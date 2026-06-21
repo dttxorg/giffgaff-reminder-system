@@ -1,6 +1,6 @@
-// 推送渠道：Sever酱 和 Bark
+// 推送渠道：Sever酱 / Bark / pushplus
 
-export type ChannelType = "serverchan" | "bark";
+export type ChannelType = "serverchan" | "bark" | "pushplus";
 
 export interface SendResult {
   ok: boolean;
@@ -69,6 +69,59 @@ export async function sendBark(
 }
 
 /**
+ * pushplus 推送
+ * 官方文档: https://www.pushplus.plus/doc/guide/api.html
+ * API: POST http://www.pushplus.plus/send
+ *   Body (JSON): { token, title, content, template: "markdown" }
+ *   - token: 用户 token (必填)
+ *   - title: 消息标题 (选填)
+ *   - content: 消息内容 (必填)
+ *   - template: 默认 html;我们用 markdown 支持多行
+ *   - channel: 默认 wechat (微信公众号),可省略
+ * 返回:
+ *   成功: { code: 200, msg: "请求成功", data: "短码" }  (200 仅代表收到请求,异步发送)
+ *   失败: { code: 非200, msg: "错误信息" }
+ */
+export async function sendPushPlus(
+  channelKey: string,
+  title: string,
+  body: string
+): Promise<SendResult> {
+  const token = channelKey.trim();
+  if (!token) {
+    return { ok: false, errorMessage: "token 不能为空" };
+  }
+  const url = "https://www.pushplus.plus/send";
+  try {
+    const resp = await fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        token,
+        title,
+        content: body,
+        template: "markdown",
+        channel: "wechat",
+      }),
+    });
+    if (!resp.ok) {
+      return { ok: false, errorMessage: `pushplus HTTP ${resp.status}` };
+    }
+    const data = (await resp.json()) as {
+      code?: number;
+      msg?: string;
+      data?: string | null;
+    };
+    if (data.code !== 200) {
+      return { ok: false, errorMessage: data.msg || `pushplus 返回 code=${data.code}` };
+    }
+    return { ok: true };
+  } catch (e) {
+    return { ok: false, errorMessage: e instanceof Error ? e.message : String(e) };
+  }
+}
+
+/**
  * 路由：按 channel 类型选择推送器
  */
 export async function sendPush(
@@ -79,5 +132,6 @@ export async function sendPush(
 ): Promise<SendResult> {
   if (channel === "serverchan") return sendServerChan(channelKey, title, body);
   if (channel === "bark") return sendBark(channelKey, title, body);
+  if (channel === "pushplus") return sendPushPlus(channelKey, title, body);
   return { ok: false, errorMessage: `未知渠道: ${channel}` };
 }

@@ -5,7 +5,7 @@ import { getCurrentUser } from "@/lib/session";
 import { sendPush } from "@/lib/channels";
 
 const BodySchema = z.object({
-  channel: z.enum(["serverchan", "bark"]),
+  channel: z.enum(["serverchan", "bark", "pushplus"]),
   channelKey: z.string().min(1, "请填写渠道 Key"),
   /** 客户端先用 test-push 验证过，true 才允许保存 */
   verified: z.boolean().optional().default(false),

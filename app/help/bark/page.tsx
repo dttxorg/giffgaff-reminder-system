@@ -24,26 +24,21 @@ export default function BarkHelpPage() {
           rel="noreferrer"
           className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg bg-slate-900 text-white font-medium hover:bg-slate-800 transition-colors shadow-sm"
         >
-          🍎 iOS - 跳转 App Store 下载(推荐)
+          🍎 iOS - 跳转 App Store 下载
         </a>
       </div>
 
       <div className="not-prose my-6 p-4 rounded-lg bg-amber-50 border border-amber-200 text-amber-900 text-sm">
-        <strong>📱 没有 iPhone / iPad?</strong>
-        <ul className="mt-2 space-y-1 list-disc list-inside">
-          <li>
-            <strong>Android</strong>:Bark 在 Google Play 上<strong>没有官方版本</strong>,
-            开发者只在 <a href={BARK_GITHUB_RELEASES_URL} target="_blank" rel="noreferrer" className="underline">GitHub Releases</a> 发布 APK。
-            <br />
-            <span className="text-amber-800">
-              装 APK 需要在手机"设置 → 安全"里允许"安装未知来源应用"。
-            </span>
-          </li>
-          <li>
-            <strong>推荐改用 Sever酱</strong>:
-            微信里就能用,不需要装 App。<Link href="/help/serverchan" className="underline">查看 Sever酱 教程 →</Link>
-          </li>
-        </ul>
+        <strong>📱 不是 iPhone / iPad?</strong>
+        <p className="mt-1">
+          Bark <strong>仅支持 iOS / macOS</strong>(App Store 官方下载)。如果您的设备是 Android / Windows / 其他,
+          推荐用 <strong>Sever酱</strong> 或 <strong>pushplus</strong> — 都是微信公众号推送,无需装 App。
+        </p>
+        <div className="mt-2 flex flex-wrap gap-2">
+          <Link href="/help/serverchan" className="underline">查看 Sever酱 教程 →</Link>
+          <span className="text-amber-700">·</span>
+          <Link href="/help/pushplus" className="underline">查看 pushplus 教程 →</Link>
+        </div>
       </div>
 
       <h2>步骤详解</h2>
@@ -52,19 +47,9 @@ export default function BarkHelpPage() {
         <li>
           <strong>下载 Bark</strong>
           <p>
-            <strong>iOS 用户</strong>:点击上方"跳转 App Store 下载"按钮,或直接在 App Store 搜索 <code>Bark</code> 下载。
+            点击上方"跳转 App Store 下载"按钮,或直接在 App Store 搜索 <code>Bark</code> 下载。
             <br />
             认准开发者: <strong>Finb</strong>(图标是个狗头)。免费,无内购。
-          </p>
-          <p>
-            <strong>Android 用户</strong>:
-            打开 <a href={BARK_GITHUB_RELEASES_URL} target="_blank" rel="noreferrer">GitHub Releases 页面</a>,
-            下载最新版本的 <code>app-release.apk</code> 文件,在手机上安装。
-            <br />
-            <span className="text-amber-700 text-sm">
-              ⚠️ Android 用户建议直接改用 Sever酱(微信公众号),省事。
-              <Link href="/help/serverchan" className="underline ml-1">教程</Link>
-            </span>
           </p>
         </li>
 

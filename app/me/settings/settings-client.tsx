@@ -4,7 +4,7 @@ import { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 
-type Channel = "serverchan" | "bark";
+type Channel = "serverchan" | "bark" | "pushplus";
 type TestStatus = "idle" | "sending" | "success" | "error";
 type SaveStatus = "idle" | "saving" | "success" | "error";
 
@@ -78,7 +78,15 @@ export function MeSettingsClient({
         return;
       }
       setTestStatus("success");
-      setTestMessage(`已发送,请检查您的 ${channel === "serverchan" ? "Sever酱 微信" : "Bark App"}`);
+      setTestMessage(
+        `已发送,请检查您的 ${
+          channel === "serverchan"
+            ? "Sever酱 微信"
+            : channel === "bark"
+            ? "Bark App"
+            : "pushplus 微信公众号"
+        }`
+      );
       setVerified(true);
       startCooldown(30);
     } catch (err) {
@@ -132,7 +140,7 @@ export function MeSettingsClient({
         <div className="space-y-4">
           <div>
             <label className="block text-sm font-medium mb-1.5">推送渠道</label>
-            <div className="grid grid-cols-2 gap-2">
+            <div className="grid grid-cols-3 gap-2">
               <ChannelOption
                 selected={channel === "serverchan"}
                 onChange={() => {
@@ -153,7 +161,18 @@ export function MeSettingsClient({
                   setTestMessage(null);
                 }}
                 title="Bark"
-                desc="iOS / Android App"
+                desc="iOS App"
+              />
+              <ChannelOption
+                selected={channel === "pushplus"}
+                onChange={() => {
+                  setChannel("pushplus");
+                  setVerified(false);
+                  setTestStatus("idle");
+                  setTestMessage(null);
+                }}
+                title="pushplus"
+                desc="微信公众号"
               />
             </div>
             <p className="text-xs text-slate-500 mt-1.5">
@@ -162,9 +181,13 @@ export function MeSettingsClient({
                 <Link href="/help/serverchan" className="text-indigo-600 hover:underline ml-1">
                   Sever酱 教程
                 </Link>
-              ) : (
+              ) : channel === "bark" ? (
                 <Link href="/help/bark" className="text-indigo-600 hover:underline ml-1">
                   Bark 教程
+                </Link>
+              ) : (
+                <Link href="/help/pushplus" className="text-indigo-600 hover:underline ml-1">
+                  pushplus 教程
                 </Link>
               )}
             </p>
@@ -172,7 +195,11 @@ export function MeSettingsClient({
 
           <div>
             <label className="block text-sm font-medium mb-1.5">
-              {channel === "serverchan" ? "SendKey" : "Bark URL"}
+              {channel === "serverchan"
+                ? "SendKey"
+                : channel === "bark"
+                ? "Bark URL"
+                : "pushplus Token"}
             </label>
             <input
               type="text"
@@ -185,7 +212,13 @@ export function MeSettingsClient({
                   setTestMessage(null);
                 }
               }}
-              placeholder={channel === "serverchan" ? "SCT2xxxxxxxx" : "https://api.day.app/xxx"}
+              placeholder={
+                channel === "serverchan"
+                  ? "SCT2xxxxxxxx"
+                  : channel === "bark"
+                  ? "https://api.day.app/xxx"
+                  : "abcdef123456...(登录 pushplus 后查看)"
+              }
               autoComplete="off"
               className="w-full px-3.5 py-2.5 rounded-lg border border-slate-300 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 outline-none transition font-mono text-sm"
             />

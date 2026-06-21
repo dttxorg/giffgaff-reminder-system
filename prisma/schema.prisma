@@ -53,6 +53,7 @@ model User {
 enum Channel {
   serverchan
   bark
+  pushplus
 }
 
 // 发送日志（幂等保证）
