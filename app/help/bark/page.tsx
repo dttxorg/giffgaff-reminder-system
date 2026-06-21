@@ -1,55 +1,141 @@
 import Link from "next/link";
 
+const BARK_APP_STORE_URL = "https://apps.apple.com/cn/app/bark-%E7%8B%97%E5%AD%90%E6%9C%BA%E5%99%A8%E4%BA%BA/id1403753865";
+const BARK_APP_STORE_EN_URL = "https://apps.apple.com/us/app/bark-custom-notifications/id1403753865";
+const BARK_GITHUB_URL = "https://github.com/finb/bark";
+const BARK_GITHUB_RELEASES_URL = "https://github.com/finb/bark/releases";
+
 export default function BarkHelpPage() {
   return (
     <article className="max-w-2xl mx-auto px-4 py-8 sm:py-12 prose prose-slate">
       <h1>Bark 开通教程</h1>
       <p>
-        Bark 是一个 iOS / Android 推送 App,直接推送到您的手机。无需注册账号,无需关注公众号。
+        Bark 是一个 <strong>iOS / Android</strong> 推送 App,直接推送到您的手机。
+        <br />
+        <span className="text-slate-500 text-sm">
+          无需注册账号,无需关注公众号,装上 App 就能用。大约 1 分钟搞定。
+        </span>
       </p>
+
+      <div className="not-prose my-6 flex flex-wrap gap-3">
+        <a
+          href={BARK_APP_STORE_URL}
+          target="_blank"
+          rel="noreferrer"
+          className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg bg-slate-900 text-white font-medium hover:bg-slate-800 transition-colors shadow-sm"
+        >
+          🍎 iOS - 跳转 App Store 下载
+        </a>
+        <a
+          href={BARK_GITHUB_RELEASES_URL}
+          target="_blank"
+          rel="noreferrer"
+          className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg bg-emerald-600 text-white font-medium hover:bg-emerald-700 transition-colors shadow-sm"
+        >
+          🤖 Android - GitHub 下载 APK
+        </a>
+      </div>
+
+      <h2>步骤详解</h2>
 
       <ol>
         <li>
           <strong>下载 Bark</strong>
           <p>
-            iOS 用户:在 App Store 搜索&quot;Bark&quot;下载(开发者:Finb)
+            <strong>iOS 用户</strong>:点击上方"跳转 App Store"按钮,或直接在 App Store 搜索 <code>Bark</code> 下载。
             <br />
-            Android 用户:从 GitHub <a href="https://github.com/finb/bark" target="_blank" rel="noreferrer">finb/bark</a> 下载 APK 安装
+            认准开发者: <strong>Finb</strong>(图标是个狗头)。免费,无内购。
+          </p>
+          <p>
+            <strong>Android 用户</strong>:点击上方"GitHub 下载 APK"按钮,在 Releases 页面下载最新的 <code>.apk</code> 文件安装。
+            <br />
+            <span className="text-slate-500 text-sm">
+              如果 GitHub 访问慢,可以从 <a href="https://github.com/finb/bark/releases" target="_blank" rel="noreferrer">releases 页面</a> 选其他下载源。
+            </span>
           </p>
         </li>
+
         <li>
           <strong>打开 App,首页会显示一个 Bark URL</strong>
           <p>
-            形如 <code>https://api.day.app/abc123xyz</code>(末尾的随机字符串就是您的 key)
+            形如 <code>https://api.day.app/abc123xyz</code>(末尾的随机字符串就是您的 key)。
+            <br />
+            <span className="text-slate-500 text-sm">
+              如果 URL 显示不同,只要是 <code>https://</code> 开头,以一串字符结尾,就是对的。
+            </span>
           </p>
         </li>
+
         <li>
           <strong>复制 App 里显示的完整 URL</strong>
+          <p>
+            点 URL 旁边的"复制"按钮(通常是个剪贴板图标),或长按 URL 选"复制"。
+          </p>
         </li>
+
         <li>
-          <strong>回到本系统登录页</strong>
-          <p>把 URL 粘贴到&quot;Bark URL&quot;输入框,选择&quot;Bark&quot;渠道</p>
-        </li>
-        <li>
-          <strong>点击「发送验证码」测试</strong>
-          <p>Bark 会立即推一条测试消息,说明配置成功</p>
+          <strong>回到本系统,设置通知渠道</strong>
+          <p>
+            登录本系统(填手机号即可)→ 进入 <strong>用户中心</strong> →
+            顶部红色横幅点"立即设置"→ 选择 <strong>Bark</strong> →
+            把刚才复制的 URL 粘贴到输入框 → 点 <strong>测试推送</strong>。
+          </p>
+          <p>Bark App 应立即收到一条"测试消息",说明配置成功。点"保存"完成。</p>
         </li>
       </ol>
 
-      <div className="not-prose mt-8 p-4 rounded-lg bg-amber-50 border border-amber-200 text-amber-900 text-sm">
-        <strong>提示</strong>: 如果您有自己的服务器,可以自建 Bark Server,推送更稳定。只需把 URL 换成您自己服务器地址即可。
-      </div>
+      <h2>常见问题</h2>
 
-      <div className="not-prose mt-6 flex gap-3">
+      <details>
+        <summary>Bark URL 在哪里找?</summary>
+        <p>
+          打开 Bark App,<strong>首页第一行</strong>就是您的 Bark URL。如果首页不是 URL,点底部"设置"标签。
+        </p>
+        <p className="text-slate-500 text-sm">
+          URL 示例:<br />
+          • <code>https://api.day.app/abc123xyz</code> (官方服务器,推荐)<br />
+          • <code>https://bark.your-server.com/your-key</code> (自建服务器)
+        </p>
+      </details>
+
+      <details>
+        <summary>iOS 收不到推送?</summary>
+        <ul>
+          <li><strong>必须打开 App 一次</strong>(苹果限制,新装的推送 App 不打开不工作)</li>
+          <li>检查 iPhone 设置 → 通知 → Bark → 允许通知 ✅</li>
+          <li>检查 Bark App 内"测试推送"是否能正常发出</li>
+        </ul>
+      </details>
+
+      <details>
+        <summary>Android 收不到推送?</summary>
+        <ul>
+          <li>检查手机设置 → 应用 → Bark → 通知 → 允许通知 ✅</li>
+          <li>某些定制系统需要额外设置"自启动"和"后台运行"</li>
+          <li>检查 Bark App 内"测试推送"是否能正常发出</li>
+        </ul>
+      </details>
+
+      <details>
+        <summary>可以自建服务器吗?</summary>
+        <p>
+          可以。如果官方 <code>api.day.app</code> 不稳定,可以自己部署 Bark Server,推送更可靠。
+          <br />
+          详见 <a href={BARK_GITHUB_URL} target="_blank" rel="noreferrer">finb/bark GitHub</a>。
+        </p>
+        <p>自建后,把 URL 换成您自己服务器地址即可,无需改其他步骤。</p>
+      </details>
+
+      <div className="not-prose mt-6 flex gap-3 flex-wrap">
         <Link
-          href="/login"
-          className="inline-flex items-center px-4 py-2 rounded-lg bg-indigo-600 text-white text-sm font-medium hover:bg-indigo-700"
+          href="/me/settings"
+          className="inline-flex items-center px-5 py-2.5 rounded-lg bg-indigo-600 text-white text-sm font-medium hover:bg-indigo-700"
         >
-          去登录
+          去设置通知渠道
         </Link>
         <Link
           href="/help/serverchan"
-          className="inline-flex items-center px-4 py-2 rounded-lg bg-white text-slate-700 text-sm font-medium border border-slate-200 hover:bg-slate-50"
+          className="inline-flex items-center px-5 py-2.5 rounded-lg bg-white text-slate-700 text-sm font-medium border border-slate-200 hover:bg-slate-50"
         >
           查看 Sever酱 教程
         </Link>
