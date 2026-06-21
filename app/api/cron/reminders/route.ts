@@ -12,13 +12,16 @@ export async function POST(req: Request) {
     return NextResponse.json({ ok: false, error: "未授权" }, { status: 401 });
   }
 
-  // 构造 baseUrl：优先用 VERCEL_URL（Vercel 部署），否则用环境变量或 request origin
+  // 构造 baseUrl 优先级:
+  //   1. PUBLIC_BASE_URL (用户自定义,推荐设置,用于推送里拼接的保号链接)
+  //   2. VERCEL_URL (Vercel 默认注入,指向 vercel.app,不推荐给用户)
+  //   3. request origin (兜底,生产环境基本不会到这里)
   const url = new URL(req.url);
   const baseUrl =
-    process.env.VERCEL_URL
-      ? `https://${process.env.VERCEL_URL}`
-      : process.env.PUBLIC_BASE_URL || `${url.protocol}//${url.host}`;
+    process.env.PUBLIC_BASE_URL ||
+    (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : null) ||
+    `${url.protocol}//${url.host}`;
 
   const result = await runReminderScan({ baseUrl });
-  return NextResponse.json({ ok: true, ...result });
+  return NextResponse.json({ ok: true, baseUrl, ...result });
 }

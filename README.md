@@ -69,6 +69,7 @@
    - Vercel 会自动创建 Neon 项目并注入 `DATABASE_URL` 环境变量
 5. 手动添加其他环境变量:
    - `CRON_SECRET`:一段长随机字符串,例 `openssl rand -hex 32`
+   - **`PUBLIC_BASE_URL`**:`https://baohao.681218.xyz`(你绑定的自定义域名,**强烈推荐设置** — 不设的话推送里给客户的保号链接会变成 `*.vercel.app`,看起来不像你的产品)
    - `ADMIN_USERNAME`:管理员账号(默认 `admin`,生产建议改)
    - `ADMIN_PASSWORD`:管理员密码(首次访问 `/admin/login` 时会用这个密码自动建账号,生产必改)
 
@@ -140,6 +141,7 @@ npm run dev
 |---|---|---|
 | `DATABASE_URL` | 是 | Postgres 连接串(Vercel 集成自动注入) |
 | `CRON_SECRET` | 是 | cron 路由 Bearer token(本地调试可省略) |
+| `PUBLIC_BASE_URL` | **强烈推荐** | 推送给用户的保号链接域名,例 `https://baohao.681218.xyz`。不设会 fallback 到 Vercel 默认域名 `*.vercel.app` |
 | `ADMIN_USERNAME` | 否 | 管理员账号(默认 `admin`) |
 | `ADMIN_PASSWORD` | 否 | 管理员密码(默认 `admin123`,生产必改) |
 
