@@ -1,6 +1,6 @@
 // 提醒引擎：根据当前时间扫描所有 sim，发送提醒
 import { prisma } from "./db";
-import { bucketForDay, dayOffsetFromBaseline } from "./bucket";
+import { bucketForDay, dayOffsetFromBaseline, shanghaiParts } from "./bucket";
 import { sendPush, type ChannelType } from "./channels";
 import { DEFAULT_TEMPLATE, portUrl, renderTemplate } from "./template";
 
@@ -24,7 +24,9 @@ interface RunOptions {
  */
 export async function runReminderScan(opts: RunOptions): Promise<ReminderRunResult> {
   const now = opts.now ?? new Date();
-  const hourOfDay = now.getUTCHours();
+  // 用北京时间算小时,bucket 窗口才跟用户预期对齐
+  // (Vercel serverless 在 UTC,getUTCHours 会让 0-8 点的 sim 全部错位)
+  const hourOfDay = shanghaiParts(now).hour;
   const result: ReminderRunResult = { processed: 0, sent: 0, skipped: 0, failed: 0, details: [] };
 
   // 1. 取所有 active sim + 绑定 user

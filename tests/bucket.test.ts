@@ -1,5 +1,10 @@
 import { describe, it, expect } from "vitest";
-import { bucketForDay, dayOffsetFromBaseline, isInReminderWindow } from "../lib/bucket";
+import {
+  bucketForDay,
+  dayOffsetFromBaseline,
+  isInReminderWindow,
+  shanghaiParts,
+} from "../lib/bucket";
 
 describe("bucketForDay", () => {
   it("返回 null 当 dayOffset 不在 170-180 范围", () => {
@@ -78,6 +83,58 @@ describe("dayOffsetFromBaseline", () => {
     const baseline = new Date("2025-12-30T00:00:00Z");
     const now = new Date("2026-01-05T00:00:00Z");
     expect(dayOffsetFromBaseline(baseline, now)).toBe(6);
+  });
+
+  // ===== 关键回归测试:Vercel 跑在 UTC,业务按 Asia/Shanghai 解读日期 =====
+  // 这些 case 在 UTC 算法下会差 1 天(用户之前感知到的 bug)
+
+  it("北京时间凌晨:now=2026-06-22 01:00 BJ 应解读为 6-22,不是 UTC 的 6-21", () => {
+    // 2026-06-21T17:00:00Z = 北京时间 2026-06-22 01:00
+    const now = new Date("2026-06-21T17:00:00Z");
+    const baseline = new Date("2026-06-22T00:00:00Z"); // 北京 2026-06-22 08:00
+    expect(dayOffsetFromBaseline(baseline, now)).toBe(0);
+  });
+
+  it("跨时区 24h 内仍按上海 ymd 算:now 是 baseline 的前一天 23:30 BJ", () => {
+    // baseline = 北京 2026-06-23 00:00 (= UTC 2026-06-22 16:00)
+    const baseline = new Date("2026-06-22T16:00:00Z");
+    // now = 北京 2026-06-22 23:30 (= UTC 2026-06-22 15:30)
+    const now = new Date("2026-06-22T15:30:00Z");
+    // UTC 算法会算成 diff=0(同一天),上海算法应该返回 -1(baseline 是明天)
+    expect(dayOffsetFromBaseline(baseline, now)).toBe(-1);
+  });
+
+  it("北京时间 0-8 点不应算成 UTC 的前一天", () => {
+    // baseline = 北京 2026-01-15 = UTC 2026-01-15 00:00
+    const baseline = new Date("2026-01-15T00:00:00Z");
+    // now = 北京 2026-06-22 01:00 = UTC 2026-06-21 17:00
+    const now = new Date("2026-06-21T17:00:00Z");
+    // UTC 算法 → 157 天(把 now 当 6-21)
+    // 上海算法 → 158 天(now 是 6-22)
+    expect(dayOffsetFromBaseline(baseline, now)).toBe(158);
+  });
+});
+
+describe("shanghaiParts", () => {
+  it("UTC 时间正确转为上海 ymdh", () => {
+    // 2026-06-21T18:47:19Z = 北京 2026-06-22 02:47:19
+    const d = new Date("2026-06-21T18:47:19Z");
+    expect(shanghaiParts(d)).toEqual({
+      year: 2026,
+      month: 6,
+      day: 22,
+      hour: 2,
+      minute: 47,
+      second: 19,
+    });
+  });
+
+  it("midnight 必须返回 hour=0,不是 24", () => {
+    // 2026-06-21T16:00:00Z = 北京 2026-06-22 00:00:00
+    const d = new Date("2026-06-21T16:00:00Z");
+    const p = shanghaiParts(d);
+    expect(p.hour).toBe(0);
+    expect(p.day).toBe(22);
   });
 });
 
