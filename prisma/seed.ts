@@ -5,9 +5,16 @@ import { PrismaClient } from "../lib/generated/prisma/client";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { hashPassword } from "../lib/auth";
 
-const connectionString = process.env.DATABASE_URL;
+const connectionString =
+  process.env.DATABASE_URL ||
+  process.env.POSTGRES_PRISMA_URL ||
+  process.env.POSTGRES_URL ||
+  process.env.POSTGRES_URL_NON_POOLING;
 if (!connectionString) {
-  throw new Error("DATABASE_URL 未设置");
+  throw new Error(
+    "DATABASE_URL 未设置。请在 .env 或 Vercel 环境变量中配置。" +
+      "Vercel Neon 集成通常自动注入 POSTGRES_PRISMA_URL。"
+  );
 }
 const adapter = new PrismaPg({ connectionString });
 const prisma = new PrismaClient({ adapter });

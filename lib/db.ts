@@ -6,11 +6,24 @@ const globalForPrisma = globalThis as unknown as {
   prisma: PrismaClient | undefined;
 };
 
-function createPrisma() {
-  const connectionString = process.env.DATABASE_URL;
-  if (!connectionString) {
-    throw new Error("DATABASE_URL 未设置。请在 .env 或 Vercel 环境变量中配置。");
+// 兼容多种 Vercel Neon 集成注入的变量名
+function getDatabaseUrl(): string {
+  const url =
+    process.env.DATABASE_URL ||
+    process.env.POSTGRES_PRISMA_URL ||
+    process.env.POSTGRES_URL ||
+    process.env.POSTGRES_URL_NON_POOLING;
+  if (!url) {
+    throw new Error(
+      "DATABASE_URL 未设置。请在 .env 或 Vercel 环境变量中配置。" +
+        "Vercel Neon 集成通常自动注入 POSTGRES_PRISMA_URL。"
+    );
   }
+  return url;
+}
+
+function createPrisma() {
+  const connectionString = getDatabaseUrl();
   const adapter = new PrismaPg({ connectionString });
   return new PrismaClient({
     adapter,
