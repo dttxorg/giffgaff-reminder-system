@@ -58,36 +58,41 @@
 
 ### 1. 准备 GitHub 仓库
 
-把代码推到 GitHub(参见下文"本地开发")。
+把代码推到 GitHub(参见下文"本地开发")。本项目已在 `dttxorg/giffgaff-reminder-system`。
 
 ### 2. 在 Vercel 创建项目
 
 1. 打开 [vercel.com/new](https://vercel.com/new)
-2. 选择 "Import Git Repository" → 选你的 GitHub 仓库
-3. Framework Preset 选 "Next.js"
-4. **关键步骤:在 "Storage" 区域点击 "Create Database" → 选 "Postgres" → Vercel 会自动挂载 Neon Postgres**
-5. 环境变量(Vercel 会自动注入 `DATABASE_URL`)。手动添加:
-   - `CRON_SECRET`:一段长随机字符串(用于 cron 鉴权),例 `openssl rand -hex 32`
+2. 选 "Import Git Repository" → 选 `dttxorg/giffgaff-reminder-system`
+3. Framework Preset 自动识别 "Next.js"
+4. **关键步骤:在 "Storage" 区域点击 "Create Database" → 选 "Postgres" → Region 选离你近的(如 Singapore)**
+   - Vercel 会自动创建 Neon 项目并注入 `DATABASE_URL` 环境变量
+5. 手动添加其他环境变量:
+   - `CRON_SECRET`:一段长随机字符串,例 `openssl rand -hex 32`
    - `ADMIN_USERNAME`:管理员账号(默认 `admin`,生产建议改)
-   - `ADMIN_PASSWORD`:管理员密码(首次访问 `/admin/login` 时会用这个密码自动建账号)
-   - `SESSION_SECRET`:cookie 签名密钥(预留,目前未用)
+   - `ADMIN_PASSWORD`:管理员密码(首次访问 `/admin/login` 时会用这个密码自动建账号,生产必改)
 
 ### 3. 部署
 
-点击 Deploy。Vercel 会自动跑:
-- `prisma generate`
-- `prisma migrate deploy`(如果有 migration)
-- `next build`
+点 Deploy。Vercel 会自动跑:
+- `npm install`(触发 `postinstall` 跑 `prisma generate`)
+- `npm run build`(包含 `prisma migrate deploy` 跑数据库迁移)
+- 部署到 Vercel Edge
 
-### 4. 跑数据库 migration
+**首次部署如果 migration 失败**:检查 Storage 区域是否已创建 Postgres,以及 `DATABASE_URL` 是否已注入。
 
-部署完成后,在 Vercel 项目 → Settings → Functions → 找一处 "Exec" 或在本地跑:
+### 4. 跑 seed(可选,创建测试数据 + 默认管理员)
+
+部署完成后,在 Vercel 项目 → Settings → Functions → 找 `prisma/seed.ts`,或者用本地 Vercel CLI:
 
 ```bash
-DATABASE_URL='<vercel 提供的>' npx prisma migrate deploy
+# 拉 Vercel 环境变量到本地
+npx vercel env pull .env.production
+# 跑 seed
+DATABASE_URL='<从 .env.production 读>' npm run db:seed
 ```
 
-或者把 migration 加到 `package.json` 的 `postinstall` 钩子(Vercel build 时自动跑)。
+或者直接在 Vercel 创建一个临时 Function exec 入口跑 seed。本项目 V1 可以不跑 seed,直接到 `/admin/login` 用环境变量 `ADMIN_USERNAME` / `ADMIN_PASSWORD` 登录即可(代码会自动建管理员)。
 
 ### 5. 配置外部 cron
 
