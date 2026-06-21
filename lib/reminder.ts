@@ -66,7 +66,7 @@ export async function runReminderScan(opts: RunOptions): Promise<ReminderRunResu
       days: dayOffset,
       port_url: url,
     });
-    const title = `Giffgaff 报号提醒 (${dayOffset}天)`;
+    const title = `Giffgaff 保号提醒 (${dayOffset}天)`;
 
     if (opts.dryRun) {
       result.sent++;

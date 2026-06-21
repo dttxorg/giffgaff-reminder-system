@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 
-const DEFAULT = `【Giffgaff 报号提醒】您的号码 {{phone}} 已激活 {{days}} 天，该报号啦！
+const DEFAULT = `【Giffgaff 保号提醒】您的号码 {{phone}} 已激活 {{days}} 天，该保号啦！
 点击更新保号时间：{{port_url}}`;
 
 export default function SettingsForm({ initial }: { initial: string }) {

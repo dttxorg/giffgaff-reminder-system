@@ -1,4 +1,4 @@
-// 报号提醒规则：基于 dayOffset（今天 - 激活/上次保号日期）和 hourOfDay 计算 bucket
+// 保号提醒规则：基于 dayOffset（今天 - 激活/上次保号日期）和 hourOfDay 计算 bucket
 
 /**
  * 各 dayOffset 对应的当天发送次数

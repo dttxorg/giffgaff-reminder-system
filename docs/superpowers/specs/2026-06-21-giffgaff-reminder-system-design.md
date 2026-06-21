@@ -1,4 +1,4 @@
-# Giffgaff 报号提醒系统 — 设计文档
+# Giffgaff 保号提醒系统 — 设计文档
 
 **日期**: 2026-06-21
 **作者**: ZCode + 用户协作
@@ -6,10 +6,10 @@
 
 ## 1. 背景与目标
 
-Giffgaff SIM 卡如果长期不"报号"(porting / keeping active)会被回收。用户群体拥有大量 SIM 卡,手动记住每个号码的报号日期不现实。本系统目标:
+Giffgaff SIM 卡如果长期不"保号"(porting / keeping active)会被回收。用户群体拥有大量 SIM 卡,手动记住每个号码的保号日期不现实。本系统目标:
 
-1. 用户从激活日期起算,第 170 天开始收到报号提醒;按时间临近自动加频。
-2. 报号后用户通过网页自行更新保号日期,系统按新日期重新计时。
+1. 用户从激活日期起算,第 170 天开始收到保号提醒;按时间临近自动加频。
+2. 保号后用户通过网页自行更新保号日期,系统按新日期重新计时。
 3. 管理员在后台维护号码库、查看全量数据、编辑提醒文案。
 4. **用户输入号码支持模糊匹配**:用户输入 `07724 215611`(可带空格)也能匹配到完整号 `07724215611`,只要后 6 位匹配即可。
 5. **测试推送按钮**:用户填完渠道 key 后,提供一个"测试"按钮,立刻发一条测试消息到用户的 Sever酱 / Bark,验证配置是否正确。不消耗验证码、不写库,纯推送测试。
@@ -55,9 +55,9 @@ Giffgaff SIM 卡如果长期不"报号"(porting / keeping active)会被回收。
 | 178 | 3 次 | 3 个等长窗口 [00:00, 08:00) / [08:00, 16:00) / [16:00, 24:00) |
 | 179 | 5 次 | 5 个等长窗口,每个 4 小时 48 分 |
 | 180 | 10 次 | 10 个等长窗口,每个 2 小时 24 分 |
-| >180 | 0 次(停止 — 已错过报号窗口) | — |
+| >180 | 0 次(停止 — 已错过保号窗口) | — |
 
-**注**:180 天当天用户必须保号。如果 180 天结束仍未操作,系统停止推送(避免骚扰),但号码仍标记为"待报号"。
+**注**:180 天当天用户必须保号。如果 180 天结束仍未操作,系统停止推送(避免骚扰),但号码仍标记为"待保号"。
 
 **桶(bucket)概念**:每次提醒是一个 bucket。同一个 sim、同一天、同一 bucket 由 `reminders_sent` 表保证只发一次。即使 cron 重复触发或并发调用也不会重复推。
 
@@ -126,7 +126,7 @@ function bucketForDay(dayOffset: number, hourOfDay: number): { count: number; bu
 model Sim {
   id              Int       @id @default(autoincrement())
   phoneNumber     String    @unique           // 完整号,如 07724215611(只存数字)
-  activatedAt     DateTime                      // 激活日期(报号起算日)
+  activatedAt     DateTime                      // 激活日期(保号起算日)
   lastPortedAt    DateTime?                     // 上次保号日期,NULL = 还没保过号
   status          SimStatus @default(active)    // active / paused
   createdAt       DateTime  @default(now())
@@ -306,11 +306,11 @@ model VerificationCode {
 - 按钮:"退出登录"
 
 ### 7.3 `/p/[simId]`(保号页,公开)
-- 标题:Giffgaff 报号
+- 标题:Giffgaff 保号
 - 显示:号码 {完整号} 激活于 {YYYY-MM-DD},今天已激活 **{N}** 天
 - 日期选择器:label "新的保号日期"
   - 默认值:今天
-  - 范围:今天 ~ 过去 7 天(含)— 允许补录最近未报号的日期;未来日期不允许
+  - 范围:今天 ~ 过去 7 天(含)— 允许补录最近未保号的日期;未来日期不允许
 - "提交"按钮 → POST `/api/p/{sim_id}/port`
 - 提交成功显示:"已记录新的保号日期,下次提醒将在 170 天后"
 
@@ -356,7 +356,7 @@ model VerificationCode {
 存储于 `settings` 表 `key=reminder_template`:
 
 ```
-【Giffgaff 报号提醒】您的号码 {{phone}} 已激活 {{days}} 天,该报号啦!
+【Giffgaff 保号提醒】您的号码 {{phone}} 已激活 {{days}} 天,该保号啦!
 点击更新保号时间:{{port_url}}
 ```
 

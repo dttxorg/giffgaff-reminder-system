@@ -1,6 +1,6 @@
 // 提醒文案模板渲染
 
-export const DEFAULT_TEMPLATE = `【Giffgaff 报号提醒】您的号码 {{phone}} 已激活 {{days}} 天，该报号啦！
+export const DEFAULT_TEMPLATE = `【Giffgaff 保号提醒】您的号码 {{phone}} 已激活 {{days}} 天，该保号啦！
 点击更新保号时间：{{port_url}}`;
 
 /**

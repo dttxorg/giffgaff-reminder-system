@@ -108,9 +108,9 @@ export default function PortPage() {
   return (
     <div className="max-w-md mx-auto px-4 py-8 sm:py-12">
       <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 sm:p-8">
-        <h1 className="text-2xl font-bold mb-1">Giffgaff 报号</h1>
+        <h1 className="text-2xl font-bold mb-1">Giffgaff 保号</h1>
         <p className="text-slate-600 text-sm mb-6">
-          报号后系统按新日期重新计时 170 天
+          保号后系统按新日期重新计时 170 天
         </p>
 
         <div className="rounded-lg bg-slate-50 p-4 mb-6">

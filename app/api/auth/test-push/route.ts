@@ -60,8 +60,8 @@ export async function POST(req: Request) {
   const result = await sendPush(
     channel,
     channelKey,
-    "Giffgaff 报号提醒 - 测试",
-    `✅ 这是一条测试消息。\n\n如果您看到这条消息,说明您的 ${channelName} 配置成功!\n\n接下来系统会在 Giffgaff 报号日前 170-180 天自动给您推送报号提醒。`
+    "Giffgaff 保号提醒 - 测试",
+    `✅ 这是一条测试消息。\n\n如果您看到这条消息,说明您的 ${channelName} 配置成功!\n\n接下来系统会在 Giffgaff 保号日前 170-180 天自动给您推送保号提醒。`
   );
 
   // 记录本次调用时间（无论成功失败都占用名额）

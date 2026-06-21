@@ -8,7 +8,7 @@ export default function HomePage() {
           Giffgaff SIM 卡保号提醒
         </h1>
         <p className="text-slate-600 text-lg">
-          再也不用记着哪天该报号了 — 到日子自动推送给您
+          再也不用记着哪天该保号了 — 到日子自动推送给您
         </p>
       </div>
 
@@ -48,8 +48,8 @@ export default function HomePage() {
       <section id="faq" className="space-y-3">
         <h2 className="text-xl font-semibold mb-4">常见问题</h2>
         <Faq
-          q="Giffgaff 卡为什么要报号？"
-          a="Giffgaff SIM 卡如果长期不活跃(不发起通话/短信/上网),运营商会在 6 个月后回收号码。保号(报号)就是通过任何付费活动(发短信、打电话)让卡保持活跃。"
+          q="Giffgaff 卡为什么要保号？"
+          a="Giffgaff SIM 卡如果长期不活跃(不发起通话/短信/上网),运营商会在 6 个月后回收号码。保号就是通过任何付费活动(发短信、打电话)让卡保持活跃。"
         />
         <Faq
           q="保号提醒是怎么触发的？"

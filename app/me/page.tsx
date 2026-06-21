@@ -43,7 +43,7 @@ export default async function MePage() {
 
         {inWindow && (
           <div className="mt-4 p-3 rounded-lg bg-amber-50 border border-amber-200 text-amber-800 text-sm">
-            ⚠️ 已进入报号提醒窗口,请尽快保号
+            ⚠️ 已进入保号提醒窗口,请尽快保号
           </div>
         )}
       </div>

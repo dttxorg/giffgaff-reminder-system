@@ -1,4 +1,4 @@
-// Giffgaff 报号提醒系统 - Prisma Schema
+// Giffgaff 保号提醒系统 - Prisma Schema
 // 部署：Vercel + Neon Postgres (通过 Vercel Storage 集成)
 // 本地开发：在 Vercel Dashboard 复制 DATABASE_URL 到 .env
 
@@ -15,7 +15,7 @@ datasource db {
 model Sim {
   id           Int       @id @default(autoincrement())
   phoneNumber  String    @unique           // 完整号，如 07724215611（只存数字）
-  activatedAt  DateTime                    // 激活日期（报号起算日）
+  activatedAt  DateTime                    // 激活日期（保号起算日）
   lastPortedAt DateTime?                   // 上次保号日期，NULL = 还没保过号
   status       SimStatus  @default(active)  // active / paused
   createdAt    DateTime   @default(now())
