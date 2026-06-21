@@ -19,18 +19,26 @@ Giffgaff SIM 卡如果长期不"保号"(porting / keeping active)会被回收。
 ### 2.1 用户旅程
 
 ```
-新用户 → /login(填 sim 号码,支持带空格如 "07724 215611" + 选推送渠道 + 填渠道 Key)
+新用户 → /login(只填 sim 号码,支持带空格如 "07724 215611")
         → 服务端提取后 6 位,匹配 sims 表中 phoneNumber 后 6 位一致的 sim
-        → 匹配到 → 发送验证码(通过 Sever酱 / Bark)
-        → 填验证码 → 绑定 user → 进入 /me
-        → 看到自己绑定的号码 + 激活日期
-        → 推送渠道已保存,系统自动按规则推提醒
+        → 匹配到 → 自动创建 user(无 channel)→ 登录成功 → 跳 /me
+        → /me 检测 user.channel 为空 → 显示红色横幅"⚠️ 您还没设置通知渠道"
+        → 点"立即设置" → /me/settings 选 Sever酱 / Bark + 填 key
+        → 点"测试推送"验证 → 服务端再确认一次 → 保存
+        → 跳回 /me,channel 已设置,系统开始按规则推提醒
+
+老用户 → /login(只填 sim 号码)
+        → 服务端查到已存在的 user → 直接登录 → 跳 /me
+        → 看到自己的号码 + 激活日期 + 推送渠道
 
 每日收到推送 → 文案含链接 https://<域名>/p/<sim_id>
               → 打开链接 → /p/<sim_id> 页面(公开,凭 sim_id 即可访问)
               → 选择新的保号日期(日期选择器)
               → 提交 → 重新计时 170 天
 ```
+
+**设计要点(2026-06-21 补丁 3)**:登录流程不要求用户提交 channel key。
+channel 是一次性设置(在 /me/settings),之后登录只凭 sim 号码。
 
 ### 2.2 管理员旅程
 
@@ -251,11 +259,12 @@ model VerificationCode {
 | GET  | `/help/serverchan` | Sever酱 开通教程 |
 | GET  | `/help/bark` | Bark 开通教程 |
 | GET  | `/login` | 登录页 |
-| POST | `/api/auth/send-code` | 发送验证码。Body: `{ simNumber, channel, channelKey }`(支持带空格格式,服务端做后 6 位匹配) |
-| POST | `/api/auth/test-push` | 测试推送(不发验证码,纯验证渠道 key 是否配对)。Body: `{ channel, channelKey }` |
-| POST | `/api/auth/verify` | 校验验证码。Body: `{ simNumber, code }`,成功后种 session cookie 绑定到对应 sim |
+| POST | `/api/auth/login` | 无验证码登录。Body: `{ simNumber }`(后 6 位匹配 sim,自动创建/获取 user,种 session cookie) |
+| POST | `/api/auth/test-push` | 测试推送(给 /me/settings 用,验证渠道 key 是否配对)。Body: `{ channel, channelKey }` |
 | POST | `/api/auth/logout` | 登出 |
-| GET  | `/me` | 用户主页(需登录),展示绑定 sim(完整号)+ 操作 |
+| POST | `/api/me/channel` | 更新当前用户通知渠道。Body: `{ channel, channelKey, verified }`(`verified=true` 表示客户端已用 test-push 验证过) |
+| GET  | `/me` | 用户主页(需登录),展示绑定 sim + 操作。检测 channel 空时显示红色横幅引导 |
+| GET  | `/me/settings` | 通知渠道设置页(需登录) |
 | GET  | `/p/[simId]` | 保号时间更新页(公开),显示当前激活天数 + 日期选择器 |
 | POST | `/api/p/[simId]/port` | 提交新保号日期。Body: `{ portedAt: "YYYY-MM-DD" }` |
 
@@ -290,13 +299,18 @@ model VerificationCode {
 
 所有页面顶部 nav:左 Logo + 右 "登录 / 用户中心 / 退出"链接;管理后台有独立侧边栏(桌面) / 顶部汉堡菜单(移动)。
 
-### 7.1 `/login`
-- 手机号输入框
-- 渠道选择 radio:Server酱 / Bark,**每个选项右侧带一个"如何获取?"小问号图标**,点击展开教程弹窗(见 §7.7)
-- key 输入框(Sever酱 = SendKey,Bark = 完整 URL),下方一行灰色提示"还没注册?查看教程"
-- **"测试推送"按钮**(在"发送验证码"旁边)— 点击后立刻调用 `POST /api/auth/test-push` 推一条测试消息,验证 key 是否配对。带简单限流(同一 IP 每 30 秒最多 1 次)。成功 / 失败状态在按钮旁显示。
-- "发送验证码"按钮 → 收到后展开验证码输入框
-- 验证码输入框 + "登录"按钮
+### 7.1 `/login`(2026-06-21 补丁 3 简化)
+- **只填手机号** + 登录按钮
+- 底部一行灰色提示:还没在系统里?请联系管理员把您的 giffgaff 号码录入号码库
+- 服务端流程:后 6 位匹配 sim → 自动创建/获取 user → 登录成功
+- 渠道设置在登录后到 `/me/settings` 引导设置
+
+### 7.1.1 `/me/settings`(新增)
+- 选 Sever酱 / Bark(卡片式选择)
+- 填 SendKey / Bark URL
+- "测试推送"按钮 → 调 `POST /api/auth/test-push` 验证
+- 测试成功才能点"保存"(否则按钮 disabled + 提示)
+- 保存调 `POST /api/me/channel` → 跳回 /me
 
 ### 7.2 `/me`(登录后)
 - 顶部:"欢迎 {手机号末四位}"
@@ -501,3 +515,4 @@ V1 阶段不强制 TDD,但每个核心模块要有最小可运行验证:
 - 2026-06-21: 初稿
 - 2026-06-21: 补丁 1 - 补加模糊匹配(后 6 位匹配 sim);调整 User 模型,移除 `phoneNumber`,增加 `simLookupKey`;调整登录 API Body 字段 `phoneNumber → simNumber`;补加部署形态(用 Vercel Neon 集成)
 - 2026-06-21: 补丁 2 - 增加"测试推送"功能:登录页加"测试"按钮 + 新增 `POST /api/auth/test-push` API(纯验证渠道 key,不消耗验证码)+ 简单 IP 限流(30s/次)
+- 2026-06-21: 补丁 3 - 登录流程简化:登录只填手机号(无验证码),channel 设置拆到独立的 `/me/settings` 页面;删除 `/api/auth/send-code` 和 `/api/auth/verify`,新增 `/api/auth/login` 和 `/api/me/channel`;推送文案 sim 号码改为显示后 4 位(隐私)

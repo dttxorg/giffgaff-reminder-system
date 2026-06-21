@@ -59,10 +59,11 @@ export async function runReminderScan(opts: RunOptions): Promise<ReminderRunResu
       continue;
     }
 
-    // 6. 渲染文案
+    // 6. 渲染文案（隐私：sim 号码只显示后 4 位）
     const url = portUrl(opts.baseUrl, sim.id);
+    const phoneDisplay = `**** ${sim.phoneNumber.slice(-4)}`;
     const body = renderTemplate(template, {
-      phone: sim.phoneNumber,
+      phone: phoneDisplay,
       days: dayOffset,
       port_url: url,
     });
