@@ -13,7 +13,7 @@ export default function ServerChanHelpPage() {
           <strong>用微信扫码关注公众号「Server酱」</strong>
           <p>
             访问官网 <a href="https://sct.ftqq.com" target="_blank" rel="noreferrer">sct.ftqq.com</a> 扫码关注
-            (也支持直接搜索微信公众号"Server酱")
+            (也支持直接搜索微信公众号&quot;Server酱&quot;)
           </p>
         </li>
         <li>
@@ -22,7 +22,7 @@ export default function ServerChanHelpPage() {
         </li>
         <li>
           <strong>回到本系统登录页</strong>
-          <p>把 SendKey 粘贴到"SendKey"输入框,选择"Sever酱"渠道</p>
+          <p>把 SendKey 粘贴到&quot;SendKey&quot;输入框,选择&quot;Sever酱&quot;渠道</p>
         </li>
         <li>
           <strong>点击「发送验证码」测试</strong>

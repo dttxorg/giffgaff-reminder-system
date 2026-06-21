@@ -15,6 +15,7 @@ export default function PortPage() {
   const params = useParams<{ simId: string }>();
   const router = useRouter();
   const simId = parseInt(params.simId, 10);
+  const simIdValid = Number.isFinite(simId) && simId > 0;
   const [sim, setSim] = useState<SimInfo | null>(null);
   const [notFound, setNotFound] = useState(false);
   const [portedAt, setPortedAt] = useState<string>("");
@@ -23,10 +24,7 @@ export default function PortPage() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!Number.isFinite(simId) || simId <= 0) {
-      setNotFound(true);
-      return;
-    }
+    if (!simIdValid) return;
     fetch(`/api/p/${simId}`)
       .then((r) => (r.ok ? r.json() : Promise.reject(r.status)))
       .then((data: SimInfo) => {
@@ -34,7 +32,7 @@ export default function PortPage() {
         setPortedAt(new Date().toISOString().slice(0, 10));
       })
       .catch(() => setNotFound(true));
-  }, [simId]);
+  }, [simId, simIdValid]);
 
   // 7 天前的日期作为最早可选
   const minDate = (() => {
@@ -69,7 +67,7 @@ export default function PortPage() {
     }
   };
 
-  if (notFound) {
+  if (notFound || !simIdValid) {
     return (
       <div className="max-w-md mx-auto px-4 py-12 text-center">
         <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-8">

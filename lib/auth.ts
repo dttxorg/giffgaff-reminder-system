@@ -56,7 +56,6 @@ export async function ensureDefaultAdmin(): Promise<void> {
   await prisma.adminUser.create({
     data: { username, passwordHash },
   });
-  // eslint-disable-next-line no-console
   console.log(`[admin] 已创建默认管理员：${username}`);
 }
 
@@ -67,7 +66,6 @@ export function checkCronAuth(req: Request): boolean {
   const auth = req.headers.get("authorization") || "";
   const expected = process.env.CRON_SECRET;
   if (!expected) {
-    // eslint-disable-next-line no-console
     console.warn("[cron] CRON_SECRET 未设置，跳过鉴权（仅用于本地调试）");
     return true;
   }

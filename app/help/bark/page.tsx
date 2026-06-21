@@ -12,7 +12,7 @@ export default function BarkHelpPage() {
         <li>
           <strong>下载 Bark</strong>
           <p>
-            iOS 用户:在 App Store 搜索"Bark"下载(开发者:Finb)
+            iOS 用户:在 App Store 搜索&quot;Bark&quot;下载(开发者:Finb)
             <br />
             Android 用户:从 GitHub <a href="https://github.com/finb/bark" target="_blank" rel="noreferrer">finb/bark</a> 下载 APK 安装
           </p>
@@ -28,7 +28,7 @@ export default function BarkHelpPage() {
         </li>
         <li>
           <strong>回到本系统登录页</strong>
-          <p>把 URL 粘贴到"Bark URL"输入框,选择"Bark"渠道</p>
+          <p>把 URL 粘贴到&quot;Bark URL&quot;输入框,选择&quot;Bark&quot;渠道</p>
         </li>
         <li>
           <strong>点击「发送验证码」测试</strong>

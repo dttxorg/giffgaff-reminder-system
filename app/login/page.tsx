@@ -164,14 +164,12 @@ export default function LoginPage() {
               <label className="block text-sm font-medium mb-1.5">推送渠道</label>
               <div className="grid grid-cols-2 gap-2">
                 <ChannelOption
-                  value="serverchan"
                   selected={channel === "serverchan"}
                   onChange={() => setChannel("serverchan")}
                   title="Sever酱"
                   desc="微信公众号"
                 />
                 <ChannelOption
-                  value="bark"
                   selected={channel === "bark"}
                   onChange={() => setChannel("bark")}
                   title="Bark"
@@ -296,13 +294,11 @@ export default function LoginPage() {
 }
 
 function ChannelOption({
-  value,
   selected,
   onChange,
   title,
   desc,
 }: {
-  value: Channel;
   selected: boolean;
   onChange: () => void;
   title: string;

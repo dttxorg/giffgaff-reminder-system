@@ -32,25 +32,21 @@ export async function POST(req: Request) {
   }
 
   // 模糊匹配 sim
-  const sims = await prisma.sim.findMany({
+  const simCount = await prisma.sim.count({
     where: {
       phoneNumber: { endsWith: lookupKey },
       status: "active",
     },
-    orderBy: { id: "asc" },
-    take: 2,
   });
-  if (sims.length === 0) {
+  if (simCount === 0) {
     return NextResponse.json(
       { ok: false, error: "未找到您的号码，请联系管理员添加" },
       { status: 404 }
     );
   }
-  if (sims.length > 1) {
-    // eslint-disable-next-line no-console
-    console.warn(`[auth] 末 6 位 ${lookupKey} 匹配到 ${sims.length} 个 sim,自动取 id 最小`);
+  if (simCount > 1) {
+    console.warn(`[auth] 末 6 位 ${lookupKey} 匹配到 ${simCount} 个 sim,取 id 最小的`);
   }
-  const sim = sims[0];
 
   // 生成 6 位验证码
   const code = generateVerificationCode();
