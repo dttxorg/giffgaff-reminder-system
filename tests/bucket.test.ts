@@ -9,21 +9,32 @@ describe("bucketForDay", () => {
     expect(bucketForDay(-1, 12)).toBeNull();
   });
 
-  it("170-177 每天 1 次,bucket 始终 0", () => {
-    for (let d = 170; d <= 177; d++) {
+  it("170-172 每天 1 次,bucket 始终 0", () => {
+    for (let d = 170; d <= 172; d++) {
       for (let h = 0; h < 24; h++) {
         expect(bucketForDay(d, h)).toEqual({ count: 1, bucket: 0 });
       }
     }
   });
 
-  it("178 每天 3 次,3 个等长 8h 窗口", () => {
-    expect(bucketForDay(178, 0)).toEqual({ count: 3, bucket: 0 });
-    expect(bucketForDay(178, 7)).toEqual({ count: 3, bucket: 0 });
-    expect(bucketForDay(178, 8)).toEqual({ count: 3, bucket: 1 });
-    expect(bucketForDay(178, 15)).toEqual({ count: 3, bucket: 1 });
-    expect(bucketForDay(178, 16)).toEqual({ count: 3, bucket: 2 });
-    expect(bucketForDay(178, 23)).toEqual({ count: 3, bucket: 2 });
+  it("173-175 每天 2 次,2 个等长 12h 窗口", () => {
+    for (const d of [173, 174, 175]) {
+      expect(bucketForDay(d, 0)).toEqual({ count: 2, bucket: 0 });
+      expect(bucketForDay(d, 11)).toEqual({ count: 2, bucket: 0 });
+      expect(bucketForDay(d, 12)).toEqual({ count: 2, bucket: 1 });
+      expect(bucketForDay(d, 23)).toEqual({ count: 2, bucket: 1 });
+    }
+  });
+
+  it("176-178 每天 3 次,3 个等长 8h 窗口", () => {
+    for (const d of [176, 177, 178]) {
+      expect(bucketForDay(d, 0)).toEqual({ count: 3, bucket: 0 });
+      expect(bucketForDay(d, 7)).toEqual({ count: 3, bucket: 0 });
+      expect(bucketForDay(d, 8)).toEqual({ count: 3, bucket: 1 });
+      expect(bucketForDay(d, 15)).toEqual({ count: 3, bucket: 1 });
+      expect(bucketForDay(d, 16)).toEqual({ count: 3, bucket: 2 });
+      expect(bucketForDay(d, 23)).toEqual({ count: 3, bucket: 2 });
+    }
   });
 
   it("179 每天 5 次,5 个等长 4.8h 窗口", () => {
