@@ -1,0 +1,128 @@
+// Giffgaff 报号提醒系统 - Prisma Schema
+// 部署：Vercel + Neon Postgres (通过 Vercel Storage 集成)
+// 本地开发：在 Vercel Dashboard 复制 DATABASE_URL 到 .env
+
+generator client {
+  provider = "prisma-client"
+  output   = "../lib/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// 号码库（giffgaff sim 卡）
+model Sim {
+  id           Int       @id @default(autoincrement())
+  phoneNumber  String    @unique           // 完整号，如 07724215611（只存数字）
+  activatedAt  DateTime                    // 激活日期（报号起算日）
+  lastPortedAt DateTime?                   // 上次保号日期，NULL = 还没保过号
+  status       SimStatus  @default(active)  // active / paused
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+
+  user      User?
+  reminders ReminderSent[]
+
+  @@index([phoneNumber])
+  @@index([activatedAt, lastPortedAt])
+}
+
+enum SimStatus {
+  active
+  paused
+}
+
+// 用户档案（一个 user 绑定一个 sim）
+model User {
+  id           Int      @id @default(autoincrement())
+  simId        Int      @unique             // 1:1 绑定 sim
+  simLookupKey String                       // 冗余存后 6 位（用于审计/反查）
+  channel      Channel                      // serverchan / bark
+  channelKey   String                       // SendKey 或 Bark URL（明文存 V1）
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  sim       Sim            @relation(fields: [simId], references: [id], onDelete: Cascade)
+  reminders ReminderSent[]
+  sessions  UserSession[]
+
+  @@index([simLookupKey])
+}
+
+enum Channel {
+  serverchan
+  bark
+}
+
+// 发送日志（幂等保证）
+model ReminderSent {
+  id           Int        @id @default(autoincrement())
+  userId       Int
+  simId        Int
+  dayOffset    Int                           // 提醒那天的 day_offset（170/178/179/180）
+  bucket       Int                           // 0-indexed bucket
+  sentAt       DateTime   @default(now())
+  status       SendStatus @default(success)
+  errorMessage String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  sim  Sim  @relation(fields: [simId], references: [id], onDelete: Cascade)
+
+  @@unique([simId, dayOffset, bucket])  // 同号同日同 bucket 唯一 → 幂等
+  @@index([sentAt])
+}
+
+enum SendStatus {
+  success
+  failed
+}
+
+// 系统设置（KV 表）
+model Setting {
+  key       String   @id                   // 如 "reminder_template"
+  value     String                         // 模板字符串
+  updatedAt DateTime @updatedAt
+}
+
+// 验证码
+model VerificationCode {
+  id          Int      @id @default(autoincrement())
+  simLookupKey String                         // 后 6 位（与 simLookupKey 对齐）
+  code        String                         // 6 位数字
+  channel     Channel
+  channelKey  String                         // 验证码发送到的目标
+  expiresAt   DateTime                       // 5 分钟过期
+  used        Boolean  @default(false)
+  createdAt   DateTime @default(now())
+
+  @@index([simLookupKey, code])
+}
+
+// 管理员账号（V1 单管理员）
+model AdminUser {
+  id           Int      @id @default(autoincrement())
+  username     String   @unique
+  passwordHash String                     // bcrypt 哈希
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+// 管理员会话
+model AdminSession {
+  id        String   @id @default(uuid())
+  createdAt DateTime @default(now())
+  expiresAt DateTime                       // 7 天后过期
+}
+
+// 用户会话
+model UserSession {
+  id        String   @id @default(uuid())
+  userId    Int
+  createdAt DateTime @default(now())
+  expiresAt DateTime
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}

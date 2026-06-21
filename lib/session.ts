@@ -1,0 +1,101 @@
+// Session 管理：基于 HTTP-only cookie + 数据库 session 表
+import { cookies } from "next/headers";
+import { prisma } from "./db";
+
+const USER_COOKIE = "gg_user_session";
+const ADMIN_COOKIE = "gg_admin_session";
+const COOKIE_MAX_AGE = 60 * 60 * 24 * 7; // 7 天
+
+/**
+ * 创建用户 session
+ */
+export async function createUserSession(userId: number): Promise<string> {
+  const expiresAt = new Date(Date.now() + COOKIE_MAX_AGE * 1000);
+  const session = await prisma.userSession.create({
+    data: { userId, expiresAt },
+  });
+  const jar = await cookies();
+  jar.set(USER_COOKIE, session.id, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "lax",
+    maxAge: COOKIE_MAX_AGE,
+    path: "/",
+  });
+  return session.id;
+}
+
+/**
+ * 获取当前登录用户
+ */
+export async function getCurrentUser() {
+  const jar = await cookies();
+  const sid = jar.get(USER_COOKIE)?.value;
+  if (!sid) return null;
+  const session = await prisma.userSession.findUnique({
+    where: { id: sid },
+    include: { user: { include: { sim: true } } },
+  });
+  if (!session) return null;
+  if (session.expiresAt < new Date()) {
+    await prisma.userSession.delete({ where: { id: sid } }).catch(() => {});
+    return null;
+  }
+  return session.user;
+}
+
+/**
+ * 销毁用户 session
+ */
+export async function destroyUserSession() {
+  const jar = await cookies();
+  const sid = jar.get(USER_COOKIE)?.value;
+  if (sid) {
+    await prisma.userSession.delete({ where: { id: sid } }).catch(() => {});
+  }
+  jar.delete(USER_COOKIE);
+}
+
+/**
+ * 创建管理员 session
+ */
+export async function createAdminSession(): Promise<string> {
+  const expiresAt = new Date(Date.now() + COOKIE_MAX_AGE * 1000);
+  const session = await prisma.adminSession.create({
+    data: { expiresAt },
+  });
+  const jar = await cookies();
+  jar.set(ADMIN_COOKIE, session.id, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "lax",
+    maxAge: COOKIE_MAX_AGE,
+    path: "/",
+  });
+  return session.id;
+}
+
+/**
+ * 验证管理员 session
+ */
+export async function getAdminSession(): Promise<boolean> {
+  const jar = await cookies();
+  const sid = jar.get(ADMIN_COOKIE)?.value;
+  if (!sid) return false;
+  const session = await prisma.adminSession.findUnique({ where: { id: sid } });
+  if (!session) return false;
+  if (session.expiresAt < new Date()) {
+    await prisma.adminSession.delete({ where: { id: sid } }).catch(() => {});
+    return false;
+  }
+  return true;
+}
+
+export async function destroyAdminSession() {
+  const jar = await cookies();
+  const sid = jar.get(ADMIN_COOKIE)?.value;
+  if (sid) {
+    await prisma.adminSession.delete({ where: { id: sid } }).catch(() => {});
+  }
+  jar.delete(ADMIN_COOKIE);
+}
