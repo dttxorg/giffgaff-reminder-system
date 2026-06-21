@@ -1,10 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 
 type Channel = "serverchan" | "bark";
+type TestStatus = "idle" | "sending" | "success" | "error";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -15,6 +16,68 @@ export default function LoginPage() {
   const [code, setCode] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+
+  // 测试推送状态
+  const [testStatus, setTestStatus] = useState<TestStatus>("idle");
+  const [testMessage, setTestMessage] = useState<string | null>(null);
+  const [cooldown, setCooldown] = useState(0);
+  const cooldownTimer = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (cooldownTimer.current) clearInterval(cooldownTimer.current);
+    };
+  }, []);
+
+  const startCooldown = (seconds: number) => {
+    setCooldown(seconds);
+    if (cooldownTimer.current) clearInterval(cooldownTimer.current);
+    cooldownTimer.current = setInterval(() => {
+      setCooldown((c) => {
+        if (c <= 1) {
+          if (cooldownTimer.current) clearInterval(cooldownTimer.current);
+          return 0;
+        }
+        return c - 1;
+      });
+    }, 1000);
+  };
+
+  const onTestPush = async () => {
+    if (!channelKey.trim()) {
+      setTestStatus("error");
+      setTestMessage("请先填写渠道 Key");
+      return;
+    }
+    if (cooldown > 0) return;
+    setTestStatus("sending");
+    setTestMessage(null);
+    try {
+      const resp = await fetch("/api/auth/test-push", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ channel, channelKey }),
+      });
+      const data = await resp.json();
+      if (!data.ok) {
+        setTestStatus("error");
+        setTestMessage(data.error || "推送失败");
+        // 429 时按后端提示的秒数倒计时
+        if (resp.status === 429) {
+          const match = (data.error || "").match(/(\d+)\s*秒/);
+          if (match) startCooldown(parseInt(match[1], 10));
+          else startCooldown(30);
+        }
+        return;
+      }
+      setTestStatus("success");
+      setTestMessage(`已发送,请检查您的 ${channel === "serverchan" ? "Sever酱 微信" : "Bark App"}`);
+      startCooldown(30);
+    } catch (err) {
+      setTestStatus("error");
+      setTestMessage(err instanceof Error ? err.message : "网络错误");
+    }
+  };
 
   const onSendCode = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -136,12 +199,46 @@ export default function LoginPage() {
               <input
                 type="text"
                 value={channelKey}
-                onChange={(e) => setChannelKey(e.target.value)}
+                onChange={(e) => {
+                  setChannelKey(e.target.value);
+                  if (testStatus !== "idle") {
+                    setTestStatus("idle");
+                    setTestMessage(null);
+                  }
+                }}
                 placeholder={channel === "serverchan" ? "SCT2xxxxxxxx" : "https://api.day.app/xxx"}
                 required
                 autoComplete="off"
                 className="w-full px-3.5 py-2.5 rounded-lg border border-slate-300 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 outline-none transition font-mono text-sm"
               />
+
+              {/* 测试推送按钮 + 状态 */}
+              <div className="mt-2 flex items-center gap-2 flex-wrap">
+                <button
+                  type="button"
+                  onClick={onTestPush}
+                  disabled={testStatus === "sending" || cooldown > 0}
+                  className="px-3 py-1.5 text-xs rounded-md border border-slate-300 text-slate-700 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                >
+                  {testStatus === "sending"
+                    ? "发送中..."
+                    : cooldown > 0
+                    ? `请稍候 (${cooldown}s)`
+                    : "测试推送"}
+                </button>
+                {testStatus === "success" && testMessage && (
+                  <span className="text-xs text-emerald-700 flex items-center gap-1">
+                    <span>✅</span>
+                    <span>{testMessage}</span>
+                  </span>
+                )}
+                {testStatus === "error" && testMessage && (
+                  <span className="text-xs text-rose-700 flex items-center gap-1">
+                    <span>❌</span>
+                    <span>{testMessage}</span>
+                  </span>
+                )}
+              </div>
             </div>
 
             <button

@@ -12,6 +12,7 @@ Giffgaff SIM 卡如果长期不"报号"(porting / keeping active)会被回收。
 2. 报号后用户通过网页自行更新保号日期,系统按新日期重新计时。
 3. 管理员在后台维护号码库、查看全量数据、编辑提醒文案。
 4. **用户输入号码支持模糊匹配**:用户输入 `07724 215611`(可带空格)也能匹配到完整号 `07724215611`,只要后 6 位匹配即可。
+5. **测试推送按钮**:用户填完渠道 key 后,提供一个"测试"按钮,立刻发一条测试消息到用户的 Sever酱 / Bark,验证配置是否正确。不消耗验证码、不写库,纯推送测试。
 
 ## 2. 核心业务流程
 
@@ -251,6 +252,7 @@ model VerificationCode {
 | GET  | `/help/bark` | Bark 开通教程 |
 | GET  | `/login` | 登录页 |
 | POST | `/api/auth/send-code` | 发送验证码。Body: `{ simNumber, channel, channelKey }`(支持带空格格式,服务端做后 6 位匹配) |
+| POST | `/api/auth/test-push` | 测试推送(不发验证码,纯验证渠道 key 是否配对)。Body: `{ channel, channelKey }` |
 | POST | `/api/auth/verify` | 校验验证码。Body: `{ simNumber, code }`,成功后种 session cookie 绑定到对应 sim |
 | POST | `/api/auth/logout` | 登出 |
 | GET  | `/me` | 用户主页(需登录),展示绑定 sim(完整号)+ 操作 |
@@ -292,6 +294,7 @@ model VerificationCode {
 - 手机号输入框
 - 渠道选择 radio:Server酱 / Bark,**每个选项右侧带一个"如何获取?"小问号图标**,点击展开教程弹窗(见 §7.7)
 - key 输入框(Sever酱 = SendKey,Bark = 完整 URL),下方一行灰色提示"还没注册?查看教程"
+- **"测试推送"按钮**(在"发送验证码"旁边)— 点击后立刻调用 `POST /api/auth/test-push` 推一条测试消息,验证 key 是否配对。带简单限流(同一 IP 每 30 秒最多 1 次)。成功 / 失败状态在按钮旁显示。
 - "发送验证码"按钮 → 收到后展开验证码输入框
 - 验证码输入框 + "登录"按钮
 
@@ -497,3 +500,4 @@ V1 阶段不强制 TDD,但每个核心模块要有最小可运行验证:
 **变更日志**
 - 2026-06-21: 初稿
 - 2026-06-21: 补丁 1 - 补加模糊匹配(后 6 位匹配 sim);调整 User 模型,移除 `phoneNumber`,增加 `simLookupKey`;调整登录 API Body 字段 `phoneNumber → simNumber`;补加部署形态(用 Vercel Neon 集成)
+- 2026-06-21: 补丁 2 - 增加"测试推送"功能:登录页加"测试"按钮 + 新增 `POST /api/auth/test-push` API(纯验证渠道 key,不消耗验证码)+ 简单 IP 限流(30s/次)
