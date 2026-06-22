@@ -1,11 +1,12 @@
 // 卡密兑换核心逻辑：事务 + 幂等
 //
-// 客户拿到 unbound 卡密后，提交手机号 + 激活日期。
-// 系统创建 sim、user，标记卡密已用，自动登录。
+// 客户拿到 unbound 卡密后，提交手机号 + 激活日期 + 设置密码。
+// 系统创建 sim、user（带密码哈希），标记卡密已用，自动登录。
 //
-// 卡密本身就是凭据（谁拿到谁能兑换），跟现有 sim 末 6 位登录的"安全模型"一致。
+// 卡密本身就是"一次性激活凭证"，兑换后用手机号+密码登录。
 import { prisma } from "./db";
 import { normalizeCardCode } from "./card-key";
+import { hashPassword } from "./auth";
 import type { Prisma } from "./generated/prisma/client";
 
 export type RedeemInput = {
@@ -15,6 +16,8 @@ export type RedeemInput = {
   phoneNumber: string;
   /** 客户自己的激活日期 (yyyy-MM-dd) */
   activatedAt: string;
+  /** 客户自己设置的登录密码（明文，函数内哈希） */
+  password: string;
 };
 
 export type RedeemResult =
@@ -32,6 +35,7 @@ export type RedeemResult =
         | "ALREADY_USED" // 卡密已兑换
         | "INVALID_PHONE" // 手机号格式错
         | "INVALID_DATE" // 日期格式错
+        | "PASSWORD_TOO_SHORT" // 密码太短
         | "PHONE_TAKEN"; // 手机号已被绑定
     };
 
@@ -88,6 +92,9 @@ export async function redeemCard(
   if (!isValidPhone(input.phoneNumber)) {
     return { ok: false, error: "INVALID_PHONE" };
   }
+  if (typeof input.password !== "string" || input.password.length < 8) {
+    return { ok: false, error: "PASSWORD_TOO_SHORT" };
+  }
   const parsed = parseDate(input.activatedAt);
   if (!parsed.ok) return { ok: false, error: "INVALID_DATE" };
 
@@ -99,6 +106,9 @@ export async function redeemCard(
   if (existingSim) {
     return { ok: false, error: "PHONE_TAKEN" };
   }
+
+  // 哈希密码
+  const passwordHash = await hashPassword(input.password);
 
   // 创建 sim
   const sim = await db.sim.create({
@@ -117,6 +127,7 @@ export async function redeemCard(
       simLookupKey: lookupKey,
       channel: "serverchan",
       channelKey: "",
+      passwordHash,
     },
   });
 

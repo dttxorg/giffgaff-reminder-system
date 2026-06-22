@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/db";
-import { verifyPassword, ensureDefaultAdmin } from "@/lib/auth";
+import { verifyPassword } from "@/lib/auth";
+import { ensureDefaultAdmin } from "@/lib/admin-bootstrap";
 import { createAdminSession } from "@/lib/session";
 
 const BodySchema = z.object({

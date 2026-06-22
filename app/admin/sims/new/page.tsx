@@ -8,18 +8,23 @@ export default function NewSimPage() {
   const [phoneNumber, setPhoneNumber] = useState("");
   const [activatedAt, setActivatedAt] = useState(new Date().toISOString().slice(0, 10));
   const [status, setStatus] = useState<"active" | "paused">("active");
+  const [initialPassword, setInitialPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
+    if (initialPassword.length < 8) {
+      setError("初始密码至少 8 位");
+      return;
+    }
     setLoading(true);
     try {
       const resp = await fetch("/api/admin/sims", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ phoneNumber, activatedAt, status }),
+        body: JSON.stringify({ phoneNumber, activatedAt, status, initialPassword }),
       });
       const data = await resp.json();
       if (!data.ok) {
@@ -32,6 +37,15 @@ export default function NewSimPage() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const generatePassword = () => {
+    const chars = "23456789ABCDEFGHJKMNPQRSTWXYZabcdefghjkmnpqrstwxyz";
+    let s = "";
+    for (let i = 0; i < 12; i++) {
+      s += chars[Math.floor(Math.random() * chars.length)];
+    }
+    setInitialPassword(s);
   };
 
   return (
@@ -78,7 +92,35 @@ export default function NewSimPage() {
           </select>
         </div>
 
-        <div className="flex gap-2">
+        <div>
+          <label className="block text-sm font-medium mb-1.5">
+            客户初始登录密码
+          </label>
+          <div className="flex gap-2">
+            <input
+              type="text"
+              value={initialPassword}
+              onChange={(e) => setInitialPassword(e.target.value)}
+              placeholder="至少 8 位"
+              required
+              minLength={8}
+              autoComplete="off"
+              className="flex-1 px-3.5 py-2.5 rounded-lg border border-slate-300 font-mono focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 outline-none"
+            />
+            <button
+              type="button"
+              onClick={generatePassword}
+              className="px-3 py-2 rounded-lg border border-slate-300 text-slate-700 text-sm hover:bg-slate-50 whitespace-nowrap"
+            >
+              随机生成
+            </button>
+          </div>
+          <p className="text-xs text-slate-500 mt-1.5">
+            请通过安全渠道（线下/加密消息）告知客户,客户首次登录后可在「设置」里自行修改
+          </p>
+        </div>
+
+        <div className="flex gap-2 pt-2">
           <button
             type="submit"
             disabled={loading}

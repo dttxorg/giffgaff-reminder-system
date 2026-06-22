@@ -7,6 +7,7 @@ import Link from "next/link";
 export default function LoginPage() {
   const router = useRouter();
   const [simNumber, setSimNumber] = useState("");
+  const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -18,7 +19,7 @@ export default function LoginPage() {
       const resp = await fetch("/api/auth/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ simNumber }),
+        body: JSON.stringify({ simNumber, password }),
       });
       const data = await resp.json();
       if (!data.ok) {
@@ -40,7 +41,7 @@ export default function LoginPage() {
       <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 sm:p-8">
         <h1 className="text-2xl font-bold mb-1">登录</h1>
         <p className="text-slate-600 text-sm mb-6">
-          输入您的 giffgaff 号码即可登录。第一次登录后会被引导设置通知渠道。
+          输入您的 giffgaff 号码和登录密码。第一次登录后会被引导设置通知渠道。
         </p>
 
         {error && (
@@ -60,13 +61,25 @@ export default function LoginPage() {
               onChange={(e) => setSimNumber(e.target.value)}
               placeholder="如 07724 215611"
               required
-              autoFocus
               autoComplete="off"
               className="w-full px-3.5 py-2.5 rounded-lg border border-slate-300 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 outline-none transition"
             />
             <p className="text-xs text-slate-500 mt-1">
               支持带空格 / 横线,系统按后 6 位匹配
             </p>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium mb-1.5">登录密码</label>
+            <input
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="管理员给您的初始密码"
+              required
+              autoComplete="current-password"
+              className="w-full px-3.5 py-2.5 rounded-lg border border-slate-300 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 outline-none transition"
+            />
           </div>
 
           <button
@@ -79,10 +92,13 @@ export default function LoginPage() {
         </form>
 
         <div className="mt-4 p-3 rounded-lg bg-slate-50 border border-slate-100 text-xs text-slate-500">
-          <p className="mb-1">还没在系统里?</p>
+          <p className="mb-1">还没账号?</p>
           <p>
-            请联系管理员把您的 giffgaff 号码录入号码库,录入后即可登录。
-            登录后会引导您设置 Sever酱 / Bark 通知渠道。
+            持有卡密?在{" "}
+            <Link href="/redeem" className="text-indigo-600 hover:underline">
+              兑换页
+            </Link>{" "}
+            填卡密并设置密码开通。没有卡密请联系管理员录入。
           </p>
         </div>
       </div>

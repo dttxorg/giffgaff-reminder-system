@@ -14,12 +14,12 @@ datasource db {
 // 号码库（giffgaff sim 卡）
 model Sim {
   id           Int       @id @default(autoincrement())
-  phoneNumber  String    @unique           // 完整号，如 07724215611（只存数字）
-  activatedAt  DateTime                    // 激活日期（保号起算日）
-  lastPortedAt DateTime?                   // 上次保号日期，NULL = 还没保过号
-  status       SimStatus  @default(active)  // active / paused
-  createdAt    DateTime   @default(now())
-  updatedAt    DateTime   @updatedAt
+  phoneNumber  String    @unique // 完整号，如 07724215611（只存数字）
+  activatedAt  DateTime // 激活日期（保号起算日）
+  lastPortedAt DateTime? // 上次保号日期，NULL = 还没保过号
+  status       SimStatus @default(active) // active / paused
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
 
   user      User?
   reminders ReminderSent[]
@@ -35,13 +35,18 @@ enum SimStatus {
 
 // 用户档案（一个 user 绑定一个 sim）
 model User {
-  id           Int      @id @default(autoincrement())
-  simId        Int      @unique             // 1:1 绑定 sim
-  simLookupKey String                       // 冗余存后 6 位（用于审计/反查）
-  channel      Channel                      // serverchan / bark
-  channelKey   String                       // SendKey 或 Bark URL（明文存 V1）
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  id               Int       @id @default(autoincrement())
+  simId            Int       @unique // 1:1 绑定 sim
+  simLookupKey     String // 冗余存后 6 位（用于审计/反查）
+  channel          Channel // serverchan / bark
+  channelKey       String // SendKey 或 Bark URL（明文存 V1）
+  // 登录密码：scrypt 哈希（null = 旧用户未升级，需管理员重置）
+  passwordHash     String?
+  // 登录限流：连续失败 5 次锁 15 分钟
+  failedLoginCount Int       @default(0)
+  lockedUntil      DateTime?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
 
   sim       Sim            @relation(fields: [simId], references: [id], onDelete: Cascade)
   reminders ReminderSent[]
@@ -61,8 +66,8 @@ model ReminderSent {
   id           Int        @id @default(autoincrement())
   userId       Int
   simId        Int
-  dayOffset    Int                           // 提醒那天的 day_offset（170/178/179/180）
-  bucket       Int                           // 0-indexed bucket
+  dayOffset    Int // 提醒那天的 day_offset（170/178/179/180）
+  bucket       Int // 0-indexed bucket
   sentAt       DateTime   @default(now())
   status       SendStatus @default(success)
   errorMessage String?
@@ -70,7 +75,7 @@ model ReminderSent {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
   sim  Sim  @relation(fields: [simId], references: [id], onDelete: Cascade)
 
-  @@unique([simId, dayOffset, bucket])  // 同号同日同 bucket 唯一 → 幂等
+  @@unique([simId, dayOffset, bucket]) // 同号同日同 bucket 唯一 → 幂等
   @@index([sentAt])
 }
 
@@ -81,21 +86,21 @@ enum SendStatus {
 
 // 系统设置（KV 表）
 model Setting {
-  key       String   @id                   // 如 "reminder_template"
-  value     String                         // 模板字符串
+  key       String   @id // 如 "reminder_template"
+  value     String // 模板字符串
   updatedAt DateTime @updatedAt
 }
 
 // 验证码
 model VerificationCode {
-  id          Int      @id @default(autoincrement())
-  simLookupKey String                         // 后 6 位（与 simLookupKey 对齐）
-  code        String                         // 6 位数字
-  channel     Channel
-  channelKey  String                         // 验证码发送到的目标
-  expiresAt   DateTime                       // 5 分钟过期
-  used        Boolean  @default(false)
-  createdAt   DateTime @default(now())
+  id           Int      @id @default(autoincrement())
+  simLookupKey String // 后 6 位（与 simLookupKey 对齐）
+  code         String // 6 位数字
+  channel      Channel
+  channelKey   String // 验证码发送到的目标
+  expiresAt    DateTime // 5 分钟过期
+  used         Boolean  @default(false)
+  createdAt    DateTime @default(now())
 
   @@index([simLookupKey, code])
 }
@@ -104,7 +109,7 @@ model VerificationCode {
 model AdminUser {
   id           Int      @id @default(autoincrement())
   username     String   @unique
-  passwordHash String                     // bcrypt 哈希
+  passwordHash String // bcrypt 哈希
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 }
@@ -113,7 +118,7 @@ model AdminUser {
 model AdminSession {
   id        String   @id @default(uuid())
   createdAt DateTime @default(now())
-  expiresAt DateTime                       // 7 天后过期
+  expiresAt DateTime // 7 天后过期
 }
 
 // 用户会话
@@ -132,16 +137,16 @@ model UserSession {
 // 空模板卡密，客户兑换时填手机号 + 激活日期 + 推送渠道
 // 一次性使用（used=true 后不能再用），永久有效（expiresAt = null）
 model CardKey {
-  id        Int       @id @default(autoincrement())
-  code      String    @unique                  // XXXX-XXXX-XXXX-XXXX
-  notes     String?                            // 管理员备注（档位/批次等）
+  id    Int     @id @default(autoincrement())
+  code  String  @unique // XXXX-XXXX-XXXX-XXXX
+  notes String? // 管理员备注（档位/批次等）
 
   used      Boolean   @default(false)
   usedAt    DateTime?
-  usedSimId Int?      @unique                  // 兑换后绑定的 sim（双保险防重复）
+  usedSimId Int?      @unique // 兑换后绑定的 sim（双保险防重复）
 
   createdAt DateTime  @default(now())
-  expiresAt DateTime?                          // 永久 = null
+  expiresAt DateTime? // 永久 = null
 
   @@index([used])
   @@index([createdAt])

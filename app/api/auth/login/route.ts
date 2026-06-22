@@ -3,24 +3,25 @@ import { z } from "zod";
 import { prisma } from "@/lib/db";
 import { toLookupKey } from "@/lib/phone";
 import { createUserSession } from "@/lib/session";
+import { verifyPassword } from "@/lib/auth";
 
 const BodySchema = z.object({
   simNumber: z.string().min(1, "请输入 giffgaff 号码"),
+  password: z.string().min(1, "请输入密码"),
 });
+
+// 登录限流参数
+const MAX_FAILED_ATTEMPTS = 5;
+const LOCK_DURATION_MS = 15 * 60 * 1000; // 15 分钟
 
 /**
  * POST /api/auth/login
- * 无验证码登录：凭 sim 号码后 6 位匹配 → 自动登录
+ * 手机号末 6 位 + 密码登录
  *
- * 流程：
- * 1. 归一化号码 → 取后 6 位
- * 2. 查 sim
- * 3. 找/建 user（channel 字段可能为空 → /me 引导设置）
- * 4. 种 session cookie
- *
- * 注意：本路由不做密码/验证码校验。sim 号码本身被视为凭据。
- * 安全性等价于「任何人知道 sim 号码都能进 /me」，
- * 但 /me 只能看自己的 sim 信息，/p/[simId] 公开可改保号日期的设计从 V1 就是这样。
+ * 安全设计：
+ * - 错 5 次锁账号 15 分钟（DB 持久化，serverless 多实例安全）
+ * - 旧 user（passwordHash = NULL）拒绝登录，提示联系管理员重置
+ * - 查 sim 时末 6 位匹配，结果取 id 最小（双保险：业务上 1:1）
  */
 export async function POST(req: Request) {
   let body: unknown;
@@ -39,45 +40,80 @@ export async function POST(req: Request) {
     return NextResponse.json({ ok: false, error: "号码至少 6 位数字" }, { status: 400 });
   }
 
-  // 模糊匹配 sim
-  const sims = await prisma.sim.findMany({
+  // 模糊匹配 sim（最多取 1 条；id 最小做兜底）
+  const sim = await prisma.sim.findFirst({
     where: { phoneNumber: { endsWith: lookupKey }, status: "active" },
     orderBy: { id: "asc" },
   });
-  if (sims.length === 0) {
+  if (!sim) {
     return NextResponse.json(
       { ok: false, error: "未找到您的号码，请联系管理员添加" },
       { status: 404 }
     );
   }
-  if (sims.length > 1) {
-    // eslint-disable-next-line no-console
-    console.warn(`[auth] 末 6 位 ${lookupKey} 匹配到 ${sims.length} 个 sim,自动取 id 最小`);
-  }
-  const sim = sims[0];
 
-  // 找/建 user（不设 channel，留空让用户去 /me/settings 设）
-  let user = await prisma.user.findUnique({ where: { simId: sim.id } });
+  // 找 user
+  const user = await prisma.user.findUnique({ where: { simId: sim.id } });
   if (!user) {
-    // eslint-disable-next-line no-console
-    console.log(`[auth] 新用户绑定 sim=${sim.id} phoneTail=${lookupKey}`);
-    user = await prisma.user.create({
-      data: {
-        simId: sim.id,
-        simLookupKey: lookupKey,
-        // channel 留默认值。User 模型上 channel 是 enum 必填，所以给个占位值
-        // 但占位值不会真发推送；/me 检测到 channelKey 为空时引导用户设置
-        channel: "serverchan",
-        channelKey: "",
+    return NextResponse.json(
+      { ok: false, error: "账号未初始化，请联系管理员" },
+      { status: 404 }
+    );
+  }
+
+  // 检查是否锁定
+  if (user.lockedUntil && user.lockedUntil > new Date()) {
+    const minutesLeft = Math.ceil((user.lockedUntil.getTime() - Date.now()) / 60000);
+    return NextResponse.json(
+      { ok: false, error: `账号已锁定，请 ${minutesLeft} 分钟后再试` },
+      { status: 429 }
+    );
+  }
+
+  // 旧 user（passwordHash 为 null）：必须管理员在后台重置密码
+  if (!user.passwordHash) {
+    return NextResponse.json(
+      {
+        ok: false,
+        error: "账号未升级密码登录，请联系管理员在后台重置密码",
       },
-    });
-  } else if (user.simLookupKey !== lookupKey) {
-    // 用户用不同的 sim 号码登录过（理论上 1:1，不会发生但保险起见）
+      { status: 401 }
+    );
+  }
+
+  // 验证密码
+  const ok = await verifyPassword(parsed.data.password, user.passwordHash);
+  if (!ok) {
+    const newCount = user.failedLoginCount + 1;
+    const shouldLock = newCount >= MAX_FAILED_ATTEMPTS;
     await prisma.user.update({
       where: { id: user.id },
-      data: { simLookupKey: lookupKey },
+      data: {
+        failedLoginCount: shouldLock ? 0 : newCount,
+        lockedUntil: shouldLock ? new Date(Date.now() + LOCK_DURATION_MS) : null,
+      },
     });
+    if (shouldLock) {
+      return NextResponse.json(
+        {
+          ok: false,
+          error: `密码错误次数过多，账号已锁定 ${LOCK_DURATION_MS / 60000} 分钟`,
+        },
+        { status: 429 }
+      );
+    }
+    const remaining = MAX_FAILED_ATTEMPTS - newCount;
+    return NextResponse.json(
+      { ok: false, error: `密码错误，还可尝试 ${remaining} 次` },
+      { status: 401 }
+    );
   }
+
+  // 登录成功：清空失败计数
+  await prisma.user.update({
+    where: { id: user.id },
+    data: { failedLoginCount: 0, lockedUntil: null },
+  });
 
   await createUserSession(user.id);
   return NextResponse.json({

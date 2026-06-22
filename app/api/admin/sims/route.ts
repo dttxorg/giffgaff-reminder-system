@@ -2,13 +2,26 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/db";
 import { getAdminSession } from "@/lib/session";
+import { hashPassword } from "@/lib/auth";
 
 const BodySchema = z.object({
   phoneNumber: z.string().min(6),
   activatedAt: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
   status: z.enum(["active", "paused"]).optional(),
+  // A 场景：管理员录 sim 时一并给客户设置初始密码
+  // 管理员会把这个密码转告客户，客户首次登录后可去 /me/settings 自行修改
+  initialPassword: z.string().min(8, "初始密码至少 8 位"),
 });
 
+/**
+ * POST /api/admin/sims
+ * A 场景：管理员录 sim + 同步创建 user（含初始密码）
+ *
+ * 业务流：
+ * 1. 创建 sim
+ * 2. 创建 user（passwordHash 哈希初始密码，failedLoginCount=0）
+ * 3. 客户访问 /login → 输手机号 + 初始密码 → 进入 /me
+ */
 export async function POST(req: Request) {
   if (!(await getAdminSession())) {
     return NextResponse.json({ ok: false, error: "未授权" }, { status: 401 });
@@ -36,12 +49,25 @@ export async function POST(req: Request) {
       });
       return NextResponse.json({ ok: true, sim: updated, created: false });
     }
-    const created = await prisma.sim.create({
-      data: {
-        phoneNumber: phone,
-        activatedAt,
-        status: parsed.data.status || "active",
-      },
+    const passwordHash = await hashPassword(parsed.data.initialPassword);
+    const created = await prisma.$transaction(async (tx) => {
+      const sim = await tx.sim.create({
+        data: {
+          phoneNumber: phone,
+          activatedAt,
+          status: parsed.data.status || "active",
+        },
+      });
+      await tx.user.create({
+        data: {
+          simId: sim.id,
+          simLookupKey: phone.slice(-6),
+          channel: "serverchan",
+          channelKey: "",
+          passwordHash,
+        },
+      });
+      return sim;
     });
     return NextResponse.json({ ok: true, sim: created, created: true });
   } catch (e) {

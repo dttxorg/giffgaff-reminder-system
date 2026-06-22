@@ -283,6 +283,126 @@ export function MeSettingsClient({
           </Link>
         </div>
       </div>
+
+      <PasswordSection />
+    </div>
+  );
+}
+
+function PasswordSection() {
+  const [oldPassword, setOldPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [newPasswordConfirm, setNewPasswordConfirm] = useState("");
+  const [status, setStatus] = useState<"idle" | "saving" | "success" | "error">(
+    "idle"
+  );
+  const [message, setMessage] = useState<string | null>(null);
+
+  const newPwValid = newPassword.length >= 8;
+  const match = newPassword === newPasswordConfirm;
+  const canSubmit =
+    oldPassword.length > 0 && newPwValid && match && status !== "saving";
+
+  const onSubmit = async () => {
+    if (!canSubmit) return;
+    setStatus("saving");
+    setMessage(null);
+    try {
+      const resp = await fetch("/api/me/password", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ oldPassword, newPassword }),
+      });
+      const data = await resp.json();
+      if (!data.ok) {
+        setStatus("error");
+        setMessage(data.error || "修改失败");
+        return;
+      }
+      setStatus("success");
+      setMessage("密码已更新");
+      setOldPassword("");
+      setNewPassword("");
+      setNewPasswordConfirm("");
+    } catch (e) {
+      setStatus("error");
+      setMessage(e instanceof Error ? e.message : "网络错误");
+    }
+  };
+
+  return (
+    <div className="mt-6 bg-white rounded-2xl shadow-sm border border-slate-200 p-6 sm:p-8">
+      <h2 className="text-lg font-semibold mb-1">修改登录密码</h2>
+      <p className="text-xs text-slate-500 mb-4">
+        建议把管理员给的初始密码改为您自己熟悉的密码
+      </p>
+
+      <div className="space-y-3">
+        <div>
+          <label className="block text-sm font-medium mb-1.5">当前密码</label>
+          <input
+            type="password"
+            value={oldPassword}
+            onChange={(e) => setOldPassword(e.target.value)}
+            autoComplete="current-password"
+            className="w-full px-3.5 py-2.5 rounded-lg border border-slate-300 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 outline-none"
+          />
+        </div>
+        <div>
+          <label className="block text-sm font-medium mb-1.5">新密码</label>
+          <input
+            type="password"
+            value={newPassword}
+            onChange={(e) => setNewPassword(e.target.value)}
+            placeholder="至少 8 位"
+            autoComplete="new-password"
+            minLength={8}
+            className="w-full px-3.5 py-2.5 rounded-lg border border-slate-300 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 outline-none"
+          />
+        </div>
+        <div>
+          <label className="block text-sm font-medium mb-1.5">
+            再次输入新密码
+          </label>
+          <input
+            type="password"
+            value={newPasswordConfirm}
+            onChange={(e) => setNewPasswordConfirm(e.target.value)}
+            autoComplete="new-password"
+            minLength={8}
+            className={`w-full px-3.5 py-2.5 rounded-lg border outline-none ${
+              newPasswordConfirm && !match
+                ? "border-rose-300 focus:border-rose-500 focus:ring-2 focus:ring-rose-100"
+                : "border-slate-300 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
+            }`}
+          />
+          {newPasswordConfirm && !match && (
+            <p className="text-xs text-rose-600 mt-1">两次密码不一致</p>
+          )}
+        </div>
+      </div>
+
+      {message && (
+        <div
+          className={`mt-4 p-3 rounded-lg text-sm ${
+            status === "success"
+              ? "bg-emerald-50 border border-emerald-200 text-emerald-700"
+              : "bg-rose-50 border border-rose-200 text-rose-700"
+          }`}
+        >
+          {message}
+        </div>
+      )}
+
+      <div className="mt-5 flex gap-2">
+        <button
+          onClick={onSubmit}
+          disabled={!canSubmit}
+          className="px-5 py-2.5 rounded-lg bg-slate-900 text-white text-sm font-medium hover:bg-slate-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+        >
+          {status === "saving" ? "保存中..." : "更新密码"}
+        </button>
+      </div>
     </div>
   );
 }

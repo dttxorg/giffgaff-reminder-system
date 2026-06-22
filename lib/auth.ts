@@ -1,6 +1,6 @@
-// 鉴权工具：管理员密码校验 + 环境变量读取
+// 鉴权工具：密码哈希/校验（纯函数，不依赖 DB）
+// ensureDefaultAdmin 在 ./admin-bootstrap.ts 里（依赖 DB）
 import { randomBytes, scrypt, timingSafeEqual } from "node:crypto";
-import { prisma } from "./db";
 
 const SCRYPT_N = 16384;
 const SCRYPT_r = 8;
@@ -30,33 +30,29 @@ export async function verifyPassword(password: string, stored: string): Promise<
   const p = parseInt(parts[3], 10);
   const salt = Buffer.from(parts[4], "base64");
   const expected = Buffer.from(parts[5], "base64");
+  if (
+    !Number.isFinite(N) ||
+    !Number.isFinite(r) ||
+    !Number.isFinite(p) ||
+    salt.length === 0 ||
+    expected.length === 0
+  ) {
+    return false;
+  }
   return new Promise((resolve) => {
-    scrypt(password, salt, expected.length, { N, r, p }, (err, derivedKey) => {
-      if (err) return resolve(false);
-      try {
-        resolve(timingSafeEqual(derivedKey, expected));
-      } catch {
-        resolve(false);
-      }
-    });
+    try {
+      scrypt(password, salt, expected.length, { N, r, p }, (err, derivedKey) => {
+        if (err) return resolve(false);
+        try {
+          resolve(timingSafeEqual(derivedKey, expected));
+        } catch {
+          resolve(false);
+        }
+      });
+    } catch {
+      resolve(false);
+    }
   });
-}
-
-/**
- * 确保默认管理员账号存在
- * V1 单管理员模式：环境变量 ADMIN_USERNAME / ADMIN_PASSWORD 决定首登账号
- * 如未设置，使用默认 admin / admin123（生产应改）
- */
-export async function ensureDefaultAdmin(): Promise<void> {
-  const username = process.env.ADMIN_USERNAME || "admin";
-  const password = process.env.ADMIN_PASSWORD || "admin123";
-  const existing = await prisma.adminUser.findUnique({ where: { username } });
-  if (existing) return;
-  const passwordHash = await hashPassword(password);
-  await prisma.adminUser.create({
-    data: { username, passwordHash },
-  });
-  console.log(`[admin] 已创建默认管理员：${username}`);
 }
 
 /**

@@ -52,7 +52,8 @@ export function RedeemClient({ initialCode }: RedeemClientProps) {
   async function doRedeem(
     code: string,
     phone: string,
-    date: string
+    date: string,
+    password: string
   ) {
     setPhase({ kind: "redeeming" });
     try {
@@ -63,6 +64,7 @@ export function RedeemClient({ initialCode }: RedeemClientProps) {
           code,
           phoneNumber: normalizePhone(phone),
           activatedAt: date,
+          password,
         }),
       });
       const data = await resp.json();
@@ -103,7 +105,9 @@ export function RedeemClient({ initialCode }: RedeemClientProps) {
       {phase.kind === "form" && (
         <FormPhase
           notes={phase.notes}
-          onSubmit={(phone, date) => doRedeem(phase.code, phone, date)}
+          onSubmit={(phone, date, password) =>
+            doRedeem(phase.code, phone, date, password)
+          }
           onBack={() => setPhase({ kind: "input" })}
         />
       )}
@@ -175,21 +179,26 @@ function FormPhase({
   onBack,
 }: {
   notes: string | null;
-  onSubmit: (phone: string, date: string) => void;
+  onSubmit: (phone: string, date: string, password: string) => void;
   onBack: () => void;
 }) {
   const [phone, setPhone] = useState("");
   const [date, setDate] = useState(() => todayLocalISODate());
+  const [password, setPassword] = useState("");
+  const [passwordConfirm, setPasswordConfirm] = useState("");
 
   const validPhone = normalizePhone(phone).length >= 6;
   const validDate = /^\d{4}-\d{2}-\d{2}$/.test(date);
+  const validPassword = password.length >= 8;
+  const passwordsMatch = password === passwordConfirm;
+  const canSubmit = validPhone && validDate && validPassword && passwordsMatch;
 
   return (
     <form
       onSubmit={(e) => {
         e.preventDefault();
-        if (!validPhone || !validDate) return;
-        onSubmit(phone, date);
+        if (!canSubmit) return;
+        onSubmit(phone, date, password);
       }}
       className="space-y-4"
     >
@@ -198,7 +207,7 @@ function FormPhase({
           ✓ 卡密有效
         </div>
         <div className="text-xs text-emerald-700">
-          请填写您的 SIM 卡信息和激活日期完成绑定
+          请填写您的 SIM 卡信息并设置登录密码完成绑定
         </div>
       </div>
 
@@ -237,6 +246,42 @@ function FormPhase({
         </p>
       </div>
 
+      <div className="pt-2 border-t border-slate-100">
+        <label className="block text-sm font-medium mb-1.5">
+          设置登录密码
+        </label>
+        <input
+          type="password"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          placeholder="至少 8 位"
+          autoComplete="new-password"
+          required
+          minLength={8}
+          className="w-full px-3.5 py-2.5 rounded-lg border border-slate-300 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 outline-none"
+        />
+        <input
+          type="password"
+          value={passwordConfirm}
+          onChange={(e) => setPasswordConfirm(e.target.value)}
+          placeholder="再输一遍"
+          autoComplete="new-password"
+          required
+          minLength={8}
+          className={`mt-2 w-full px-3.5 py-2.5 rounded-lg border outline-none ${
+            passwordConfirm && !passwordsMatch
+              ? "border-rose-300 focus:border-rose-500 focus:ring-2 focus:ring-rose-100"
+              : "border-slate-300 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
+          }`}
+        />
+        <p className="text-xs text-slate-500 mt-1.5">
+          请妥善保存,忘记后需联系管理员重置
+        </p>
+        {passwordConfirm && !passwordsMatch && (
+          <p className="text-xs text-rose-600 mt-1">两次密码不一致</p>
+        )}
+      </div>
+
       <div className="text-xs text-slate-500 bg-slate-50 rounded p-3 border border-slate-200">
         兑换后将自动登录,绑定推送渠道后即可接收保号提醒
       </div>
@@ -244,7 +289,7 @@ function FormPhase({
       <div className="flex gap-2 pt-2">
         <button
           type="submit"
-          disabled={!validPhone || !validDate}
+          disabled={!canSubmit}
           className="flex-1 py-2.5 rounded-lg bg-indigo-600 text-white font-medium hover:bg-indigo-700 disabled:opacity-50 transition-colors"
         >
           兑换并登录
