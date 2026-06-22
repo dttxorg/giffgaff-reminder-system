@@ -1,6 +1,5 @@
 // GET /api/redeem/preview?code=XXXX
-// 预览卡密信息：仅返回 mode + bound 模式的 phoneNumber/activatedAt
-// 不修改任何数据,用于前端表单动态渲染
+// 校验卡密是否可兑换（不修改任何数据）
 import { NextResponse } from "next/server";
 import { normalizeCardCode } from "@/lib/card-key";
 import { prisma } from "@/lib/db";
@@ -25,14 +24,6 @@ export async function GET(req: Request) {
 
   return NextResponse.json({
     ok: true,
-    mode: card.mode,
     notes: card.notes,
-    // bound 模式返回卡密自带的手机号/激活日期
-    ...(card.mode === "bound" && card.phoneNumber && card.activatedAt
-      ? {
-          phoneNumber: card.phoneNumber,
-          activatedAt: card.activatedAt.toISOString().slice(0, 10),
-        }
-      : {}),
   });
 }

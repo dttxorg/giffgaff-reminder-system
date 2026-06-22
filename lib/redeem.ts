@@ -1,4 +1,9 @@
 // 卡密兑换核心逻辑：事务 + 幂等
+//
+// 客户拿到 unbound 卡密后，提交手机号 + 激活日期。
+// 系统创建 sim、user，标记卡密已用，自动登录。
+//
+// 卡密本身就是凭据（谁拿到谁能兑换），跟现有 sim 末 6 位登录的"安全模型"一致。
 import { prisma } from "./db";
 import { normalizeCardCode } from "./card-key";
 import type { Prisma } from "./generated/prisma/client";
@@ -6,10 +11,10 @@ import type { Prisma } from "./generated/prisma/client";
 export type RedeemInput = {
   /** 用户输入的卡密（已归一化为原始 16 字符） */
   rawCode: string;
-  /** unbound 模式必填：客户自己的手机号 */
-  phoneNumber?: string;
-  /** unbound 模式必填：客户自己的激活日期 (yyyy-MM-dd) */
-  activatedAt?: string;
+  /** 客户自己的手机号 */
+  phoneNumber: string;
+  /** 客户自己的激活日期 (yyyy-MM-dd) */
+  activatedAt: string;
 };
 
 export type RedeemResult =
@@ -17,7 +22,6 @@ export type RedeemResult =
       ok: true;
       userId: number;
       simId: number;
-      mode: "bound" | "unbound";
     }
   | {
       ok: false;
@@ -26,16 +30,13 @@ export type RedeemResult =
         | "NOT_FOUND" // 卡密不存在
         | "EXPIRED" // 卡密过期
         | "ALREADY_USED" // 卡密已兑换
-        | "MISSING_PHONE" // unbound 模式缺手机号
-        | "MISSING_DATE" // unbound 模式缺激活日期
-        | "PHONE_TAKEN" // 手机号已被绑定
+        | "INVALID_PHONE" // 手机号格式错
         | "INVALID_DATE" // 日期格式错
-        | "INVALID_PHONE"; // 手机号格式错
+        | "PHONE_TAKEN"; // 手机号已被绑定
     };
 
 /**
  * 校验并解析 yyyy-MM-dd → Date (UTC 0:00)
- * 返回 { ok: true, date } 或 { ok: false }
  */
 function parseDate(input: string): { ok: true; date: Date } | { ok: false } {
   const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(input);
@@ -44,7 +45,6 @@ function parseDate(input: string): { ok: true; date: Date } | { ok: false } {
   if (mo < 1 || mo > 12 || d < 1 || d > 31) return { ok: false };
   const date = new Date(Date.UTC(y, mo - 1, d));
   if (Number.isNaN(date.getTime())) return { ok: false };
-  // 二次校验（避免 2-30 这种假合法）
   if (
     date.getUTCFullYear() !== y ||
     date.getUTCMonth() !== mo - 1 ||
@@ -56,7 +56,7 @@ function parseDate(input: string): { ok: true; date: Date } | { ok: false } {
 }
 
 /**
- * 手机号：归一化后 6-15 位数字
+ * 手机号：6-15 位数字
  */
 function isValidPhone(input: string): boolean {
   return /^\d{6,15}$/.test(input);
@@ -65,10 +65,7 @@ function isValidPhone(input: string): boolean {
 /**
  * 兑换卡密（事务安全）
  *
- * bound 模式：phoneNumber/activatedAt 由卡密自带，忽略 input 里的同名参数
- * unbound 模式：phoneNumber/activatedAt 由调用方传入（来自表单）
- *
- * 成功返回 { ok: true, userId, simId, mode }
+ * 成功返回 { ok: true, userId, simId }
  * 失败返回 { ok: false, error }
  */
 export async function redeemCard(
@@ -88,29 +85,14 @@ export async function redeemCard(
     return { ok: false, error: "EXPIRED" };
   }
 
-  // 解析最终生效的 phoneNumber / activatedAt
-  let phoneNumber: string;
-  let activatedAt: Date;
-
-  if (card.mode === "bound") {
-    if (!card.phoneNumber || !card.activatedAt) {
-      // schema 完整性约束，正常不会发生
-      return { ok: false, error: "INVALID_CODE" };
-    }
-    phoneNumber = card.phoneNumber;
-    activatedAt = card.activatedAt;
-  } else {
-    // unbound
-    if (!input.phoneNumber) return { ok: false, error: "MISSING_PHONE" };
-    if (!input.activatedAt) return { ok: false, error: "MISSING_DATE" };
-    if (!isValidPhone(input.phoneNumber)) {
-      return { ok: false, error: "INVALID_PHONE" };
-    }
-    const parsed = parseDate(input.activatedAt);
-    if (!parsed.ok) return { ok: false, error: "INVALID_DATE" };
-    phoneNumber = input.phoneNumber;
-    activatedAt = parsed.date;
+  if (!isValidPhone(input.phoneNumber)) {
+    return { ok: false, error: "INVALID_PHONE" };
   }
+  const parsed = parseDate(input.activatedAt);
+  if (!parsed.ok) return { ok: false, error: "INVALID_DATE" };
+
+  const phoneNumber = input.phoneNumber;
+  const activatedAt = parsed.date;
 
   // 检查 phoneNumber 是否已被 sim 占用
   const existingSim = await db.sim.findUnique({ where: { phoneNumber } });
@@ -152,6 +134,5 @@ export async function redeemCard(
     ok: true,
     userId: user.id,
     simId: sim.id,
-    mode: card.mode,
   };
 }

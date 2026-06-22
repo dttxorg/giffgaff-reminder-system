@@ -8,9 +8,8 @@ import { createUserSession } from "@/lib/session";
 
 const BodySchema = z.object({
   code: z.string().min(1, "请输入卡密"),
-  // unbound 模式可能传
-  phoneNumber: z.string().optional(),
-  activatedAt: z.string().optional(),
+  phoneNumber: z.string().min(1, "请输入手机号"),
+  activatedAt: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "请输入有效日期"),
 });
 
 const ERROR_MESSAGES: Record<string, string> = {
@@ -18,11 +17,9 @@ const ERROR_MESSAGES: Record<string, string> = {
   NOT_FOUND: "卡密不存在",
   EXPIRED: "卡密已过期",
   ALREADY_USED: "卡密已被兑换,无法重复使用",
-  MISSING_PHONE: "请填写手机号",
-  MISSING_DATE: "请填写激活日期",
-  PHONE_TAKEN: "该手机号已被绑定,请联系管理员",
-  INVALID_DATE: "激活日期格式不正确 (yyyy-MM-dd)",
   INVALID_PHONE: "手机号格式不正确",
+  INVALID_DATE: "激活日期格式不正确 (yyyy-MM-dd)",
+  PHONE_TAKEN: "该手机号已被绑定,请联系管理员",
 };
 
 export async function POST(req: Request) {
@@ -34,7 +31,11 @@ export async function POST(req: Request) {
   }
   const parsed = BodySchema.safeParse(body);
   if (!parsed.success) {
-    return NextResponse.json({ ok: false, error: "参数错误" }, { status: 400 });
+    const issue = parsed.error.issues[0];
+    return NextResponse.json(
+      { ok: false, error: issue?.message || "参数错误" },
+      { status: 400 }
+    );
   }
 
   // 用事务确保 sim/user/cardKey 更新原子性
@@ -59,8 +60,8 @@ export async function POST(req: Request) {
 
   if (!result.ok) {
     const msg = ERROR_MESSAGES[result.error] ?? "兑换失败";
-    // 4xx 让前端能识别
-    const status = result.error === "NOT_FOUND" || result.error === "ALREADY_USED" ? 404 : 400;
+    const status =
+      result.error === "NOT_FOUND" || result.error === "ALREADY_USED" ? 404 : 400;
     return NextResponse.json({ ok: false, error: msg }, { status });
   }
 
@@ -70,7 +71,6 @@ export async function POST(req: Request) {
   return NextResponse.json({
     ok: true,
     redirect: "/me",
-    mode: result.mode,
-    needSetupChannel: true, // 兑换后 channelKey 必空
+    needSetupChannel: true,
   });
 }

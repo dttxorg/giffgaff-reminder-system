@@ -3,17 +3,9 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { formatCardCode } from "@/lib/card-key";
-import { normalizePhone } from "@/lib/phone";
-
-type Mode = "bound" | "unbound";
 
 export function NewCardClient() {
   const router = useRouter();
-  const [mode, setMode] = useState<Mode>("bound");
-  const [phoneNumber, setPhoneNumber] = useState("");
-  const [activatedAt, setActivatedAt] = useState(
-    new Date().toISOString().slice(0, 10)
-  );
   const [count, setCount] = useState(10);
   const [notes, setNotes] = useState("");
 
@@ -27,17 +19,10 @@ export function NewCardClient() {
     setLoading(true);
     setCreated(null);
     try {
-      const payload: Record<string, unknown> = { mode, notes: notes || undefined };
-      if (mode === "bound") {
-        payload.phoneNumber = phoneNumber;
-        payload.activatedAt = activatedAt;
-      } else {
-        payload.count = count;
-      }
       const resp = await fetch("/api/admin/cards", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
+        body: JSON.stringify({ count, notes: notes || undefined }),
       });
       const data = await resp.json();
       if (!data.ok) {
@@ -72,7 +57,7 @@ export function NewCardClient() {
             ))}
           </div>
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 flex-wrap">
           <button
             type="button"
             onClick={() => {
@@ -94,7 +79,6 @@ export function NewCardClient() {
             type="button"
             onClick={() => {
               setCreated(null);
-              setPhoneNumber("");
               setCount(10);
               setNotes("");
             }}
@@ -119,65 +103,18 @@ export function NewCardClient() {
       )}
 
       <div>
-        <label className="block text-sm font-medium mb-1.5">卡密类型</label>
-        <div className="grid grid-cols-2 gap-2">
-          <ModeOption
-            selected={mode === "bound"}
-            onClick={() => setMode("bound")}
-            title="已绑定"
-            desc="需要填写手机号+激活日期"
-          />
-          <ModeOption
-            selected={mode === "unbound"}
-            onClick={() => setMode("unbound")}
-            title="空模板"
-            desc="批量生成,兑换时填写"
-          />
-        </div>
+        <label className="block text-sm font-medium mb-1.5">生成数量</label>
+        <input
+          type="number"
+          value={count}
+          onChange={(e) => setCount(Math.max(1, Math.min(500, Number(e.target.value) || 1)))}
+          min={1}
+          max={500}
+          required
+          className="w-full px-3.5 py-2.5 rounded-lg border border-slate-300 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 outline-none"
+        />
+        <p className="text-xs text-slate-500 mt-1.5">最多 500 张/批</p>
       </div>
-
-      {mode === "bound" ? (
-        <>
-          <div>
-            <label className="block text-sm font-medium mb-1.5">手机号</label>
-            <input
-              type="text"
-              value={phoneNumber}
-              onChange={(e) => setPhoneNumber(e.target.value)}
-              placeholder="07724215611"
-              required
-              className="w-full px-3.5 py-2.5 rounded-lg border border-slate-300 font-mono focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 outline-none"
-            />
-            <p className="text-xs text-slate-500 mt-1.5">
-              归一化后存: {normalizePhone(phoneNumber) || "—"}
-            </p>
-          </div>
-          <div>
-            <label className="block text-sm font-medium mb-1.5">激活日期</label>
-            <input
-              type="date"
-              value={activatedAt}
-              onChange={(e) => setActivatedAt(e.target.value)}
-              required
-              className="w-full px-3.5 py-2.5 rounded-lg border border-slate-300 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 outline-none"
-            />
-          </div>
-        </>
-      ) : (
-        <div>
-          <label className="block text-sm font-medium mb-1.5">生成数量</label>
-          <input
-            type="number"
-            value={count}
-            onChange={(e) => setCount(Math.max(1, Math.min(500, Number(e.target.value) || 1)))}
-            min={1}
-            max={500}
-            required
-            className="w-full px-3.5 py-2.5 rounded-lg border border-slate-300 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 outline-none"
-          />
-          <p className="text-xs text-slate-500 mt-1.5">最多 500 张/批</p>
-        </div>
-      )}
 
       <div>
         <label className="block text-sm font-medium mb-1.5">
@@ -187,7 +124,7 @@ export function NewCardClient() {
           type="text"
           value={notes}
           onChange={(e) => setNotes(e.target.value)}
-          placeholder="如: ¥60 档 / 第一批 / 给某分销商"
+          placeholder="如: 第一批 / 给某分销商"
           maxLength={100}
           className="w-full px-3.5 py-2.5 rounded-lg border border-slate-300 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 outline-none"
         />
@@ -210,32 +147,5 @@ export function NewCardClient() {
         </button>
       </div>
     </form>
-  );
-}
-
-function ModeOption({
-  selected,
-  onClick,
-  title,
-  desc,
-}: {
-  selected: boolean;
-  onClick: () => void;
-  title: string;
-  desc: string;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={`text-left p-3 rounded-lg border transition-all ${
-        selected
-          ? "border-indigo-500 bg-indigo-50 ring-2 ring-indigo-100"
-          : "border-slate-200 hover:border-slate-300 bg-white"
-      }`}
-    >
-      <div className="font-medium text-sm">{title}</div>
-      <div className="text-xs text-slate-500 mt-0.5">{desc}</div>
-    </button>
   );
 }
