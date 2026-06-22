@@ -30,12 +30,18 @@ export default function HomePage() {
         </div>
       </div>
 
-      <div className="flex justify-center mb-12">
+      <div className="flex flex-col items-center mb-12 gap-3">
         <Link
           href="/login"
           className="inline-flex items-center justify-center px-6 py-3 rounded-lg bg-indigo-600 text-white font-medium hover:bg-indigo-700 transition-colors shadow-sm"
         >
           立即登录 / 绑定
+        </Link>
+        <Link
+          href="/redeem"
+          className="text-sm text-slate-500 hover:text-indigo-600 transition-colors"
+        >
+          有卡密？立即兑换 →
         </Link>
       </div>
 
@@ -60,6 +66,10 @@ export default function HomePage() {
         <Faq
           q="我能在公众号/Bark 看到什么内容？"
           a="推送里会带一个链接,点进去就是保号时间更新页。选今天/最近 7 天内的一个日期提交,系统就从那天重新计时 170 天。"
+        />
+        <Faq
+          q="卡密是什么 / 怎么用？"
+          a="如果您是从销售方获得的一串 16 位卡密(形如 XXXX-XXXX-XXXX-XXXX),可以访问兑换页输入卡密完成绑定。已绑定的卡密兑换时只需选推送渠道;空模板卡密兑换时需填写手机号和激活日期。卡密一次性使用,兑换后失效。"
         />
       </section>
     </div>

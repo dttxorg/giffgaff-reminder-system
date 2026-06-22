@@ -1,0 +1,76 @@
+// POST /api/redeem
+// 卡密兑换。无需登录。成功后自动登录跳 /me
+import { NextResponse } from "next/server";
+import { z } from "zod";
+import { prisma } from "@/lib/db";
+import { redeemCard } from "@/lib/redeem";
+import { createUserSession } from "@/lib/session";
+
+const BodySchema = z.object({
+  code: z.string().min(1, "请输入卡密"),
+  // unbound 模式可能传
+  phoneNumber: z.string().optional(),
+  activatedAt: z.string().optional(),
+});
+
+const ERROR_MESSAGES: Record<string, string> = {
+  INVALID_CODE: "卡密格式不正确",
+  NOT_FOUND: "卡密不存在",
+  EXPIRED: "卡密已过期",
+  ALREADY_USED: "卡密已被兑换,无法重复使用",
+  MISSING_PHONE: "请填写手机号",
+  MISSING_DATE: "请填写激活日期",
+  PHONE_TAKEN: "该手机号已被绑定,请联系管理员",
+  INVALID_DATE: "激活日期格式不正确 (yyyy-MM-dd)",
+  INVALID_PHONE: "手机号格式不正确",
+};
+
+export async function POST(req: Request) {
+  let body: unknown;
+  try {
+    body = await req.json();
+  } catch {
+    return NextResponse.json({ ok: false, error: "请求体格式错误" }, { status: 400 });
+  }
+  const parsed = BodySchema.safeParse(body);
+  if (!parsed.success) {
+    return NextResponse.json({ ok: false, error: "参数错误" }, { status: 400 });
+  }
+
+  // 用事务确保 sim/user/cardKey 更新原子性
+  let result;
+  try {
+    result = await prisma.$transaction(async (tx) => {
+      return redeemCard(
+        {
+          rawCode: parsed.data.code,
+          phoneNumber: parsed.data.phoneNumber,
+          activatedAt: parsed.data.activatedAt,
+        },
+        tx
+      );
+    });
+  } catch (e) {
+    return NextResponse.json(
+      { ok: false, error: e instanceof Error ? e.message : "兑换失败" },
+      { status: 500 }
+    );
+  }
+
+  if (!result.ok) {
+    const msg = ERROR_MESSAGES[result.error] ?? "兑换失败";
+    // 4xx 让前端能识别
+    const status = result.error === "NOT_FOUND" || result.error === "ALREADY_USED" ? 404 : 400;
+    return NextResponse.json({ ok: false, error: msg }, { status });
+  }
+
+  // 自动登录
+  await createUserSession(result.userId);
+
+  return NextResponse.json({
+    ok: true,
+    redirect: "/me",
+    mode: result.mode,
+    needSetupChannel: true, // 兑换后 channelKey 必空
+  });
+}

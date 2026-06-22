@@ -18,6 +18,7 @@ export default async function AdminLayout({
           <nav className="p-2 space-y-0.5 text-sm flex-1">
             <AdminLink href="/admin" label="仪表盘" />
             <AdminLink href="/admin/sims" label="号码管理" />
+            <AdminLink href="/admin/cards" label="卡密管理" />
             <AdminLink href="/admin/users" label="用户" />
             <AdminLink href="/admin/reminders" label="提醒日志" />
             <AdminLink href="/admin/settings" label="文案设置" />

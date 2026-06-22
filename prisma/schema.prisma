@@ -127,3 +127,31 @@ model UserSession {
 
   @@index([userId])
 }
+
+// 卡密：分销/兑换场景
+// - bound：生成时已绑定 phoneNumber + activatedAt（客户兑换时只需选推送渠道）
+// - unbound：空模板，客户兑换时填 phoneNumber + activatedAt + 推送渠道
+// 一次性使用（used=true 后不能再用），永久有效（expiresAt = null）
+model CardKey {
+  id          Int       @id @default(autoincrement())
+  code        String    @unique              // XXXX-XXXX-XXXX-XXXX
+  mode        CardMode                       // bound / unbound
+  phoneNumber String?                        // 仅 bound：冗余存手机号
+  activatedAt DateTime?                      // 仅 bound：冗余存激活日期
+  notes       String?                        // 管理员备注（档位/批次等）
+
+  used        Boolean   @default(false)
+  usedAt      DateTime?
+  usedSimId   Int?      @unique              // 兑换后绑定的 sim（双保险防重复）
+
+  createdAt   DateTime  @default(now())
+  expiresAt   DateTime?                      // 永久 = null
+
+  @@index([mode, used])
+  @@index([createdAt])
+}
+
+enum CardMode {
+  bound
+  unbound
+}
