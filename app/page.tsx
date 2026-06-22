@@ -30,19 +30,13 @@ export default function HomePage() {
         </div>
       </div>
 
-      <div className="flex flex-col sm:flex-row gap-3 justify-center mb-12">
+      <div className="flex justify-center mb-12">
         <Link
           href="/login"
           className="inline-flex items-center justify-center px-6 py-3 rounded-lg bg-indigo-600 text-white font-medium hover:bg-indigo-700 transition-colors shadow-sm"
         >
           立即登录 / 绑定
         </Link>
-        <a
-          href="#faq"
-          className="inline-flex items-center justify-center px-6 py-3 rounded-lg bg-white text-slate-700 font-medium hover:bg-slate-50 transition-colors border border-slate-200"
-        >
-          了解更多
-        </a>
       </div>
 
       <section id="faq" className="space-y-3">
@@ -66,10 +60,6 @@ export default function HomePage() {
         <Faq
           q="我能在公众号/Bark 看到什么内容？"
           a="推送里会带一个链接,点进去就是保号时间更新页。选今天/最近 7 天内的一个日期提交,系统就从那天重新计时 170 天。"
-        />
-        <Faq
-          q="我是管理员,在哪里维护号码库？"
-          a="管理员入口仅供系统所有者使用,普通用户无需关注。如确需管理,请联系系统所有者获取入口地址和账号。"
         />
       </section>
     </div>
