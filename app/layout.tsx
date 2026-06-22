@@ -43,28 +43,27 @@ export default async function RootLayout({
                   </form>
                 </>
               ) : (
-                <>
-                  <Link
-                    href="/login"
-                    className="px-3 py-1.5 rounded-md hover:bg-slate-100 transition-colors"
-                  >
-                    登录
-                  </Link>
-                  <Link
-                    href="/admin/login"
-                    className="px-3 py-1.5 rounded-md hover:bg-slate-100 transition-colors text-slate-500"
-                  >
-                    管理
-                  </Link>
-                </>
+                <Link
+                  href="/login"
+                  className="px-3 py-1.5 rounded-md hover:bg-slate-100 transition-colors"
+                >
+                  登录
+                </Link>
               )}
             </nav>
           </div>
         </header>
         <main className="flex-1">{children}</main>
         <footer className="border-t border-slate-200 bg-white/60 py-4 text-center text-xs text-slate-500">
-          <div className="max-w-5xl mx-auto px-4">
-            Giffgaff 保号提醒 · V1 · 有问题找管理员
+          <div className="max-w-5xl mx-auto px-4 flex items-center justify-center gap-3">
+            <span>Giffgaff 保号提醒 · V1</span>
+            <span className="text-slate-300">·</span>
+            <Link
+              href="/admin/login"
+              className="text-slate-400 hover:text-slate-600 transition-colors"
+            >
+              管理入口
+            </Link>
           </div>
         </footer>
       </body>
