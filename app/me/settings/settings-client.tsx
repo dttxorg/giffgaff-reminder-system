@@ -357,8 +357,17 @@ function PasswordSection() {
             placeholder="至少 8 位"
             autoComplete="new-password"
             minLength={8}
-            className="w-full px-3.5 py-2.5 rounded-lg border border-slate-300 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 outline-none"
+            className={`w-full px-3.5 py-2.5 rounded-lg border outline-none ${
+              newPassword && newPassword.length < 8
+                ? "border-rose-300 focus:border-rose-500 focus:ring-2 focus:ring-rose-100"
+                : "border-slate-300 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
+            }`}
           />
+          {newPassword && newPassword.length < 8 && (
+            <p className="text-xs text-rose-600 mt-1.5">
+              密码至少 8 位（当前 {newPassword.length} 位）
+            </p>
+          )}
         </div>
         <div>
           <label className="block text-sm font-medium mb-1.5">

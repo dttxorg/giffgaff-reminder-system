@@ -258,7 +258,11 @@ function FormPhase({
           autoComplete="new-password"
           required
           minLength={8}
-          className="w-full px-3.5 py-2.5 rounded-lg border border-slate-300 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 outline-none"
+          className={`w-full px-3.5 py-2.5 rounded-lg border outline-none ${
+            password && password.length < 8
+              ? "border-rose-300 focus:border-rose-500 focus:ring-2 focus:ring-rose-100"
+              : "border-slate-300 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
+          }`}
         />
         <input
           type="password"
@@ -274,9 +278,15 @@ function FormPhase({
               : "border-slate-300 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
           }`}
         />
-        <p className="text-xs text-slate-500 mt-1.5">
-          请妥善保存,忘记后需联系管理员重置
-        </p>
+        {password && password.length < 8 ? (
+          <p className="text-xs text-rose-600 mt-1.5">
+            密码至少 8 位（当前 {password.length} 位）
+          </p>
+        ) : (
+          <p className="text-xs text-slate-500 mt-1.5">
+            请妥善保存,忘记后需联系管理员重置
+          </p>
+        )}
         {passwordConfirm && !passwordsMatch && (
           <p className="text-xs text-rose-600 mt-1">两次密码不一致</p>
         )}

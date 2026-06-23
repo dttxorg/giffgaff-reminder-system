@@ -105,7 +105,11 @@ export default function NewSimPage() {
               required
               minLength={8}
               autoComplete="off"
-              className="flex-1 px-3.5 py-2.5 rounded-lg border border-slate-300 font-mono focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 outline-none"
+              className={`flex-1 px-3.5 py-2.5 rounded-lg border font-mono outline-none ${
+                initialPassword && initialPassword.length < 8
+                  ? "border-rose-300 focus:border-rose-500 focus:ring-2 focus:ring-rose-100"
+                  : "border-slate-300 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
+              }`}
             />
             <button
               type="button"
@@ -115,9 +119,15 @@ export default function NewSimPage() {
               随机生成
             </button>
           </div>
-          <p className="text-xs text-slate-500 mt-1.5">
-            请通过安全渠道（线下/加密消息）告知客户,客户首次登录后可在「设置」里自行修改
-          </p>
+          {initialPassword && initialPassword.length < 8 ? (
+            <p className="text-xs text-rose-600 mt-1.5">
+              密码至少 8 位（当前 {initialPassword.length} 位）
+            </p>
+          ) : (
+            <p className="text-xs text-slate-500 mt-1.5">
+              请通过安全渠道（线下/加密消息）告知客户,客户首次登录后可在「设置」里自行修改
+            </p>
+          )}
         </div>
 
         <div className="flex gap-2 pt-2">
