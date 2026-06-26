@@ -4,7 +4,7 @@ import { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 
-type Channel = "serverchan" | "bark" | "pushplus";
+type Channel = "serverchan" | "bark" | "pushplus" | "telegram";
 type TestStatus = "idle" | "sending" | "success" | "error";
 type SaveStatus = "idle" | "saving" | "success" | "error";
 
@@ -84,7 +84,9 @@ export function MeSettingsClient({
             ? "Sever酱 微信"
             : channel === "bark"
             ? "Bark App"
-            : "pushplus 微信公众号"
+            : channel === "pushplus"
+            ? "pushplus 微信公众号"
+            : "Telegram"
         }`
       );
       setVerified(true);
@@ -140,7 +142,7 @@ export function MeSettingsClient({
         <div className="space-y-4">
           <div>
             <label className="block text-sm font-medium mb-1.5">推送渠道</label>
-            <div className="grid grid-cols-3 gap-2">
+            <div className="grid grid-cols-2 gap-2">
               <ChannelOption
                 selected={channel === "serverchan"}
                 onChange={() => {
@@ -174,6 +176,17 @@ export function MeSettingsClient({
                 title="pushplus"
                 desc="微信公众号"
               />
+              <ChannelOption
+                selected={channel === "telegram"}
+                onChange={() => {
+                  setChannel("telegram");
+                  setVerified(false);
+                  setTestStatus("idle");
+                  setTestMessage(null);
+                }}
+                title="Telegram"
+                desc="机器人推送"
+              />
             </div>
             <p className="text-xs text-slate-500 mt-1.5">
               还没注册?
@@ -185,9 +198,13 @@ export function MeSettingsClient({
                 <Link href="/help/bark" className="text-indigo-600 hover:underline ml-1">
                   Bark 教程
                 </Link>
-              ) : (
+              ) : channel === "pushplus" ? (
                 <Link href="/help/pushplus" className="text-indigo-600 hover:underline ml-1">
                   pushplus 教程
+                </Link>
+              ) : (
+                <Link href="/help/telegram" className="text-indigo-600 hover:underline ml-1">
+                  Telegram 教程
                 </Link>
               )}
             </p>
@@ -199,7 +216,9 @@ export function MeSettingsClient({
                 ? "SendKey"
                 : channel === "bark"
                 ? "Bark URL"
-                : "pushplus Token"}
+                : channel === "pushplus"
+                ? "pushplus Token"
+                : "Bot Token | Chat ID"}
             </label>
             <input
               type="text"
@@ -217,7 +236,9 @@ export function MeSettingsClient({
                   ? "SCT2xxxxxxxx"
                   : channel === "bark"
                   ? "https://api.day.app/xxx"
-                  : "abcdef123456...(登录 pushplus 后查看)"
+                  : channel === "pushplus"
+                  ? "abcdef123456...(登录 pushplus 后查看)"
+                  : "123456:ABC-DEF...|123456789"
               }
               autoComplete="off"
               className="w-full px-3.5 py-2.5 rounded-lg border border-slate-300 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 outline-none transition font-mono text-sm"

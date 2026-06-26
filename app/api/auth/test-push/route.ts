@@ -3,7 +3,7 @@ import { z } from "zod";
 import { sendPush } from "@/lib/channels";
 
 const BodySchema = z.object({
-  channel: z.enum(["serverchan", "bark", "pushplus"]),
+  channel: z.enum(["serverchan", "bark", "pushplus", "telegram"]),
   channelKey: z.string().min(1),
 });
 
@@ -57,7 +57,13 @@ export async function POST(req: Request) {
 
   const { channel, channelKey } = parsed.data;
   const channelName =
-    channel === "serverchan" ? "Sever酱" : channel === "bark" ? "Bark" : "pushplus";
+    channel === "serverchan"
+      ? "Sever酱"
+      : channel === "bark"
+      ? "Bark"
+      : channel === "pushplus"
+      ? "pushplus"
+      : "Telegram";
   const result = await sendPush(
     channel,
     channelKey,

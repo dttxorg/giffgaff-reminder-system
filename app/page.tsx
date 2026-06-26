@@ -86,7 +86,7 @@ export default function HomePage() {
         />
         <Faq
           q="推送渠道怎么选？"
-          a="Sever酱(微信公众号推送)适合大多数用户。Bark(iOS/Android App)适合不想用微信的同学。两种都可以,登录时选一个就行。"
+          a="Sever酱 / pushplus(微信公众号)适合大多数用户。Bark 适合 iOS 用户。Telegram Bot 适合能用 Telegram 的同学,免关注公众号、跨平台、即时送达。任意选一个就行,登录后可以在「设置」里改。"
         />
         <Faq
           q="账号忘了 / 想换推送渠道？"

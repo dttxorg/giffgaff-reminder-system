@@ -166,6 +166,12 @@ export default function PushPlusHelpPage() {
         >
           查看 Bark 教程
         </Link>
+        <Link
+          href="/help/telegram"
+          className="inline-flex items-center px-5 py-2.5 rounded-lg bg-white text-slate-700 text-sm font-medium border border-slate-200 hover:bg-slate-50"
+        >
+          查看 Telegram 教程
+        </Link>
       </div>
     </article>
   );

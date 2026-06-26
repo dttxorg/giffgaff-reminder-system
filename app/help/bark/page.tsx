@@ -32,12 +32,14 @@ export default function BarkHelpPage() {
         <strong>📱 不是 iPhone / iPad?</strong>
         <p className="mt-1">
           Bark <strong>仅支持 iOS / macOS</strong>(App Store 官方下载)。如果您的设备是 Android / Windows / 其他,
-          推荐用 <strong>Sever酱</strong> 或 <strong>pushplus</strong> — 都是微信公众号推送,无需装 App。
+          推荐用 <strong>Sever酱</strong>、<strong>pushplus</strong> 或 <strong>Telegram Bot</strong>。
         </p>
         <div className="mt-2 flex flex-wrap gap-2">
-          <Link href="/help/serverchan" className="underline">查看 Sever酱 教程 →</Link>
+          <Link href="/help/serverchan" className="underline">Sever酱 →</Link>
           <span className="text-amber-700">·</span>
-          <Link href="/help/pushplus" className="underline">查看 pushplus 教程 →</Link>
+          <Link href="/help/pushplus" className="underline">pushplus →</Link>
+          <span className="text-amber-700">·</span>
+          <Link href="/help/telegram" className="underline">Telegram Bot →</Link>
         </div>
       </div>
 
@@ -134,6 +136,12 @@ export default function BarkHelpPage() {
           className="inline-flex items-center px-5 py-2.5 rounded-lg bg-white text-slate-700 text-sm font-medium border border-slate-200 hover:bg-slate-50"
         >
           查看 Sever酱 教程
+        </Link>
+        <Link
+          href="/help/telegram"
+          className="inline-flex items-center px-5 py-2.5 rounded-lg bg-white text-slate-700 text-sm font-medium border border-slate-200 hover:bg-slate-50"
+        >
+          查看 Telegram 教程
         </Link>
       </div>
     </article>

@@ -1,6 +1,6 @@
-// 推送渠道：Sever酱 / Bark / pushplus
+// 推送渠道：Sever酱 / Bark / pushplus / Telegram
 
-export type ChannelType = "serverchan" | "bark" | "pushplus";
+export type ChannelType = "serverchan" | "bark" | "pushplus" | "telegram";
 
 export interface SendResult {
   ok: boolean;
@@ -122,6 +122,71 @@ export async function sendPushPlus(
 }
 
 /**
+ * Telegram Bot 推送
+ *
+ * channelKey 格式: "<botToken>|<chatId>"
+ *   - botToken: 用户在 @BotFather 创建 bot 时拿到的 token，形如 123456:ABC-DEF...
+ *   - chatId: 用户在 Telegram 里的数字 ID（私聊 bot 后用 @userinfobot 或 getUpdates 拿到）
+ *
+ * API: POST https://api.telegram.org/bot<token>/sendMessage
+ *   Body (JSON): { chat_id, text, parse_mode: "HTML" | "Markdown" }
+ *   - 限流：每秒 30 条到不同 chat，每秒 1 条到同一 chat（本系统一天最多推 20 条/号，绰绰有余）
+ *   - 返回: { ok: true, result: {...} } 或 { ok: false, description, error_code }
+ */
+export async function sendTelegram(
+  channelKey: string,
+  title: string,
+  body: string
+): Promise<SendResult> {
+  const parts = channelKey.split("|");
+  if (parts.length !== 2) {
+    return { ok: false, errorMessage: "channelKey 格式错误，应为 botToken|chatId" };
+  }
+  const [botToken, chatIdRaw] = parts;
+  const token = botToken.trim();
+  const chatId = chatIdRaw.trim();
+  if (!token || !chatId) {
+    return { ok: false, errorMessage: "botToken 和 chatId 不能为空" };
+  }
+  // chatId 必须是数字（私聊）/ 数字字符串（群组以 - 开头）
+  if (!/^-?\d+$/.test(chatId)) {
+    return { ok: false, errorMessage: "chatId 应为纯数字（含负号表示群组）" };
+  }
+
+  const url = `https://api.telegram.org/bot${token}/sendMessage`;
+  // HTML 模式：title 走 <b>，body 走换行；安全地 escape HTML
+  const escapeHtml = (s: string) =>
+    s
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;");
+  const text = `<b>${escapeHtml(title)}</b>\n\n${escapeHtml(body)}`;
+
+  try {
+    const resp = await fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        chat_id: chatId,
+        text,
+        parse_mode: "HTML",
+        disable_web_page_preview: true,
+      }),
+    });
+    if (!resp.ok) {
+      return { ok: false, errorMessage: `Telegram HTTP ${resp.status}` };
+    }
+    const data = (await resp.json()) as { ok?: boolean; description?: string; error_code?: number };
+    if (!data.ok) {
+      return { ok: false, errorMessage: data.description || `Telegram 返回 error_code=${data.error_code}` };
+    }
+    return { ok: true };
+  } catch (e) {
+    return { ok: false, errorMessage: e instanceof Error ? e.message : String(e) };
+  }
+}
+
+/**
  * 路由：按 channel 类型选择推送器
  */
 export async function sendPush(
@@ -133,5 +198,6 @@ export async function sendPush(
   if (channel === "serverchan") return sendServerChan(channelKey, title, body);
   if (channel === "bark") return sendBark(channelKey, title, body);
   if (channel === "pushplus") return sendPushPlus(channelKey, title, body);
+  if (channel === "telegram") return sendTelegram(channelKey, title, body);
   return { ok: false, errorMessage: `未知渠道: ${channel}` };
 }

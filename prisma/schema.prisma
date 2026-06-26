@@ -59,6 +59,7 @@ enum Channel {
   serverchan
   bark
   pushplus
+  telegram
 }
 
 // 发送日志（幂等保证）
