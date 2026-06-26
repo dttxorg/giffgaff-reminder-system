@@ -3,7 +3,7 @@ import Link from "next/link";
 export default function HomePage() {
   return (
     <div className="max-w-3xl mx-auto px-4 sm:px-6 py-10 sm:py-16">
-      <div className="text-center mb-12">
+      <div className="text-center mb-8">
         <h1 className="text-3xl sm:text-4xl font-bold tracking-tight text-slate-900 mb-3">
           Giffgaff SIM 卡保号提醒
         </h1>
@@ -11,6 +11,35 @@ export default function HomePage() {
           再也不用记着哪天该保号了 — 到日子自动推送给您
         </p>
       </div>
+
+      <a
+        href="https://gg.681218.xyz"
+        target="_blank"
+        rel="noopener noreferrer"
+        className="group block mb-12 rounded-2xl p-6 sm:p-7 bg-gradient-to-br from-orange-500 via-pink-500 to-purple-600 text-white shadow-lg hover:shadow-2xl hover:-translate-y-0.5 transition-all relative overflow-hidden"
+      >
+        <div className="absolute top-0 right-0 -mt-8 -mr-8 w-40 h-40 bg-white/10 rounded-full" />
+        <div className="absolute bottom-0 left-0 -mb-12 -ml-12 w-48 h-48 bg-white/5 rounded-full" />
+        <div className="relative flex flex-col sm:flex-row items-center gap-5">
+          <div className="text-5xl sm:text-6xl shrink-0 drop-shadow">🎁</div>
+          <div className="flex-1 text-center sm:text-left">
+            <div className="inline-block px-2 py-0.5 bg-white/20 backdrop-blur rounded text-xs font-medium mb-2">
+              🔥 限时活动
+            </div>
+            <div className="text-xl sm:text-2xl font-bold mb-1 leading-tight">
+              还没卡？现在购 Giffgaff SIM 卡
+            </div>
+            <div className="text-white/95 text-sm sm:text-base">
+              <strong className="font-semibold">免费赠送保号提醒服务</strong>
+              <span className="mx-1.5">·</span>
+              新开卡 / 续号都行
+            </div>
+          </div>
+          <div className="px-6 py-3 bg-white text-pink-600 font-bold rounded-xl whitespace-nowrap shadow-md group-hover:scale-105 transition-transform text-base">
+            立即选购 →
+          </div>
+        </div>
+      </a>
 
       <div className="grid sm:grid-cols-3 gap-4 mb-12">
         <div className="bg-white rounded-xl p-5 shadow-sm border border-slate-100">
