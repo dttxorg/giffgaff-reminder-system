@@ -48,8 +48,6 @@ export default function BarkHelpPage() {
           <strong>下载 Bark</strong>
           <p>
             点击上方"跳转 App Store 下载"按钮,或直接在 App Store 搜索 <code>Bark</code> 下载。
-            <br />
-            认准开发者: <strong>Finb</strong>(图标是个狗头)。免费,无内购。
           </p>
         </li>
 
