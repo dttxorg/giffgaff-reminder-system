@@ -34,12 +34,8 @@ export default function PortPage() {
       .catch(() => setNotFound(true));
   }, [simId, simIdValid]);
 
-  // 7 天前的日期作为最早可选
-  const minDate = (() => {
-    const d = new Date();
-    d.setDate(d.getDate() - 7);
-    return d.toISOString().slice(0, 10);
-  })();
+  // 最早可选 = 激活日期（API 返回的 YYYY-MM-DD 字符串，可直接用于 input[type=date] 的 min）
+  // 计算放在 sim 已确认非 null 之后（下方 early return），这里用占位避免 TS 报错
   const maxDate = new Date().toISOString().slice(0, 10);
 
   const onSubmit = async (e: React.FormEvent) => {
@@ -141,13 +137,13 @@ export default function PortPage() {
               type="date"
               value={portedAt}
               onChange={(e) => setPortedAt(e.target.value)}
-              min={minDate}
+              min={sim.activatedAt}
               max={maxDate}
               required
               className="w-full px-3.5 py-2.5 rounded-lg border border-slate-300 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 outline-none transition"
             />
             <p className="text-xs text-slate-500 mt-1">
-              今天 ~ 过去 7 天内可补录,未来日期不允许
+              最早可填激活日期（{sim.activatedAt}），最晚今天；老用户可补录任意历史保号日期
             </p>
           </div>
 

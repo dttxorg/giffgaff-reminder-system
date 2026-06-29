@@ -15,7 +15,8 @@ interface RouteContext {
  * 公开（按 simId），用于保号页提交
  * - simId 必须存在
  * - portedAt 不能晚于今天（不能填未来）
- * - portedAt 不能早于今天 -7 天（仅补录 7 天内）
+ * - portedAt 不能早于 activatedAt（保号动作只能发生在激活之后）
+ *   老用户（卡已用很久）可以补录任意历史日期，系统按那天重新计时 170 天
  */
 export async function POST(req: Request, ctx: RouteContext) {
   const { simId } = await ctx.params;
@@ -46,13 +47,18 @@ export async function POST(req: Request, ctx: RouteContext) {
 
   const today = new Date();
   const todayUTC = new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate()));
-  const sevenDaysAgo = new Date(todayUTC.getTime() - 7 * 24 * 60 * 60 * 1000);
+  // 最早可选 = 激活日期（同一天或之后均可；保号不可能早于激活）
+  const activatedAt = new Date(Date.UTC(
+    sim.activatedAt.getUTCFullYear(),
+    sim.activatedAt.getUTCMonth(),
+    sim.activatedAt.getUTCDate()
+  ));
 
   if (portedAt > todayUTC) {
     return NextResponse.json({ ok: false, error: "保号日期不能晚于今天" }, { status: 400 });
   }
-  if (portedAt < sevenDaysAgo) {
-    return NextResponse.json({ ok: false, error: "保号日期不能早于 7 天前" }, { status: 400 });
+  if (portedAt < activatedAt) {
+    return NextResponse.json({ ok: false, error: "保号日期不能早于激活日期" }, { status: 400 });
   }
 
   await prisma.sim.update({
