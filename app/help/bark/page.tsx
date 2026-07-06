@@ -32,12 +32,10 @@ export default function BarkHelpPage() {
         <strong>📱 不是 iPhone / iPad?</strong>
         <p className="mt-1">
           Bark <strong>仅支持 iOS / macOS</strong>(App Store 官方下载)。如果您的设备是 Android / Windows / 其他,
-          推荐用 <strong>Sever酱</strong>、<strong>pushplus</strong> 或 <strong>Telegram Bot</strong>。
+          推荐用 <strong>Sever酱</strong>(免费)或 <strong>Telegram Bot</strong>(免费,需能访问 Telegram)。
         </p>
         <div className="mt-2 flex flex-wrap gap-2">
           <Link href="/help/serverchan" className="underline">Sever酱 →</Link>
-          <span className="text-amber-700">·</span>
-          <Link href="/help/pushplus" className="underline">pushplus →</Link>
           <span className="text-amber-700">·</span>
           <Link href="/help/telegram" className="underline">Telegram Bot →</Link>
         </div>

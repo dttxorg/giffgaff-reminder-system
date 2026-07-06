@@ -196,17 +196,17 @@ export default function TelegramHelpPage() {
       </details>
 
       <details>
-        <summary>Telegram Bot vs Sever酱 / pushplus,选哪个?</summary>
+        <summary>Telegram Bot vs Sever酱,选哪个?</summary>
         <ul>
           <li>
             <strong>Telegram Bot</strong>:跨平台、即时、免关注公众号、免费无限;缺点是要装 Telegram(国内部分网络环境可能需要代理)
           </li>
           <li>
-            <strong>Sever酱 / pushplus</strong>:走微信公众号,国内直连无障碍;缺点是有每日条数限制
+            <strong>Sever酱</strong>:走微信公众号,国内直连无障碍,免费,每天 5 条;缺点是要关注公众号
           </li>
         </ul>
         <p>
-          能用 Telegram 的推荐 Bot;不能的就用 Sever酱 或 pushplus。
+          能用 Telegram 的推荐 Bot;不能的就用 Sever酱。pushplus 实名要付费,新用户不建议。
         </p>
       </details>
 

@@ -17,6 +17,19 @@ export default function PushPlusHelpPage() {
         </span>
       </p>
 
+      <div className="not-prose my-6 p-4 rounded-lg bg-amber-50 border-2 border-amber-300 text-amber-900">
+        <div className="font-semibold mb-1">⚠️ 新用户不建议使用 pushplus</div>
+        <div className="text-sm leading-relaxed">
+          pushplus 现在要求<strong>实名认证</strong>后才能发消息,而且<strong>实名认证平台要收费</strong>
+          (费用由 pushplus 收取,跟本系统无关,本系统未收取任何费用)。
+          <br />
+          新用户建议优先选择 <strong>Sever酱</strong>(免费,扫码关注公众号即可)
+          或 <strong>Telegram Bot</strong>(免费,需要能访问 Telegram)。
+          <br />
+          已经付费实名过的老用户可以继续使用,本系统对 pushplus 的支持不变。
+        </div>
+      </div>
+
       <div className="not-prose my-6 flex flex-wrap gap-3">
         <a
           href={PUSHPLUS_HOME}
@@ -52,12 +65,17 @@ export default function PushPlusHelpPage() {
         </li>
 
         <li>
-          <strong>完成实名认证 (必做)</strong>
+          <strong>完成实名认证 (必做,且需付费)</strong>
           <p>
             从 2024-08-01 起,未实名的用户<strong>无法调用发送消息接口</strong>。
           </p>
           <p>
             在 pushplus 顶部菜单 → "个人中心" → "<strong>实名认证</strong>" → 填身份证号 + 姓名,几秒钟完成。
+          </p>
+          <p className="text-amber-700 bg-amber-50 p-3 rounded text-sm">
+            <strong>注意</strong>:实名认证<strong>pushplus 平台要收费</strong>(费用由 pushplus 收取,
+            跟本系统无关,本系统未收取任何费用)。
+            如果不想付费,请回到上一页选 Sever酱 或 Telegram Bot。
           </p>
           <p className="text-slate-500 text-sm">
             (实名是为了防止滥用,平台不会拿你的信息做其他用途)

@@ -178,6 +178,17 @@ export function MeSettingsClient({
                 title="pushplus"
                 desc="微信公众号"
               />
+
+              {channel === "pushplus" && (
+                <div className="col-span-2 mt-1 p-3 rounded-lg bg-amber-50 border border-amber-300 text-amber-900 text-xs">
+                  <div className="font-semibold mb-1">⚠️ 新用户不建议</div>
+                  <div>
+                    pushplus 现在要求<strong>实名认证</strong>才能发消息,且<strong>实名认证平台要收费</strong>(由 pushplus 收取,跟本系统无关)。
+                    新用户建议先选 <strong>Sever酱</strong>(免费,扫码关注公众号即可)
+                    或 <strong>Telegram Bot</strong>(免费,需要能访问 Telegram)。
+                  </div>
+                </div>
+              )}
               <ChannelOption
                 selected={channel === "telegram"}
                 onChange={() => {
