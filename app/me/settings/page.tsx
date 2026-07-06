@@ -9,6 +9,7 @@ export default async function MeSettingsPage() {
 
   const isFirstTime = !user.channelKey;
   const initialChannel = (user.channel as "serverchan" | "bark") || "serverchan";
+  const activatedAt = user.sim.activatedAt.toISOString().slice(0, 10);
 
   return (
     <div className="max-w-md mx-auto px-4 py-8 sm:py-12">
@@ -22,6 +23,7 @@ export default async function MeSettingsPage() {
         initialChannel={initialChannel}
         initialChannelKey={user.channelKey}
         isFirstTime={isFirstTime}
+        activatedAt={activatedAt}
       />
     </div>
   );

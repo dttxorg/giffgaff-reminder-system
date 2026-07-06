@@ -46,7 +46,15 @@ export default async function MePage() {
         <div className="text-2xl font-mono font-semibold mb-3 tracking-wider">
           {formatPhoneForDisplay(sim.phoneNumber)}
         </div>
-        <div className="text-sm text-slate-500 mb-1">激活日期</div>
+        <div className="flex items-center justify-between mb-1">
+          <div className="text-sm text-slate-500">激活日期</div>
+          <Link
+            href="/me/settings#sim-info"
+            className="text-xs text-indigo-600 hover:underline"
+          >
+            修改
+          </Link>
+        </div>
         <div className="text-base mb-3">
           {sim.activatedAt.toISOString().slice(0, 10)}
           {sim.lastPortedAt && (
