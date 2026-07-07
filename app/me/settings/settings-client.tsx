@@ -201,26 +201,32 @@ export function MeSettingsClient({
                 desc="机器人推送"
               />
             </div>
-            <p className="text-xs text-slate-500 mt-1.5">
-              还没注册?
-              {channel === "serverchan" ? (
-                <Link href="/help/serverchan" className="text-indigo-600 hover:underline ml-1">
-                  Sever酱 教程
-                </Link>
-              ) : channel === "bark" ? (
-                <Link href="/help/bark" className="text-indigo-600 hover:underline ml-1">
-                  Bark 教程
-                </Link>
-              ) : channel === "pushplus" ? (
-                <Link href="/help/pushplus" className="text-indigo-600 hover:underline ml-1">
-                  pushplus 教程
-                </Link>
-              ) : (
-                <Link href="/help/telegram" className="text-indigo-600 hover:underline ml-1">
-                  Telegram 教程
-                </Link>
-              )}
-            </p>
+            <Link
+              href={
+                channel === "serverchan"
+                  ? "/help/serverchan"
+                  : channel === "bark"
+                  ? "/help/bark"
+                  : channel === "pushplus"
+                  ? "/help/pushplus"
+                  : "/help/telegram"
+              }
+              target="_blank"
+              className="mt-3 inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-indigo-600 text-white text-sm font-semibold shadow-sm hover:bg-indigo-700 hover:shadow transition-all"
+            >
+              <span aria-hidden="true">📖</span>
+              <span>
+                {channel === "serverchan"
+                  ? "Sever酱"
+                  : channel === "bark"
+                  ? "Bark"
+                  : channel === "pushplus"
+                  ? "pushplus"
+                  : "Telegram"}
+                 开通教程
+              </span>
+              <span aria-hidden="true">↗</span>
+            </Link>
           </div>
 
           <div>
