@@ -68,6 +68,12 @@ export async function PATCH(req: Request, ctx: RouteContext) {
     status?: "active" | "paused";
   } = {};
   if (parsed.data.phoneNumber) data.phoneNumber = parsed.data.phoneNumber.replace(/\D/g, "");
+  // 校验 lastPortedAt >= activatedAt:两个字段必须协同(保号不可能早于激活)。
+  // 先看请求里的 activatedAt,否则用数据库里现有的。
+  const existingSim = await prisma.sim.findUnique({ where: { id: simId } });
+  if (!existingSim) {
+    return NextResponse.json({ ok: false, error: "sim 不存在" }, { status: 404 });
+  }
   if (parsed.data.activatedAt) {
     const [y, m, d] = parsed.data.activatedAt.split("-").map(Number);
     data.activatedAt = new Date(Date.UTC(y, m - 1, d));
@@ -77,12 +83,31 @@ export async function PATCH(req: Request, ctx: RouteContext) {
       data.lastPortedAt = null;
     } else {
       const [y, m, d] = parsed.data.lastPortedAt.split("-").map(Number);
-      data.lastPortedAt = new Date(Date.UTC(y, m - 1, d));
+      const newLastPortedAt = new Date(Date.UTC(y, m - 1, d));
+      const effectiveActivatedAt = data.activatedAt ?? existingSim.activatedAt;
+      if (newLastPortedAt < effectiveActivatedAt) {
+        return NextResponse.json(
+          { ok: false, error: "上次保号日期不能早于激活日期" },
+          { status: 400 }
+        );
+      }
+      data.lastPortedAt = newLastPortedAt;
     }
   }
   if (parsed.data.status) data.status = parsed.data.status;
 
   try {
+    // 即使 activatedAt 没变,也要保证 lastPortedAt >= activatedAt(防止旧数据被污染)
+    if (
+      data.lastPortedAt !== undefined &&
+      data.lastPortedAt !== null &&
+      data.lastPortedAt < existingSim.activatedAt
+    ) {
+      return NextResponse.json(
+        { ok: false, error: "上次保号日期不能早于现有激活日期" },
+        { status: 400 }
+      );
+    }
     const updated = await prisma.sim.update({ where: { id: simId }, data });
     return NextResponse.json({ ok: true, sim: updated });
   } catch (e) {

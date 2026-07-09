@@ -30,7 +30,9 @@ export default function HomePage() {
         </div>
       </div>
 
-      <div className="flex flex-col items-center mb-12 gap-3">
+      {/* 两条主路径并列:已有账号登录 / 卡密新用户兑换。
+          把卡密入口从浅色文字链提升为同样大小的按钮,因为卡密用户是新用户最大来源。 */}
+      <div className="grid sm:grid-cols-2 gap-3 mb-12">
         <Link
           href="/login"
           className="inline-flex items-center justify-center px-6 py-3 rounded-lg bg-indigo-600 text-white font-medium hover:bg-indigo-700 transition-colors shadow-sm"
@@ -39,19 +41,24 @@ export default function HomePage() {
         </Link>
         <Link
           href="/redeem"
-          className="text-sm text-slate-500 hover:text-indigo-600 transition-colors"
+          className="inline-flex items-center justify-center px-6 py-3 rounded-lg bg-white border-2 border-indigo-600 text-indigo-700 font-medium hover:bg-indigo-50 transition-colors shadow-sm"
         >
-          有卡密？立即兑换 →
+          🎫 有卡密？立即兑换
         </Link>
       </div>
+      <p className="text-center text-xs text-slate-500 -mt-9 mb-12">
+        没有卡密?请联系管理员录入或访问<a href="/login" className="text-indigo-600 hover:underline">登录页</a>。
+      </p>
 
       <section id="faq" className="space-y-3">
         <h2 className="text-xl font-semibold mb-4">常见问题</h2>
         <Faq
+          defaultOpen
           q="Giffgaff 卡为什么要保号？"
           a="Giffgaff SIM 卡如果长期不活跃(不发起通话/短信/上网),运营商会在 6 个月后回收号码。保号就是通过任何付费活动(发短信、打电话)让卡保持活跃。"
         />
         <Faq
+          defaultOpen
           q="保号提醒是怎么触发的？"
           a="从您的卡激活日起算,第 170 天系统开始给您发提醒。随着临近 180 天截止日,提醒频率自动增加。180 天当天会推 10 次,之后停止。"
         />
@@ -76,12 +83,15 @@ export default function HomePage() {
   );
 }
 
-function Faq({ q, a }: { q: string; a: string }) {
+function Faq({ q, a, defaultOpen = false }: { q: string; a: string; defaultOpen?: boolean }) {
   return (
-    <details className="bg-white rounded-lg border border-slate-200 group">
+    <details
+      className="bg-white rounded-lg border border-slate-200 group"
+      open={defaultOpen}
+    >
       <summary className="cursor-pointer px-4 py-3 font-medium text-slate-900 list-none flex items-center justify-between">
         <span>{q}</span>
-        <span className="text-slate-400 group-open:rotate-180 transition-transform">▾</span>
+        <span className="text-slate-400 group-open:rotate-180 transition-transform" aria-hidden="true">▾</span>
       </summary>
       <div className="px-4 pb-3 text-slate-600 text-sm leading-relaxed">{a}</div>
     </details>

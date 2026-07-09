@@ -42,7 +42,7 @@ export function shanghaiParts(d: Date): {
 /**
  * 各 dayOffset 对应的当天发送次数(2026-06-21 调整:170-172=1次,173-175=2次,176-178=3次)
  */
-const COUNTS: Record<number, number> = {
+export const COUNTS: Record<number, number> = {
   170: 1, 171: 1, 172: 1,
   173: 2, 174: 2, 175: 2,
   176: 3, 177: 3, 178: 3,

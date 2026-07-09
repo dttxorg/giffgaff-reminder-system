@@ -68,6 +68,26 @@ export function NewCardClient() {
           >
             复制全部
           </button>
+          {/* 下载 .txt:关闭页面后仍能找回卡密(浏览器下载的文件持久化) */}
+          <button
+            type="button"
+            onClick={() => {
+              const text = created.join("\n") + "\n";
+              const blob = new Blob([text], { type: "text/plain;charset=utf-8" });
+              const url = URL.createObjectURL(blob);
+              const a = document.createElement("a");
+              a.href = url;
+              const ts = new Date().toISOString().slice(0, 19).replace(/[:T]/g, "-");
+              a.download = `card-keys-${ts}.txt`;
+              document.body.appendChild(a);
+              a.click();
+              document.body.removeChild(a);
+              URL.revokeObjectURL(url);
+            }}
+            className="px-4 py-2 rounded-lg bg-white border border-slate-300 text-slate-700 text-sm font-medium hover:bg-slate-50"
+          >
+            下载 .txt
+          </button>
           <button
             type="button"
             onClick={() => router.push("/admin/cards")}

@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { todayLocalISODate } from "@/lib/date";
 
 type Channel = "serverchan" | "bark" | "pushplus" | "telegram";
 type TestStatus = "idle" | "sending" | "success" | "error";
@@ -144,6 +145,20 @@ export function MeSettingsClient({
         <div className="space-y-4">
           <div>
             <label className="block text-sm font-medium mb-1.5">推送渠道</label>
+
+            {/* pushplus 警告放到 grid 上方,避免挤占 grid 槽位。
+                这样 grid 永远是干净的 2x2,即使未来再加 channel 也不会乱。 */}
+            {channel === "pushplus" && (
+              <div className="mb-2 p-3 rounded-lg bg-amber-50 border border-amber-300 text-amber-900 text-xs">
+                <div className="font-semibold mb-1">⚠️ 新用户不建议</div>
+                <div>
+                  pushplus 现在要求<strong>实名认证</strong>才能发消息,且<strong>实名认证平台要收费</strong>(由 pushplus 收取,跟本系统无关)。
+                  新用户建议先选 <strong>Sever酱</strong>(免费,扫码关注公众号即可)
+                  或 <strong>Telegram Bot</strong>(免费,需要能访问 Telegram)。
+                </div>
+              </div>
+            )}
+
             <div className="grid grid-cols-2 gap-2">
               <ChannelOption
                 selected={channel === "serverchan"}
@@ -178,17 +193,6 @@ export function MeSettingsClient({
                 title="pushplus"
                 desc="微信公众号"
               />
-
-              {channel === "pushplus" && (
-                <div className="col-span-2 mt-1 p-3 rounded-lg bg-amber-50 border border-amber-300 text-amber-900 text-xs">
-                  <div className="font-semibold mb-1">⚠️ 新用户不建议</div>
-                  <div>
-                    pushplus 现在要求<strong>实名认证</strong>才能发消息,且<strong>实名认证平台要收费</strong>(由 pushplus 收取,跟本系统无关)。
-                    新用户建议先选 <strong>Sever酱</strong>(免费,扫码关注公众号即可)
-                    或 <strong>Telegram Bot</strong>(免费,需要能访问 Telegram)。
-                  </div>
-                </div>
-              )}
               <ChannelOption
                 selected={channel === "telegram"}
                 onChange={() => {
@@ -339,31 +343,39 @@ function ActivatedAtSection({
   const [editing, setEditing] = useState(false);
   const [value, setValue] = useState(initialActivatedAt);
   const [saving, setSaving] = useState(false);
+  const [confirmOpen, setConfirmOpen] = useState(false);
   const [message, setMessage] = useState<{
     kind: "success" | "error";
     text: string;
   } | null>(null);
 
-  // 本地时区今天的 yyyy-MM-dd
-  const today = (() => {
-    const d = new Date();
-    d.setMinutes(d.getMinutes() - d.getTimezoneOffset());
-    return d.toISOString().slice(0, 10);
-  })();
+  // 本地时区今天的 yyyy-MM-dd（详见 lib/date.ts）
+  const today = todayLocalISODate();
 
   const valid = /^\d{4}-\d{2}-\d{2}$/.test(value) && value <= today;
   const changed = value !== initialActivatedAt;
   const canSubmit = valid && changed && !saving;
 
+  // 算新激活日期 + 170 天的提醒开始日,给用户直观影响提示
+  const reminderStartDate = (() => {
+    const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
+    if (!m) return "";
+    const d = new Date(Date.UTC(+m[1], +m[2] - 1, +m[3]));
+    d.setUTCDate(d.getUTCDate() + 170);
+    const y = d.getUTCFullYear();
+    const mo = String(d.getUTCMonth() + 1).padStart(2, "0");
+    const dd = String(d.getUTCDate()).padStart(2, "0");
+    return `${y}-${mo}-${dd}`;
+  })();
+
   const onSubmit = async () => {
     if (!canSubmit) return;
-    if (
-      !confirm(
-        `确认把激活日期改为 ${value}？\n\n会重新计算「已激活天数」和保号提醒节奏（如果之后没有保号记录，系统会从 ${value} 重新计时 170 天）。`
-      )
-    ) {
-      return;
-    }
+    // 打开自定义确认 Modal(替代原生 confirm())
+    setConfirmOpen(true);
+  };
+
+  const confirmAndSave = async () => {
+    setConfirmOpen(false);
     setSaving(true);
     setMessage(null);
     try {
@@ -467,6 +479,60 @@ function ActivatedAtSection({
             >
               取消
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* 自定义确认 Modal:替代原生 confirm() 以获得一致样式 + 可关闭遮罩 + 详情展示 */}
+      {confirmOpen && (
+        <div
+          className="fixed inset-0 z-50 bg-slate-900/50 flex items-center justify-center p-4"
+          onClick={() => !saving && setConfirmOpen(false)}
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="confirm-activated-title"
+        >
+          <div
+            className="bg-white rounded-2xl shadow-xl max-w-md w-full p-6"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h2 id="confirm-activated-title" className="text-lg font-semibold mb-2">
+              确认修改激活日期
+            </h2>
+            <div className="text-sm text-slate-700 space-y-2">
+              <p>
+                把激活日期从{" "}
+                <code className="bg-slate-100 px-1.5 py-0.5 rounded">{initialActivatedAt}</code>{" "}
+                改为{" "}
+                <code className="bg-indigo-50 text-indigo-700 px-1.5 py-0.5 rounded">{value}</code>。
+              </p>
+              <div className="p-3 rounded-lg bg-amber-50 border border-amber-200 text-amber-900 text-xs">
+                <div className="font-semibold mb-1">⚠️ 影响</div>
+                <ul className="list-disc list-inside space-y-0.5">
+                  <li>会重新计算「已激活天数」</li>
+                  <li>如果之后没有保号记录,系统将从 {value} 重新计时 170 天</li>
+                  <li>预计下次提醒开始日：<strong>{reminderStartDate || "—"}</strong></li>
+                </ul>
+              </div>
+            </div>
+            <div className="mt-5 flex gap-2 justify-end">
+              <button
+                type="button"
+                onClick={() => setConfirmOpen(false)}
+                disabled={saving}
+                className="px-4 py-2 rounded-lg text-slate-600 hover:bg-slate-100 text-sm disabled:opacity-50"
+              >
+                取消
+              </button>
+              <button
+                type="button"
+                onClick={confirmAndSave}
+                disabled={saving}
+                className="px-4 py-2 rounded-lg bg-rose-600 text-white text-sm font-medium hover:bg-rose-700 disabled:opacity-50"
+              >
+                {saving ? "保存中..." : "确认修改"}
+              </button>
+            </div>
           </div>
         </div>
       )}

@@ -124,7 +124,7 @@ export default function BarkHelpPage() {
 
       <div className="not-prose mt-6 flex gap-3 flex-wrap">
         <Link
-          href="/me/settings"
+          href="/me/settings?channel=bark"
           className="inline-flex items-center px-5 py-2.5 rounded-lg bg-indigo-600 text-white text-sm font-medium hover:bg-indigo-700"
         >
           去设置通知渠道

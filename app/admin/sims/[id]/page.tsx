@@ -129,8 +129,13 @@ export default function EditSimPage({ params }: { params: Promise<{ id: string }
             type="date"
             value={lastPortedAt}
             onChange={(e) => setLastPortedAt(e.target.value)}
-            className="w-full px-3.5 py-2.5 rounded-lg border border-slate-300 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 outline-none"
+            min={activatedAt || undefined}
+            disabled={!activatedAt}
+            className="w-full px-3.5 py-2.5 rounded-lg border border-slate-300 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 outline-none disabled:bg-slate-100 disabled:cursor-not-allowed"
           />
+          <p className="text-xs text-slate-500 mt-1">
+            不能早于激活日期
+          </p>
         </div>
         <div>
           <label className="block text-sm font-medium mb-1.5">状态</label>

@@ -1,8 +1,17 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { getCurrentUser } from "@/lib/session";
-import { dayOffsetFromBaseline, isInReminderWindow } from "@/lib/bucket";
+import {
+  bucketForDay,
+  dayOffsetFromBaseline,
+  isInReminderWindow,
+  shanghaiParts,
+} from "@/lib/bucket";
 import { formatPhoneForDisplay } from "@/lib/phone";
+import {
+  DayOffsetProgress,
+  ReminderWindowAlert,
+} from "./_components/day-offset-progress";
 
 export default async function MePage() {
   const user = await getCurrentUser();
@@ -12,6 +21,10 @@ export default async function MePage() {
   const baseline = sim.lastPortedAt ?? sim.activatedAt;
   const dayOffset = dayOffsetFromBaseline(baseline);
   const inWindow = isInReminderWindow(dayOffset);
+
+  // 计算当前小时的 bucket(用于显示"今天第几次推送")
+  const hourOfDay = shanghaiParts(new Date()).hour;
+  const bucketInfo = bucketForDay(dayOffset, hourOfDay);
 
   const phoneTail4 = sim.phoneNumber.slice(-4);
   const channelMissing = !user.channelKey;
@@ -55,7 +68,7 @@ export default async function MePage() {
             修改
           </Link>
         </div>
-        <div className="text-base mb-3">
+        <div className="text-base mb-4">
           {sim.activatedAt.toISOString().slice(0, 10)}
           {sim.lastPortedAt && (
             <span className="ml-2 text-xs text-slate-500">
@@ -63,14 +76,23 @@ export default async function MePage() {
             </span>
           )}
         </div>
-        <div className="text-sm text-slate-500 mb-1">已激活</div>
-        <div className="text-3xl font-bold text-indigo-600">
-          {dayOffset} <span className="text-base font-normal text-slate-500">天</span>
+        <div className="flex items-baseline gap-2 mb-3">
+          <span className="text-sm text-slate-500">已激活</span>
+          <span className="text-3xl font-bold text-indigo-600">{dayOffset}</span>
+          <span className="text-base font-normal text-slate-500">天</span>
         </div>
+        <DayOffsetProgress dayOffset={dayOffset} />
 
         {inWindow && (
-          <div className="mt-4 p-3 rounded-lg bg-amber-50 border border-amber-200 text-amber-800 text-sm">
-            ⚠️ 已进入保号提醒窗口,请尽快保号
+          <ReminderWindowAlert
+            dayOffset={dayOffset}
+            bucketInfo={bucketInfo}
+          />
+        )}
+
+        {!inWindow && dayOffset > 180 && (
+          <div className="mt-4 p-3 rounded-lg bg-slate-100 border border-slate-200 text-slate-700 text-sm">
+            已超过 180 天,系统不再自动提醒。请尽快保号并提交新日期。
           </div>
         )}
       </div>
@@ -79,7 +101,7 @@ export default async function MePage() {
         href={`/p/${sim.id}`}
         className="block w-full text-center py-3 rounded-lg bg-indigo-600 text-white font-medium hover:bg-indigo-700 transition-colors shadow-sm mb-3"
       >
-        立即去保号
+        {inWindow ? "立即去保号" : "保号（更新日期）"}
       </Link>
 
       <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
@@ -97,7 +119,13 @@ export default async function MePage() {
         ) : (
           <>
             <div className="text-base mb-1">
-              {user.channel === "serverchan" ? "Sever酱" : "Bark"}
+              {user.channel === "serverchan"
+                ? "Sever酱"
+                : user.channel === "bark"
+                ? "Bark"
+                : user.channel === "pushplus"
+                ? "pushplus"
+                : "Telegram"}
             </div>
             <div className="text-xs text-slate-400 font-mono break-all">
               {user.channelKey.slice(0, 12)}****

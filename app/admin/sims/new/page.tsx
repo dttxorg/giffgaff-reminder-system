@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { generateSecurePassword } from "@/lib/password-gen";
 
 export default function NewSimPage() {
   const router = useRouter();
@@ -40,12 +41,8 @@ export default function NewSimPage() {
   };
 
   const generatePassword = () => {
-    const chars = "23456789ABCDEFGHJKMNPQRSTWXYZabcdefghjkmnpqrstwxyz";
-    let s = "";
-    for (let i = 0; i < 12; i++) {
-      s += chars[Math.floor(Math.random() * chars.length)];
-    }
-    setInitialPassword(s);
+    // 使用 crypto.getRandomValues(CSPRNG),而非 Math.random,避免被预测
+    setInitialPassword(generateSecurePassword());
   };
 
   return (

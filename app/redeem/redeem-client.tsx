@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { normalizePhone } from "@/lib/phone";
+import { todayLocalISODate } from "@/lib/date";
 
 type Phase =
   | { kind: "input" }
@@ -207,7 +208,9 @@ function FormPhase({
           ✓ 卡密有效
         </div>
         <div className="text-xs text-emerald-700">
-          请填写您的 SIM 卡信息并设置登录密码完成绑定
+          请填写您的 SIM 卡信息并设置登录密码完成绑定。
+          兑换成功后将自动登录,系统会引导您到设置页绑定推送渠道（Sever酱 / Bark 等）,
+          <strong>绑定后才会真正开始接收保号提醒</strong>。
         </div>
       </div>
 
@@ -227,6 +230,7 @@ function FormPhase({
           onChange={(e) => setPhone(e.target.value)}
           placeholder="07724215611"
           autoComplete="off"
+          inputMode="tel"
           required
           className="w-full px-3.5 py-2.5 rounded-lg border border-slate-300 font-mono focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 outline-none"
         />
@@ -292,10 +296,6 @@ function FormPhase({
         )}
       </div>
 
-      <div className="text-xs text-slate-500 bg-slate-50 rounded p-3 border border-slate-200">
-        兑换后将自动登录,绑定推送渠道后即可接收保号提醒
-      </div>
-
       <div className="flex gap-2 pt-2">
         <button
           type="submit"
@@ -338,11 +338,4 @@ function ErrorView({
       </button>
     </div>
   );
-}
-
-/** 本地时区今天的 yyyy-MM-dd */
-function todayLocalISODate(): string {
-  const d = new Date();
-  d.setMinutes(d.getMinutes() - d.getTimezoneOffset());
-  return d.toISOString().slice(0, 10);
 }

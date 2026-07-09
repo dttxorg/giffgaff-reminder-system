@@ -163,7 +163,7 @@ export default function PushPlusHelpPage() {
               <strong>首次设置(用户中心顶部有红色横幅)</strong>:点横幅里的"立即设置" → 跳到 <code>/me/settings</code>
             </li>
             <li>
-              <strong>已登录要改渠道</strong>:直接访问 <Link href="/me/settings">/me/settings</Link>
+              <strong>已登录要改渠道</strong>:直接访问 <Link href="/me/settings?channel=pushplus">/me/settings?channel=pushplus</Link>
             </li>
           </ul>
           <p>
@@ -256,7 +256,7 @@ export default function PushPlusHelpPage() {
           <li>☐ 微信已关注「pushplus 推送加」公众号</li>
           <li>☐ 已完成实名认证 + 付费(个人中心显示「已认证」)</li>
           <li>☐ 已在 pushplus 个人中心复制 token</li>
-          <li>☐ 已在 <Link href="/me/settings">/me/settings</Link> 选 pushplus、粘贴、测试推送成功</li>
+          <li>☐ 已在 <Link href="/me/settings?channel=pushplus">/me/settings?channel=pushplus</Link> 选 pushplus、粘贴、测试推送成功</li>
           <li>☐ 微信公众号「pushplus 推送加」收到测试消息</li>
         </ul>
         <div className="mt-3 text-xs text-slate-500">
@@ -266,7 +266,7 @@ export default function PushPlusHelpPage() {
 
       <div className="not-prose mt-6 flex gap-3 flex-wrap">
         <Link
-          href="/me/settings"
+          href="/me/settings?channel=pushplus"
           className="inline-flex items-center px-5 py-2.5 rounded-lg bg-indigo-600 text-white text-sm font-medium hover:bg-indigo-700"
         >
           去设置通知渠道

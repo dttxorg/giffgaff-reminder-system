@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { generateSecurePassword } from "@/lib/password-gen";
 
 interface UserRow {
   id: number;
@@ -44,12 +45,8 @@ export function UsersClient({ users }: UsersClientProps) {
   };
 
   const generatePassword = () => {
-    const chars = "23456789ABCDEFGHJKMNPQRSTWXYZabcdefghjkmnpqrstwxyz";
-    let s = "";
-    for (let i = 0; i < 12; i++) {
-      s += chars[Math.floor(Math.random() * chars.length)];
-    }
-    setNewPassword(s);
+    // 使用 crypto.getRandomValues(CSPRNG),而非 Math.random,避免被预测
+    setNewPassword(generateSecurePassword());
   };
 
   const onSubmit = async () => {

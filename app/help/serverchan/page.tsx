@@ -114,7 +114,7 @@ export default function ServerChanHelpPage() {
               <strong>首次设置(用户中心顶部有红色横幅)</strong>:点横幅里的"立即设置" → 跳到 <code>/me/settings</code>
             </li>
             <li>
-              <strong>已登录要改渠道</strong>:直接访问 <Link href="/me/settings">/me/settings</Link>
+              <strong>已登录要改渠道</strong>:直接访问 <Link href="/me/settings?channel=serverchan">/me/settings?channel=serverchan</Link>
             </li>
           </ul>
           <p>
@@ -194,7 +194,7 @@ export default function ServerChanHelpPage() {
         <ul className="text-sm text-slate-700 space-y-1">
           <li>☐ 微信已关注「Server酱」公众号</li>
           <li>☐ 已在 sct.ftqq.com 登录并复制 SendKey(以 SCT 开头)</li>
-          <li>☐ 已在 <Link href="/me/settings">/me/settings</Link> 选 Sever酱、粘贴、测试推送成功</li>
+          <li>☐ 已在 <Link href="/me/settings?channel=serverchan">/me/settings?channel=serverchan</Link> 选 Sever酱、粘贴、测试推送成功</li>
           <li>☐ 微信公众号「Server酱」收到测试消息</li>
         </ul>
         <div className="mt-3 text-xs text-slate-500">
@@ -204,7 +204,7 @@ export default function ServerChanHelpPage() {
 
       <div className="not-prose mt-6 flex gap-3 flex-wrap">
         <Link
-          href="/me/settings"
+          href="/me/settings?channel=serverchan"
           className="inline-flex items-center px-5 py-2.5 rounded-lg bg-indigo-600 text-white text-sm font-medium hover:bg-indigo-700"
         >
           去设置通知渠道

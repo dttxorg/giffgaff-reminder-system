@@ -1,0 +1,81 @@
+import { NextResponse } from "next/server";
+import { prisma } from "@/lib/db";
+import { getAdminSession } from "@/lib/session";
+import { sendPush } from "@/lib/channels";
+import { DEFAULT_TEMPLATE, portUrl, renderTemplate } from "@/lib/template";
+import { dayOffsetFromBaseline } from "@/lib/bucket";
+
+interface RouteContext {
+  params: Promise<{ id: string }>;
+}
+
+/**
+ * POST /api/admin/reminders/[id]/resend
+ * 手动重发某条失败(也可重发成功)的提醒,使用原 sim 的当前激活/保号日期 + 绑定的推送渠道。
+ * - 鉴权: 管理员 session
+ * - 行为: 用 reminder 当时的 dayOffset 渲染模板,推给 sim.user;成功后更新原 log 的 status/errorMessage
+ */
+export async function POST(_req: Request, ctx: RouteContext) {
+  if (!(await getAdminSession())) {
+    return NextResponse.json({ ok: false, error: "未授权" }, { status: 401 });
+  }
+  const { id } = await ctx.params;
+  const reminderId = parseInt(id, 10);
+  if (!Number.isFinite(reminderId)) {
+    return NextResponse.json({ ok: false, error: "id 无效" }, { status: 400 });
+  }
+
+  const reminder = await prisma.reminderSent.findUnique({
+    where: { id: reminderId },
+    include: { sim: { include: { user: true } } },
+  });
+  if (!reminder) {
+    return NextResponse.json({ ok: false, error: "记录不存在" }, { status: 404 });
+  }
+
+  const user = reminder.sim.user;
+  if (!user) {
+    return NextResponse.json(
+      { ok: false, error: "该 sim 未绑定用户,无法推送" },
+      { status: 400 }
+    );
+  }
+  if (!user.channelKey) {
+    return NextResponse.json(
+      { ok: false, error: "用户未配置推送渠道 key" },
+      { status: 400 }
+    );
+  }
+
+  const baseline = reminder.sim.lastPortedAt ?? reminder.sim.activatedAt;
+  const days = dayOffsetFromBaseline(baseline);
+  // 重发的链接用 sim 当前 id(可能已不同于当时)
+  const baseUrl = process.env.PUBLIC_BASE_URL || "http://localhost:3000";
+  const url = portUrl(baseUrl, reminder.sim.id);
+  const setting = await prisma.setting.findUnique({ where: { key: "reminder_template" } });
+  const template = setting?.value || DEFAULT_TEMPLATE;
+  const title = "Giffgaff 保号提醒";
+  const body = renderTemplate(template, {
+    phone: reminder.sim.phoneNumber,
+    days,
+    port_url: url,
+  });
+
+  const result = await sendPush(user.channel, user.channelKey, title, body);
+  await prisma.reminderSent.update({
+    where: { id: reminderId },
+    data: {
+      status: result.ok ? "success" : "failed",
+      errorMessage: result.ok ? null : result.errorMessage || "未知错误",
+      sentAt: new Date(),
+    },
+  });
+
+  if (!result.ok) {
+    return NextResponse.json(
+      { ok: false, error: result.errorMessage || "推送失败" },
+      { status: 502 }
+    );
+  }
+  return NextResponse.json({ ok: true });
+}

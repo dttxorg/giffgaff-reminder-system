@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
+import { todayLocalISODate } from "@/lib/date";
 
 interface SimInfo {
   phoneNumber: string;
@@ -36,7 +37,8 @@ export default function PortPage() {
 
   // 最早可选 = 激活日期（API 返回的 YYYY-MM-DD 字符串，可直接用于 input[type=date] 的 min）
   // 计算放在 sim 已确认非 null 之后（下方 early return），这里用占位避免 TS 报错
-  const maxDate = new Date().toISOString().slice(0, 10);
+  // maxDate 必须按用户本地时区的"今天"算(详见 lib/date.ts 的注释)。
+  const maxDate = todayLocalISODate();
 
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

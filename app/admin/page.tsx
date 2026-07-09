@@ -82,8 +82,12 @@ export default async function AdminDashboard() {
                         {r.status}
                       </span>
                     </td>
-                    <td className="px-3 py-2 text-xs text-slate-500 max-w-xs truncate">
-                      {r.errorMessage || "—"}
+                    {/* 错误信息不再 truncate:admin 排错需要完整文本;
+                        改为 max-w + break-words 保留可读性同时控制列宽 */}
+                    <td className="px-3 py-2 text-xs text-slate-700 max-w-md break-words">
+                      {r.errorMessage || (
+                        <span className="text-slate-300">—</span>
+                      )}
                     </td>
                   </tr>
                 ))
