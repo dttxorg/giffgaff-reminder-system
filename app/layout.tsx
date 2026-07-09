@@ -1,18 +1,27 @@
 import type { Metadata } from "next";
+import { Suspense } from "react";
 import "./globals.css";
 import Link from "next/link";
-import { getCurrentUser } from "@/lib/session";
+import { UserNav, UserNavFallback } from "./_components/user-nav";
 
 export const metadata: Metadata = {
   title: "Giffgaff 保号提醒",
   description: "Giffgaff SIM 卡保号提醒服务",
 };
 
-export default async function RootLayout({
+/**
+ * 根 layout。
+ *
+ * G5 优化: 不再在 layout 顶层 await getCurrentUser(),而是用 <Suspense>
+ * 包裹 UserNav。让页面的主体内容(连 /login / /help 这种不需要用户态的)
+ * 不被这一查阻塞 — DB 慢的话用户能更早看到页面内容。
+ *
+ * 视觉: header 右侧 nav 区域在 DB 返回前显示 UserNavFallback 占位(同高度,
+ * 避免抖动),DB 返回后无缝替换为真实导航。
+ */
+export default function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
-  const user = await getCurrentUser();
-
   return (
     <html lang="zh-CN" className="h-full antialiased">
       <body className="min-h-full flex flex-col bg-gradient-to-br from-slate-50 via-white to-indigo-50 text-slate-900">
@@ -25,31 +34,9 @@ export default async function RootLayout({
               <span>Giffgaff 保号提醒</span>
             </Link>
             <nav className="flex items-center gap-1 text-sm">
-              {user ? (
-                <>
-                  <Link
-                    href="/me"
-                    className="px-3 py-1.5 rounded-md hover:bg-slate-100 transition-colors"
-                  >
-                    用户中心
-                  </Link>
-                  <form action="/api/auth/logout" method="post">
-                    <button
-                      type="submit"
-                      className="px-3 py-1.5 rounded-md hover:bg-slate-100 transition-colors text-slate-600"
-                    >
-                      退出
-                    </button>
-                  </form>
-                </>
-              ) : (
-                <Link
-                  href="/login"
-                  className="px-3 py-1.5 rounded-md hover:bg-slate-100 transition-colors"
-                >
-                  登录
-                </Link>
-              )}
+              <Suspense fallback={<UserNavFallback />}>
+                <UserNav />
+              </Suspense>
             </nav>
           </div>
         </header>

@@ -1,4 +1,5 @@
 // Session 管理：基于 HTTP-only cookie + 数据库 session 表
+import { cache } from "react";
 import { cookies } from "next/headers";
 import { prisma } from "./db";
 
@@ -27,8 +28,14 @@ export async function createUserSession(userId: number): Promise<string> {
 
 /**
  * 获取当前登录用户
+ *
+ * 用 React cache() 包裹: 单次请求内多次调用只产生一次 DB 查询。
+ * 这是 G5 修复的一部分 — 配合 layout 用 Suspense 流式渲染 UserNav,
+ * 整页响应时间不再被这一查阻塞。
+ *
+ * cookies() 在一次请求内返回同样的值,所以 cache() 的去重是安全的。
  */
-export async function getCurrentUser() {
+export const getCurrentUser = cache(async () => {
   const jar = await cookies();
   const sid = jar.get(USER_COOKIE)?.value;
   if (!sid) return null;
@@ -42,7 +49,7 @@ export async function getCurrentUser() {
     return null;
   }
   return session.user;
-}
+});
 
 /**
  * 销毁用户 session
@@ -77,8 +84,10 @@ export async function createAdminSession(): Promise<string> {
 
 /**
  * 验证管理员 session
+ *
+ * 同 getCurrentUser,用 cache() 去重。
  */
-export async function getAdminSession(): Promise<boolean> {
+export const getAdminSession = cache(async (): Promise<boolean> => {
   const jar = await cookies();
   const sid = jar.get(ADMIN_COOKIE)?.value;
   if (!sid) return false;
@@ -89,7 +98,7 @@ export async function getAdminSession(): Promise<boolean> {
     return false;
   }
   return true;
-}
+});
 
 export async function destroyAdminSession() {
   const jar = await cookies();
