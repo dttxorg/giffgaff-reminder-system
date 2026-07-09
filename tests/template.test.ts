@@ -26,8 +26,12 @@ describe("renderTemplate", () => {
 });
 
 describe("portUrl", () => {
-  it("拼接保号页 URL", () => {
+  it("拼接保号页 URL (int id,向后兼容)", () => {
     expect(portUrl("https://example.com", 42)).toBe("https://example.com/p/42");
+  });
+  it("拼接保号页 URL (token 字符串,推荐)", () => {
+    expect(portUrl("https://example.com", "abc123def456ghi789jkl012mno345pq"))
+      .toBe("https://example.com/p/abc123def456ghi789jkl012mno345pq");
   });
   it("去尾部斜杠", () => {
     expect(portUrl("https://example.com/", 42)).toBe("https://example.com/p/42");

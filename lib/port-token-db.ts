@@ -1,0 +1,60 @@
+// SIM portToken - DB 相关操作
+//
+// 与 lib/port-token.ts 分开,是因为纯工具部分需要在测试里无 DB 加载。
+// 这里的所有函数都需要 prisma,调用方应有 DB 可用。
+
+import { prisma } from "./db";
+import { generatePortToken, looksLikeToken } from "./port-token";
+
+export { generatePortToken, looksLikeToken };
+
+/**
+ * 按 URL 中的 param 查找 sim。
+ * - param 看起来像 token(字母数字,非纯数字,长度合适) → 按 portToken 查
+ * - 否则按 id 查(向后兼容旧的 /p/${int} URL)
+ * - 找不到返回 null
+ */
+export async function findSimByParam(param: string) {
+  if (looksLikeToken(param)) {
+    return prisma.sim.findUnique({ where: { portToken: param } });
+  }
+  const id = parseInt(param, 10);
+  if (!Number.isFinite(id) || id <= 0) return null;
+  return prisma.sim.findUnique({ where: { id } });
+}
+
+/**
+ * 确保 sim 有 portToken,有则返回,无则生成并持久化后返回。
+ *
+ * 用于 lazy-backfill 旧 sim:
+ * - cron reminder 触达旧 sim 时调用
+ * - 旧 URL(/p/${id})被访问时调用
+ *
+ * 冲突处理: 极小概率生成重复 token,DB 唯一约束会抛错,重试。
+ */
+export async function ensureSimPortToken(
+  simId: number
+): Promise<string | null> {
+  const sim = await prisma.sim.findUnique({
+    where: { id: simId },
+    select: { portToken: true },
+  });
+  if (!sim) return null;
+  if (sim.portToken) return sim.portToken;
+
+  for (let attempt = 0; attempt < 3; attempt++) {
+    const token = generatePortToken();
+    try {
+      const updated = await prisma.sim.update({
+        where: { id: simId },
+        data: { portToken: token },
+        select: { portToken: true },
+      });
+      return updated.portToken;
+    } catch {
+      // 唯一冲突 → 重试生成
+      if (attempt === 2) throw new Error("无法生成唯一 portToken");
+    }
+  }
+  return null;
+}

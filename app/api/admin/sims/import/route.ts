@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/db";
 import { getAdminSession } from "@/lib/session";
+import { generatePortToken } from "@/lib/port-token";
 
 const BodySchema = z.object({
   csv: z.string().min(1),
@@ -75,7 +76,11 @@ export async function POST(req: Request) {
         result.updated++;
       } else {
         await prisma.sim.create({
-          data: { phoneNumber: phone, activatedAt },
+          data: {
+            phoneNumber: phone,
+            portToken: generatePortToken(),
+            activatedAt,
+          },
         });
         result.inserted++;
       }

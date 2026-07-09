@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/db";
+import { findSimByParam } from "@/lib/port-token-db";
 
 const BodySchema = z.object({
   portedAt: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "日期格式 YYYY-MM-DD"),
@@ -12,18 +13,14 @@ interface RouteContext {
 
 /**
  * POST /api/p/[simId]/port
- * 公开（按 simId），用于保号页提交
- * - simId 必须存在
+ * 公开（按 simId 或 portToken），用于保号页提交
+ * - 优先按 portToken 查,fallback 到 int id(向后兼容老 URL)
  * - portedAt 不能晚于今天（不能填未来）
  * - portedAt 不能早于 activatedAt（保号动作只能发生在激活之后）
  *   老用户（卡已用很久）可以补录任意历史日期，系统按那天重新计时 170 天
  */
 export async function POST(req: Request, ctx: RouteContext) {
   const { simId } = await ctx.params;
-  const id = parseInt(simId, 10);
-  if (!Number.isFinite(id) || id <= 0) {
-    return NextResponse.json({ ok: false, error: "simId 无效" }, { status: 400 });
-  }
 
   let body: unknown;
   try {
@@ -36,7 +33,7 @@ export async function POST(req: Request, ctx: RouteContext) {
     return NextResponse.json({ ok: false, error: "参数错误" }, { status: 400 });
   }
 
-  const sim = await prisma.sim.findUnique({ where: { id } });
+  const sim = await findSimByParam(simId);
   if (!sim) {
     return NextResponse.json({ ok: false, error: "sim 不存在" }, { status: 404 });
   }
@@ -62,7 +59,7 @@ export async function POST(req: Request, ctx: RouteContext) {
   }
 
   await prisma.sim.update({
-    where: { id },
+    where: { id: sim.id },
     data: { lastPortedAt: portedAt },
   });
 

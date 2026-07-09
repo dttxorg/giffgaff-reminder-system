@@ -3,6 +3,7 @@ import { prisma } from "./db";
 import { bucketForDay, dayOffsetFromBaseline, shanghaiParts } from "./bucket";
 import { sendPush, type ChannelType } from "./channels";
 import { DEFAULT_TEMPLATE, portUrl, renderTemplate } from "./template";
+import { ensureSimPortToken } from "./port-token-db";
 
 export interface ReminderRunResult {
   processed: number;
@@ -61,8 +62,16 @@ export async function runReminderScan(opts: RunOptions): Promise<ReminderRunResu
       continue;
     }
 
-    // 6. 渲染文案（隐私：sim 号码只显示后 4 位）
-    const url = portUrl(opts.baseUrl, sim.id);
+    // 6. 渲染文案（隐私：sim 号码只显示后 4 位;URL 用不可枚举 token）
+    // 老 sim 没有 portToken 时 lazy-backfill(确保下次提醒也是 token URL)
+    let url: string;
+    if (sim.portToken) {
+      url = portUrl(opts.baseUrl, sim.portToken);
+    } else {
+      const token = await ensureSimPortToken(sim.id);
+      // 即使 backfill 失败也用 id 生成 URL(老推送仍能工作),不阻塞推送
+      url = token ? portUrl(opts.baseUrl, token) : portUrl(opts.baseUrl, sim.id);
+    }
     const phoneDisplay = `**** ${sim.phoneNumber.slice(-4)}`;
     const body = renderTemplate(template, {
       phone: phoneDisplay,

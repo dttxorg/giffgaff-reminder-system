@@ -15,6 +15,11 @@ datasource db {
 model Sim {
   id           Int       @id @default(autoincrement())
   phoneNumber  String    @unique // 完整号，如 07724215611（只存数字）
+  // portToken 是公开 URL(/p/[token])用的不可枚举随机串,32 字符 url-safe
+  // - 新 sim 在创建时由应用层生成并持久化
+  // - 旧 sim 会在下一次被 cron reminder / 任何 portUrl 生成路径触达时 lazy-backfill
+  // - 旧 URL(/p/${id})仍可工作,作为向后兼容(直到所有现存推送过期)
+  portToken    String?   @unique
   activatedAt  DateTime // 激活日期（保号起算日）
   lastPortedAt DateTime? // 上次保号日期，NULL = 还没保过号
   status       SimStatus @default(active) // active / paused

@@ -98,7 +98,9 @@ export default async function MePage() {
       </div>
 
       <Link
-        href={`/p/${sim.id}`}
+        // 优先用 portToken(不可枚举);老 sim 可能还没有,fallback 到 id
+        // (route handler 会自动 lazy-backfill 第一次访问时)
+        href={`/p/${sim.portToken ?? sim.id}`}
         className="block w-full text-center py-3 rounded-lg bg-indigo-600 text-white font-medium hover:bg-indigo-700 transition-colors shadow-sm mb-3"
       >
         {inWindow ? "立即去保号" : "保号（更新日期）"}

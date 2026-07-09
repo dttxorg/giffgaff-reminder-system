@@ -3,6 +3,7 @@ import { prisma } from "@/lib/db";
 import { getAdminSession } from "@/lib/session";
 import { sendPush } from "@/lib/channels";
 import { DEFAULT_TEMPLATE, portUrl, renderTemplate } from "@/lib/template";
+import { ensureSimPortToken } from "@/lib/port-token-db";
 import { dayOffsetFromBaseline } from "@/lib/bucket";
 
 interface RouteContext {
@@ -49,9 +50,15 @@ export async function POST(_req: Request, ctx: RouteContext) {
 
   const baseline = reminder.sim.lastPortedAt ?? reminder.sim.activatedAt;
   const days = dayOffsetFromBaseline(baseline);
-  // 重发的链接用 sim 当前 id(可能已不同于当时)
+  // 重发的链接用 sim 当前的 portToken(不可枚举);老 sim lazy-backfill
   const baseUrl = process.env.PUBLIC_BASE_URL || "http://localhost:3000";
-  const url = portUrl(baseUrl, reminder.sim.id);
+  let url: string;
+  if (reminder.sim.portToken) {
+    url = portUrl(baseUrl, reminder.sim.portToken);
+  } else {
+    const token = await ensureSimPortToken(reminder.sim.id);
+    url = token ? portUrl(baseUrl, token) : portUrl(baseUrl, reminder.sim.id);
+  }
   const setting = await prisma.setting.findUnique({ where: { key: "reminder_template" } });
   const template = setting?.value || DEFAULT_TEMPLATE;
   const title = "Giffgaff 保号提醒";

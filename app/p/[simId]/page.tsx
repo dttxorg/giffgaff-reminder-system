@@ -12,11 +12,26 @@ interface SimInfo {
   dayOffset: number;
 }
 
+/**
+ * URL 中的 simId 参数可以是:
+ * - 老 int id (向后兼容旧的 /p/42)
+ * - 新 portToken (不可枚举,32 字符 url-safe)
+ *
+ * 这两种都传给 API,由 API 决定如何查询。客户端只做"基本格式合法"校验,
+ * 不区分形态。
+ */
+function isParamValid(s: string): boolean {
+  // 老 int: 1+ 位数字
+  if (/^\d+$/.test(s)) return true;
+  // 新 token: url-safe, 16-64 字符
+  return /^[A-Za-z0-9_-]{16,64}$/.test(s);
+}
+
 export default function PortPage() {
   const params = useParams<{ simId: string }>();
   const router = useRouter();
-  const simId = parseInt(params.simId, 10);
-  const simIdValid = Number.isFinite(simId) && simId > 0;
+  const simIdRaw = params.simId;
+  const simIdValid = isParamValid(simIdRaw);
   const [sim, setSim] = useState<SimInfo | null>(null);
   const [notFound, setNotFound] = useState(false);
   const [portedAt, setPortedAt] = useState<string>("");
@@ -26,14 +41,15 @@ export default function PortPage() {
 
   useEffect(() => {
     if (!simIdValid) return;
-    fetch(`/api/p/${simId}`)
+    // 保留原始字符串(todo: 后续如果 Next.js 自动 encode 可省略 encodeURIComponent)
+    fetch(`/api/p/${encodeURIComponent(simIdRaw)}`)
       .then((r) => (r.ok ? r.json() : Promise.reject(r.status)))
       .then((data: SimInfo) => {
         setSim(data);
-        setPortedAt(new Date().toISOString().slice(0, 10));
+        setPortedAt(todayLocalISODate());
       })
       .catch(() => setNotFound(true));
-  }, [simId, simIdValid]);
+  }, [simIdRaw, simIdValid]);
 
   // 最早可选 = 激活日期（API 返回的 YYYY-MM-DD 字符串，可直接用于 input[type=date] 的 min）
   // 计算放在 sim 已确认非 null 之后（下方 early return），这里用占位避免 TS 报错
@@ -45,7 +61,7 @@ export default function PortPage() {
     setError(null);
     setLoading(true);
     try {
-      const resp = await fetch(`/api/p/${simId}/port`, {
+      const resp = await fetch(`/api/p/${encodeURIComponent(simIdRaw)}/port`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ portedAt }),

@@ -3,6 +3,7 @@ import { z } from "zod";
 import { prisma } from "@/lib/db";
 import { getAdminSession } from "@/lib/session";
 import { hashPassword } from "@/lib/auth";
+import { generatePortToken } from "@/lib/port-token";
 
 const BodySchema = z.object({
   phoneNumber: z.string().min(6),
@@ -51,9 +52,11 @@ export async function POST(req: Request) {
     }
     const passwordHash = await hashPassword(parsed.data.initialPassword);
     const created = await prisma.$transaction(async (tx) => {
+      // 新 sim 在创建时就生成 portToken,这样首批推送就使用安全 URL
       const sim = await tx.sim.create({
         data: {
           phoneNumber: phone,
+          portToken: generatePortToken(),
           activatedAt,
           status: parsed.data.status || "active",
         },
