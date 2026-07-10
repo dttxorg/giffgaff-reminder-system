@@ -10,28 +10,54 @@ export default async function AdminDashboard() {
   const now = new Date();
   const sp = shanghaiParts(now);
   const todayStartUTC = new Date(Date.UTC(sp.year, sp.month - 1, sp.day));
+  // 昨日 0 点(用于 vs 昨日对比)
+  const yesterdayStartUTC = new Date(todayStartUTC.getTime() - 24 * 60 * 60 * 1000);
 
-  const [simCount, activeSimCount, pausedSimCount, userCount, channelCount, todaySent, todayFailed, failedRecent] =
-    await Promise.all([
-      prisma.sim.count(),
-      prisma.sim.count({ where: { status: "active" } }),
-      prisma.sim.count({ where: { status: "paused" } }),
-      prisma.user.count(),
-      prisma.user.count({ where: { channelKey: { not: "" } } }),
-      prisma.reminderSent.count({
-        where: { sentAt: { gte: todayStartUTC } },
-      }),
-      prisma.reminderSent.count({
-        where: { status: "failed", sentAt: { gte: todayStartUTC } },
-      }),
-      // 最近 7 天的失败数,给 stat 用
-      prisma.reminderSent.count({
-        where: {
-          status: "failed",
-          sentAt: { gte: new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000) },
-        },
-      }),
-    ]);
+  // D1: 7 天每日发送数(给 sparkline 用,从今天倒数 7 天)
+  const last7DaysSends = await Promise.all(
+    Array.from({ length: 7 }, (_, i) => {
+      const dayStart = new Date(todayStartUTC.getTime() - (6 - i) * 24 * 60 * 60 * 1000);
+      const dayEnd = new Date(dayStart.getTime() + 24 * 60 * 60 * 1000);
+      return prisma.reminderSent.count({
+        where: { sentAt: { gte: dayStart, lt: dayEnd } },
+      });
+    })
+  );
+
+  const [
+    simCount,
+    activeSimCount,
+    pausedSimCount,
+    userCount,
+    channelCount,
+    todaySent,
+    todayFailed,
+    failedRecent,
+    yesterdaySent,
+  ] = await Promise.all([
+    prisma.sim.count(),
+    prisma.sim.count({ where: { status: "active" } }),
+    prisma.sim.count({ where: { status: "paused" } }),
+    prisma.user.count(),
+    prisma.user.count({ where: { channelKey: { not: "" } } }),
+    prisma.reminderSent.count({
+      where: { sentAt: { gte: todayStartUTC } },
+    }),
+    prisma.reminderSent.count({
+      where: { status: "failed", sentAt: { gte: todayStartUTC } },
+    }),
+    prisma.reminderSent.count({
+      where: {
+        status: "failed",
+        sentAt: { gte: new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000) },
+      },
+    }),
+    prisma.reminderSent.count({
+      where: {
+        sentAt: { gte: yesterdayStartUTC, lt: todayStartUTC },
+      },
+    }),
+  ]);
 
   const recent = await prisma.reminderSent.findMany({
     take: 10,
@@ -41,13 +67,30 @@ export default async function AdminDashboard() {
 
   const channelCoverage = simCount > 0 ? Math.round((channelCount / simCount) * 100) : 0;
 
+  // D1: 计算 vs 昨日 delta
+  const sentDelta = todaySent - yesterdaySent;
+  const sendDeltaLabel =
+    yesterdaySent === 0
+      ? "首次统计"
+      : sentDelta === 0
+      ? "与昨日持平"
+      : sentDelta > 0
+      ? `↑ 比昨日多 ${sentDelta}`
+      : `↓ 比昨日少 ${Math.abs(sentDelta)}`;
+  const sendDeltaTone =
+    sentDelta > 0 ? "indigo" : sentDelta < 0 ? "amber" : "slate";
+
   return (
     <div className="p-6 sm:p-8">
       <h1 className="text-2xl font-bold mb-6">仪表盘</h1>
 
-      {/* 核心数据 — 6 个 stat,active 占比凸显系统状态 */}
+      {/* 核心数据 — 6 个 stat */}
       <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-3 mb-6">
-        <Stat label="号码总数" value={simCount} sub={`active ${activeSimCount} · paused ${pausedSimCount}`} />
+        <Stat
+          label="号码总数"
+          value={simCount}
+          sub={`active ${activeSimCount} · paused ${pausedSimCount}`}
+        />
         <Stat
           label="已绑定渠道"
           value={`${channelCount}/${simCount}`}
@@ -55,7 +98,13 @@ export default async function AdminDashboard() {
           tone={channelCoverage >= 80 ? "indigo" : channelCoverage >= 50 ? "amber" : "rose"}
         />
         <Stat label="用户数" value={userCount} />
-        <Stat label="今日发送" value={todaySent} tone="indigo" />
+        <Stat
+          label="今日发送"
+          value={todaySent}
+          tone="indigo"
+          sub={sendDeltaLabel}
+          subTone={sendDeltaTone}
+        />
         <Stat
           label="今日失败"
           value={todayFailed}
@@ -65,7 +114,26 @@ export default async function AdminDashboard() {
         <Stat label="卡密未用" value={undefined} sub="在 卡密管理 查看" />
       </div>
 
-      {/* 快捷入口 — 一键触达常见任务,免去多级跳转 */}
+      {/* D1: 7 日发送趋势 sparkline + 卡片总数对比 */}
+      <div className="bg-white rounded-xl border border-slate-200 p-5 mb-6">
+        <div className="flex items-baseline justify-between mb-3">
+          <div>
+            <div className="text-sm font-medium text-slate-700">最近 7 日发送趋势</div>
+            <div className="text-xs text-slate-500 mt-0.5">
+              含今日 · 7 天累计 {last7DaysSends.reduce((a, b) => a + b, 0)} 条推送
+            </div>
+          </div>
+          <div className="text-xs text-slate-500 flex items-center gap-3">
+            <span className="flex items-center gap-1">
+              <span className="w-2.5 h-2.5 rounded-sm bg-indigo-500 inline-block" aria-hidden="true" />
+              <span>发送</span>
+            </span>
+          </div>
+        </div>
+        <Sparkline values={last7DaysSends} />
+      </div>
+
+      {/* 快捷入口 */}
       <div className="bg-white rounded-xl border border-slate-200 p-4 mb-6">
         <div className="text-sm font-medium text-slate-700 mb-3">快捷入口</div>
         <div className="flex flex-wrap gap-2">
@@ -103,7 +171,7 @@ export default async function AdminDashboard() {
                   <th className="text-left px-3 py-2">号码</th>
                   <th className="text-left px-3 py-2">day/bucket</th>
                   <th className="text-left px-3 py-2">状态</th>
-                  <th className="text-left px-3 py-2">错误</th>
+                  <th className="text-left px-3 py-2 min-w-[200px]">错误</th>
                 </tr>
               </thead>
               <tbody>
@@ -153,11 +221,13 @@ function Stat({
   value,
   sub,
   tone,
+  subTone = "slate",
 }: {
   label: string;
   value: number | string | undefined;
   sub?: string;
   tone?: "indigo" | "amber" | "rose" | "slate";
+  subTone?: "indigo" | "amber" | "rose" | "slate";
 }) {
   const toneClass =
     tone === "indigo"
@@ -166,16 +236,22 @@ function Stat({
       ? "text-amber-600"
       : tone === "rose"
       ? "text-rose-600"
-      : tone === "slate"
-      ? "text-slate-500"
       : "text-slate-900";
+  const subClass =
+    subTone === "indigo"
+      ? "text-indigo-600"
+      : subTone === "amber"
+      ? "text-amber-600"
+      : subTone === "rose"
+      ? "text-rose-600"
+      : "text-slate-500";
   return (
     <div className="bg-white rounded-xl border border-slate-200 p-4">
       <div className="text-xs text-slate-500 mb-1">{label}</div>
       <div className={`text-3xl font-bold ${toneClass}`}>
         {value === undefined ? "—" : value}
       </div>
-      {sub && <div className="text-xs text-slate-500 mt-1">{sub}</div>}
+      {sub && <div className={`text-xs mt-1 ${subClass}`}>{sub}</div>}
     </div>
   );
 }
@@ -200,5 +276,72 @@ function QuickLink({
     >
       {label}
     </Link>
+  );
+}
+
+/**
+ * 7 格 sparkline:每条 24px,间距 4px,无依赖的纯 SVG
+ * - 比例尺自动按数组最大值归一
+ * - 单元格底部加 baseline,空日子(0) 也显示薄线
+ * - 用 aria-label 给屏幕阅读器一个概括
+ */
+function Sparkline({ values }: { values: number[] }) {
+  const max = Math.max(1, ...values); // 防止除零
+  const gap = 4;
+  const barW = 24;
+  const height = 64;
+  const totalW = values.length * (barW + gap) - gap;
+
+  return (
+    <div
+      className="overflow-x-auto"
+      role="img"
+      aria-label={`最近 7 日发送量,每天 ${values.join("、")} 条`}
+    >
+      <svg
+        width={totalW}
+        height={height + 32}
+        viewBox={`0 0 ${totalW} ${height + 32}`}
+        className="block"
+      >
+        {/* baseline */}
+        <line
+          x1={0}
+          y1={height + 1}
+          x2={totalW}
+          y2={height + 1}
+          stroke="currentColor"
+          strokeOpacity={0.1}
+        />
+        {values.map((v, i) => {
+          const h = v === 0 ? 2 : Math.max(2, Math.round((v / max) * height));
+          const x = i * (barW + gap);
+          const y = height - h + 1;
+          return (
+            <g key={i}>
+              <rect
+                x={x}
+                y={y}
+                width={barW}
+                height={h}
+                rx={3}
+                fill="#4f46e5"
+                opacity={v === 0 ? 0.25 : 1}
+              />
+              <text
+                x={x + barW / 2}
+                y={height + 18}
+                fontSize={11}
+                fill="currentColor"
+                textAnchor="middle"
+                opacity={0.5}
+              >
+                {v}
+              </text>
+            </g>
+          );
+        })}
+      </svg>
+    </div>
   );
 }

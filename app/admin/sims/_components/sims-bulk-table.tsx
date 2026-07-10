@@ -61,33 +61,49 @@ export function SimsBulkTable({ sims }: SimsBulkTableProps) {
     setSelected(next);
   };
 
-  const submit = async (action: "delete" | "pause" | "activate") => {
+  const submit = async (action: "delete" | "pause" | "activate" | "test-push") => {
     if (selected.size === 0) return;
     if (
-      action === "delete" &&
+      (action === "delete" || action === "test-push") &&
       !confirm(
-        `确认删除 ${selected.size} 个号码?\n\n会级联删除绑定 user 和 reminders_sent,不可恢复。`
+        action === "delete"
+          ? `确认删除 ${selected.size} 个号码?\n\n会级联删除绑定 user 和 reminders_sent,不可恢复。`
+          : `确认向 ${selected.size} 个用户发送一次测试推送?\n\n用户的 Sever酱/Bark 等渠道都会收到一条消息(会消耗他们的日配额)。`
       )
     ) {
       return;
     }
     setLoading(true);
     setMessage(null);
+    const url = action === "test-push" ? "/api/admin/sims/test-push" : "/api/admin/sims/batch";
+    const body = action === "test-push"
+      ? { simIds: Array.from(selected) }
+      : { ids: Array.from(selected), action };
     try {
-      const resp = await fetch("/api/admin/sims/batch", {
+      const resp = await fetch(url, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ids: Array.from(selected), action }),
+        body: JSON.stringify(body),
       });
       const data = await resp.json();
       if (!data.ok) {
         setMessage({ kind: "error", text: data.error || "操作失败" });
         return;
       }
-      setMessage({
-        kind: "success",
-        text: `已${actionLabel(action)} ${data.affected} 个号码`,
-      });
+      if (action === "test-push") {
+        const total = data.summary?.total ?? 0;
+        const ok = data.summary?.success ?? 0;
+        const fail = data.summary?.failed ?? 0;
+        setMessage({
+          kind: fail === 0 ? "success" : "success",
+          text: `测试推送 ${total} 个:成功 ${ok},失败 ${fail}`,
+        });
+      } else {
+        setMessage({
+          kind: "success",
+          text: `已${actionLabel(action)} ${data.affected} 个号码`,
+        });
+      }
       setSelected(new Set());
       router.refresh();
     } catch (e) {
@@ -108,6 +124,14 @@ export function SimsBulkTable({ sims }: SimsBulkTableProps) {
           <span className="text-sm text-indigo-900 font-medium">
             已选 <strong>{totalSelected}</strong> 个
           </span>
+          <button
+            type="button"
+            onClick={() => submit("test-push")}
+            disabled={loading}
+            className="px-3 py-1.5 text-xs rounded-md border border-indigo-300 text-indigo-800 bg-white hover:bg-indigo-50 disabled:opacity-50 transition-colors"
+          >
+            测试推送
+          </button>
           <button
             type="button"
             onClick={() => submit("activate")}

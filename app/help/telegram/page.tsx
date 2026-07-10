@@ -3,7 +3,6 @@ import { ExternalLink } from "@/app/_components/external-link";
 
 const BOTFATHER_URL = "https://t.me/BotFather";
 const USERINFOBOT_URL = "https://t.me/userinfobot";
-const GETUPDATES_HINT = "https://api.telegram.org/bot<YOUR_BOT_TOKEN>/getUpdates";
 
 export default function TelegramHelpPage() {
   return (
