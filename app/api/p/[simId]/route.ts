@@ -37,5 +37,8 @@ export async function GET(_req: Request, ctx: RouteContext) {
     activatedAt: sim.activatedAt.toISOString().slice(0, 10),
     lastPortedAt: sim.lastPortedAt?.toISOString().slice(0, 10) ?? null,
     dayOffset,
+    // 公开给 /p/[simId] page 用:旧 int URL 命中时,client 端 redirect 到 /p/[portToken]
+    // 防止公开 URL 可枚举。这是安全修复(P6 修复)的一部分。
+    portToken: sim.portToken,
   });
 }

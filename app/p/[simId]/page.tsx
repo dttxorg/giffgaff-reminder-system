@@ -11,6 +11,8 @@ interface SimInfo {
   activatedAt: string;
   lastPortedAt: string | null;
   dayOffset: number;
+  /** 不可枚举的公开 URL 标识;老 sim 可能在 lazy-backfill 后才填上 */
+  portToken: string | null;
 }
 
 /**
@@ -30,6 +32,7 @@ function isParamValid(s: string): boolean {
 
 export default function PortPage() {
   const params = useParams<{ simId: string }>();
+  const router = useRouter();
   const simIdRaw = params.simId;
   const simIdValid = isParamValid(simIdRaw);
   const [sim, setSim] = useState<SimInfo | null>(null);
@@ -45,11 +48,17 @@ export default function PortPage() {
     fetch(`/api/p/${encodeURIComponent(simIdRaw)}`)
       .then((r) => (r.ok ? r.json() : Promise.reject(r.status)))
       .then((data: SimInfo) => {
+        // P6 安全修复:URL 是老 int 形式 且 sim 已有 portToken → 跳到 token URL
+        // 防止公开 URL 可枚举。replace 而非 push,避免 back 按钮回环到 int URL。
+        if (/^\d+$/.test(simIdRaw) && data.portToken) {
+          router.replace(`/p/${data.portToken}`);
+          return;
+        }
         setSim(data);
         setPortedAt(todayLocalISODate());
       })
       .catch(() => setNotFound(true));
-  }, [simIdRaw, simIdValid]);
+  }, [simIdRaw, simIdValid, router]);
 
   // 最早可选 = 激活日期（API 返回的 YYYY-MM-DD 字符串，可直接用于 input[type=date] 的 min）
   // 计算放在 sim 已确认非 null 之后（下方 early return），这里用占位避免 TS 报错
