@@ -176,9 +176,23 @@ export default async function MePage() {
         // 优先用 portToken(不可枚举);老 sim 可能还没有,fallback 到 id
         // (route handler 会自动 lazy-backfill 第一次访问时)
         href={`/p/${sim.portToken ?? sim.id}`}
-        className="block w-full text-center py-3 rounded-lg bg-indigo-600 text-white font-medium hover:bg-indigo-700 transition-colors shadow-sm"
+        className="block w-full text-center py-3 rounded-lg bg-indigo-600 text-white font-medium hover:bg-indigo-700 transition-colors shadow-sm inline-flex items-center justify-center gap-1.5"
       >
-        {inWindow ? "立即去保号" : "保号（更新日期）"}
+        {inWindow ? "立即去保号" : "保号(更新日期)"}
+        <svg
+          width={16}
+          height={16}
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth={2}
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          aria-hidden="true"
+        >
+          <line x1="5" y1="12" x2="19" y2="12" />
+          <polyline points="12 5 19 12 12 19" />
+        </svg>
       </Link>
       {/* M4:按钮副标告诉用户会发生什么,避免点进去一脸懵 */}
       <p className="text-xs text-slate-500 text-center mb-3">
