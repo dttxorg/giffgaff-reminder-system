@@ -48,6 +48,10 @@ export function MeSettingsClient({
   // - 用 channel + key 的 sha1 hash 作为后缀,不同 key 的反馈不串
   // - server-side render 时 localStorage 不存在,需要 typeof window 守卫
   // - 切渠道时,旧 key 的反馈虽然还在 storage,但下次访问不会再读,无影响
+  /* eslint-disable react-hooks/set-state-in-effect --
+     合法 use case:从 localStorage 同步 hydration data 到 React state,
+     不能用 useSyncExternalStore 因为 storage 不是"外部 store"是 localStorage。
+     只在挂载时跑一次,deps [] 是对的。*/
   useEffect(() => {
     if (typeof window === "undefined") return;
     try {
