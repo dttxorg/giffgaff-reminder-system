@@ -10,14 +10,14 @@ import { SimsBulkTable } from "./_components/sims-bulk-table";
 import type { Prisma } from "@/lib/generated/prisma/client";
 
 interface PageProps {
-  searchParams: Promise<{ q?: string; status?: string; page?: string }>;
+  searchParams: Promise<{ q?: string; status?: string; bound?: string; page?: string }>;
 }
 
 const PAGE_SIZE = 20;
 
 export default async function SimsPage({ searchParams }: PageProps) {
   await requireAdmin();
-  const { q, status, page } = await searchParams;
+  const { q, status, bound, page } = await searchParams;
   const currentPage = Math.max(1, parseInt(page || "1", 10) || 1);
   const skip = (currentPage - 1) * PAGE_SIZE;
 
@@ -28,6 +28,11 @@ export default async function SimsPage({ searchParams }: PageProps) {
   }
   if (status === "active" || status === "paused") {
     where.status = status;
+  }
+  if (bound === "yes") {
+    where.user = { isNot: null };
+  } else if (bound === "no") {
+    where.user = null;
   }
 
   // 列表 + 概览计数并行(无 filter,全量)
@@ -105,7 +110,7 @@ export default async function SimsPage({ searchParams }: PageProps) {
           </Link>
           <CsvImportButton />
           <a
-            href={`/api/admin/sims/export${buildExportQS(q, status)}`}
+            href={`/api/admin/sims/export${buildExportQS(q, status, bound)}`}
             className="inline-flex items-center px-4 py-2 rounded-lg bg-white border border-slate-200 text-slate-700 text-sm font-medium hover:bg-slate-50 hover:border-slate-300 transition-colors"
           >
             ⬇ 导出 CSV
@@ -128,6 +133,15 @@ export default async function SimsPage({ searchParams }: PageProps) {
           <option value="">全部状态</option>
           <option value="active">active</option>
           <option value="paused">paused</option>
+        </select>
+        <select
+          name="bound"
+          defaultValue={bound || ""}
+          className="px-3 py-2 rounded-lg border border-slate-300 text-sm focus:border-indigo-500 outline-none"
+        >
+          <option value="">全部绑定</option>
+          <option value="yes">已绑</option>
+          <option value="no">未绑</option>
         </select>
         <button
           type="submit"
@@ -158,7 +172,7 @@ export default async function SimsPage({ searchParams }: PageProps) {
           basePath="/admin/sims"
           searchParams={
             new URLSearchParams(
-              Object.entries({ q, status })
+              Object.entries({ q, status, bound })
                 .filter(([, v]) => v != null)
                 .map(([k, v]) => [k, String(v)])
             )
@@ -172,10 +186,15 @@ export default async function SimsPage({ searchParams }: PageProps) {
 /**
  * 复用当前页面的筛选条件构造 export query string
  */
-function buildExportQS(q: string | undefined, status: string | undefined): string {
+function buildExportQS(
+  q: string | undefined,
+  status: string | undefined,
+  bound: string | undefined
+): string {
   const sp = new URLSearchParams();
   if (q) sp.set("q", q);
   if (status) sp.set("status", status);
+  if (bound) sp.set("bound", bound);
   const s = sp.toString();
   return s ? "?" + s : "";
 }
