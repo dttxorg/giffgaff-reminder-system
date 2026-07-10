@@ -7,14 +7,19 @@ import type { Prisma } from "@/lib/generated/prisma/client";
 import { CardDeleteButton } from "./delete-button";
 import { CopyCodeButton } from "./_components/copy-code-button";
 import { EmptyState } from "@/app/_components/empty-state";
+import { Pagination } from "../_components/pagination";
 
 interface PageProps {
-  searchParams: Promise<{ used?: string; q?: string }>;
+  searchParams: Promise<{ used?: string; q?: string; page?: string }>;
 }
+
+const PAGE_SIZE = 20;
 
 export default async function CardsPage({ searchParams }: PageProps) {
   await requireAdmin();
-  const { used, q } = await searchParams;
+  const { used, q, page } = await searchParams;
+  const currentPage = Math.max(1, parseInt(page || "1", 10) || 1);
+  const skip = (currentPage - 1) * PAGE_SIZE;
 
   const where: Prisma.CardKeyWhereInput = {};
   if (used === "true") where.used = true;
@@ -32,7 +37,8 @@ export default async function CardsPage({ searchParams }: PageProps) {
   const cards = await prisma.cardKey.findMany({
     where,
     orderBy: { id: "desc" },
-    take: 200,
+    skip,
+    take: PAGE_SIZE,
   });
 
   // 顶部统计:total / unused / used
@@ -41,6 +47,8 @@ export default async function CardsPage({ searchParams }: PageProps) {
     prisma.cardKey.count({ where: { used: false } }),
   ]);
   const usedCount = totalCount - unusedCount;
+
+  const totalPages = Math.max(1, Math.ceil(totalCount / PAGE_SIZE));
 
   const exportUrl = (() => {
     const sp = new URLSearchParams();
@@ -185,11 +193,19 @@ export default async function CardsPage({ searchParams }: PageProps) {
             </tbody>
           </table>
         </div>
-        {cards.length === 200 && (
-          <div className="px-4 py-2 text-xs text-slate-500 border-t border-slate-100 bg-slate-50">
-            仅显示最近 200 条,请用搜索缩小范围
-          </div>
-        )}
+        <Pagination
+          currentPage={currentPage}
+          totalPages={totalPages}
+          totalCount={totalCount}
+          basePath="/admin/cards"
+          searchParams={
+            new URLSearchParams(
+              Object.entries({ used, q })
+                .filter(([, v]) => v != null)
+                .map(([k, v]) => [k, String(v)])
+            )
+          }
+        />
       </div>
     </div>
   );

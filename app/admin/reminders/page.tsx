@@ -5,6 +5,7 @@ import { normalizePhone } from "@/lib/phone";
 import { formatRelativeTime } from "@/lib/date";
 import { shanghaiParts } from "@/lib/bucket";
 import { AdminStat } from "../_components/admin-stat";
+import { Pagination } from "../_components/pagination";
 import { ResendButton } from "./_components/resend-button";
 
 interface PageProps {
@@ -310,79 +311,5 @@ function SearchForm({
         </Link>
       )}
     </form>
-  );
-}
-
-/**
- * 分页控件:上一页 / 下一页 + 总条数
- * 保留现有所有 searchParams(只覆盖 page)
- * 文本数量 < PAGE_SIZE 时不显示
- */
-function Pagination({
-  currentPage,
-  totalPages,
-  totalCount,
-  basePath,
-  searchParams,
-}: {
-  currentPage: number;
-  totalPages: number;
-  totalCount: number;
-  basePath: string;
-  searchParams: URLSearchParams;
-}) {
-  if (totalCount <= 0) return null;
-  if (totalPages <= 1) {
-    return (
-      <p className="text-xs text-slate-500 mt-3 text-center">
-        共 {totalCount} 条
-      </p>
-    );
-  }
-  const makeUrl = (p: number) => {
-    const next = new URLSearchParams(searchParams);
-    if (p <= 1) next.delete("page");
-    else next.set("page", String(p));
-    const s = next.toString();
-    return s ? `${basePath}?${s}` : basePath;
-  };
-  const hasPrev = currentPage > 1;
-  const hasNext = currentPage < totalPages;
-
-  return (
-    <nav
-      className="flex items-center justify-between mt-3 px-2"
-      aria-label="分页"
-    >
-      <p className="text-xs text-slate-500">
-        共 {totalCount} 条 · 第 {currentPage} / {totalPages} 页
-      </p>
-      <div className="flex gap-1">
-        {hasPrev ? (
-          <Link
-            href={makeUrl(currentPage - 1)}
-            className="px-3 py-1.5 text-xs rounded-md border border-slate-300 text-slate-700 bg-white hover:bg-slate-50"
-          >
-            上一页
-          </Link>
-        ) : (
-          <span className="px-3 py-1.5 text-xs rounded-md border border-slate-200 text-slate-300 bg-slate-50">
-            上一页
-          </span>
-        )}
-        {hasNext ? (
-          <Link
-            href={makeUrl(currentPage + 1)}
-            className="px-3 py-1.5 text-xs rounded-md border border-slate-300 text-slate-700 bg-white hover:bg-slate-50"
-          >
-            下一页
-          </Link>
-        ) : (
-          <span className="px-3 py-1.5 text-xs rounded-md border border-slate-200 text-slate-300 bg-slate-50">
-            下一页
-          </span>
-        )}
-      </div>
-    </nav>
   );
 }
