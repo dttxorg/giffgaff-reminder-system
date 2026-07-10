@@ -64,7 +64,24 @@ export default async function MePage() {
           className="block mb-4 p-4 rounded-lg bg-rose-50 border-2 border-rose-300 hover:bg-rose-100 transition-colors"
         >
           <div className="flex items-start gap-3">
-            <div className="text-2xl">⚠️</div>
+            <div className="shrink-0 w-9 h-9 rounded-full bg-rose-100 flex items-center justify-center">
+              <svg
+                width={20}
+                height={20}
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth={2}
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                aria-hidden="true"
+                className="text-rose-600"
+              >
+                <path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0Z" />
+                <line x1="12" y1="9" x2="12" y2="13" />
+                <line x1="12" y1="17" x2="12.01" y2="17" />
+              </svg>
+            </div>
             <div className="flex-1">
               <div className="font-semibold text-rose-900">您还没设置通知渠道</div>
               <div className="text-sm text-rose-700 mt-0.5">
