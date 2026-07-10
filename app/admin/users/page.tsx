@@ -45,7 +45,15 @@ export default async function UsersPage({ searchParams }: PageProps) {
 
   return (
     <div className="p-6 sm:p-8">
-      <h1 className="text-2xl font-bold mb-6">用户列表</h1>
+      <div className="flex items-center justify-between mb-6 flex-wrap gap-3">
+        <h1 className="text-2xl font-bold">用户列表</h1>
+        <a
+          href={`/api/admin/users/export${buildExportQS(channel, password)}`}
+          className="inline-flex items-center px-4 py-2 rounded-lg bg-white border border-slate-200 text-slate-700 text-sm font-medium hover:bg-slate-50 hover:border-slate-300 transition-colors"
+        >
+          ⬇ 导出 CSV
+        </a>
+      </div>
 
       {/* U5: 筛选 — 服务管理员快速定位 "没设密码" 或 "用 Bark 的所有用户" */}
       <form className="mb-4 flex gap-2 flex-wrap">
@@ -88,4 +96,19 @@ export default async function UsersPage({ searchParams }: PageProps) {
       <UsersClient users={rows} />
     </div>
   );
+}
+
+/**
+ * 复用当前页面的筛选条件构造 export query string
+ * admin 点击"导出 CSV"即下载当前可见的子集
+ */
+function buildExportQS(
+  channel: string | undefined,
+  password: string | undefined
+): string {
+  const sp = new URLSearchParams();
+  if (channel) sp.set("channel", channel);
+  if (password) sp.set("password", password);
+  const s = sp.toString();
+  return s ? "?" + s : "";
 }
