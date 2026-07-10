@@ -25,19 +25,23 @@ export default async function MePage() {
   const dayOffset = dayOffsetFromBaseline(baseline);
   const inWindow = isInReminderWindow(dayOffset);
 
-  // M3: 最近 5 条发送给自己的提醒 — 透明度,用户能看见系统到底推过啥
-  const recentReminders = await prisma.reminderSent.findMany({
-    where: { simId: sim.id },
-    orderBy: { sentAt: "desc" },
-    take: 5,
-    select: {
-      id: true,
-      dayOffset: true,
-      bucket: true,
-      sentAt: true,
-      status: true,
-    },
-  });
+  // M3: 最近 5 条 + lifetime 总数(并行)
+  // 总数让用户知道系统"一直在跑",透明度提升
+  const [recentReminders, lifetimeCount] = await Promise.all([
+    prisma.reminderSent.findMany({
+      where: { simId: sim.id },
+      orderBy: { sentAt: "desc" },
+      take: 5,
+      select: {
+        id: true,
+        dayOffset: true,
+        bucket: true,
+        sentAt: true,
+        status: true,
+      },
+    }),
+    prisma.reminderSent.count({ where: { simId: sim.id } }),
+  ]);
 
   // 计算当前小时的 bucket(用于显示"今天第几次推送")
   const hourOfDay = shanghaiParts(new Date()).hour;
@@ -155,9 +159,15 @@ export default async function MePage() {
 
       {/* M3: 最近发送给我的提醒 — 透明度,让用户知道系统到底推过啥 */}
       <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 mt-4">
-        <div className="flex items-center justify-between mb-2">
-          <div className="text-sm text-slate-500">最近推送给我</div>
-          <span className="text-xs text-slate-400">最多显示 5 条</span>
+        <div className="flex items-baseline justify-between mb-3">
+          <div>
+            <div className="text-sm text-slate-500">最近推送给我</div>
+            <div className="text-2xl font-bold text-slate-900 mt-0.5">
+              {lifetimeCount}
+              <span className="text-sm font-normal text-slate-500 ml-1.5">条累计</span>
+            </div>
+          </div>
+          <span className="text-xs text-slate-400">显示最近 5 条</span>
         </div>
         {recentReminders.length === 0 ? (
           <div className="text-sm text-slate-500 py-4">
