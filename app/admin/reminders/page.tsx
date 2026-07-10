@@ -62,7 +62,15 @@ export default async function RemindersPage({ searchParams }: PageProps) {
 
   return (
     <div className="p-6 sm:p-8">
-      <h1 className="text-2xl font-bold mb-6">提醒日志</h1>
+      <div className="flex items-center justify-between mb-6 flex-wrap gap-3">
+        <h1 className="text-2xl font-bold">提醒日志</h1>
+        <a
+          href={`/api/admin/reminders/export${buildExportQS(simId, q, status, from, to)}`}
+          className="inline-flex items-center px-4 py-2 rounded-lg bg-white border border-slate-200 text-slate-700 text-sm font-medium hover:bg-slate-50 hover:border-slate-300 transition-colors"
+        >
+          ⬇ 导出 CSV
+        </a>
+      </div>
 
       <SearchForm simId={simId} q={q} status={status} from={from} to={to} />
 
@@ -205,4 +213,25 @@ function SearchForm({
       )}
     </form>
   );
+}
+
+/**
+ * 构造 export API 的 query string,保留当前页面的所有筛选条件
+ * admin 点击"导出 CSV"时复用同样的筛选,获取相同的子集
+ */
+function buildExportQS(
+  simId: string | undefined,
+  q: string | undefined,
+  status: string | undefined,
+  from: string | undefined,
+  to: string | undefined
+): string {
+  const sp = new URLSearchParams();
+  if (simId) sp.set("simId", simId);
+  if (q) sp.set("q", q);
+  if (status) sp.set("status", status);
+  if (from) sp.set("from", from);
+  if (to) sp.set("to", to);
+  const s = sp.toString();
+  return s ? "?" + s : "";
 }
