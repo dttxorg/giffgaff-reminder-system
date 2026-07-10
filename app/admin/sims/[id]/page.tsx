@@ -4,6 +4,7 @@ import { use, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Spinner } from "@/app/_components/skip-to-content";
+import { formatRelativeTime } from "@/lib/date";
 
 interface SimData {
   id: number;
@@ -230,7 +231,10 @@ export default function EditSimPage({ params }: { params: Promise<{ id: string }
                       {r.status === "success" ? "送达" : "失败"}
                     </span>
                   </div>
-                  <div className="text-xs text-slate-400 font-mono mt-0.5">
+                  <div className="text-xs text-slate-700 mt-0.5">
+                    {formatRelativeTime(r.sentAt)}
+                  </div>
+                  <div className="text-[10px] text-slate-400 font-mono">
                     {r.sentAt} UTC
                   </div>
                   {r.errorMessage && (

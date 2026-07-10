@@ -1,4 +1,5 @@
 "use client";
+import { formatRelativeTime } from "@/lib/date";
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
@@ -129,8 +130,9 @@ export function UsersClient({ users }: UsersClientProps) {
                       )}
                     </td>
                     <td className="px-3 py-2 text-slate-500 hidden md:table-cell">{u.reminderCount}</td>
-                    <td className="px-3 py-2 font-mono text-xs text-slate-500">
-                      {u.createdAt}
+                    <td className="px-3 py-2 text-xs hidden md:table-cell">
+                      <div className="text-slate-700">{formatRelativeTime(u.createdAt)}</div>
+                      <div className="text-[10px] text-slate-400 font-mono">{u.createdAt} UTC</div>
                     </td>
                     <td className="px-3 py-2">
                       <button

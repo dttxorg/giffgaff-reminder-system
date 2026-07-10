@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useState } from "react";
+import { formatRelativeTime } from "@/lib/date";
 import { useRouter } from "next/navigation";
 
 interface SimRow {
@@ -254,18 +255,23 @@ export function SimsBulkTable({ sims }: SimsBulkTableProps) {
                 </td>
                 <td className="px-3 py-2 text-xs">
                   {sim.lastSentAt ? (
-                    <div className="flex items-center gap-1.5">
-                      <span
-                        className={`shrink-0 w-1.5 h-1.5 rounded-full ${
-                          sim.lastSentStatus === "success"
-                            ? "bg-emerald-500"
-                            : "bg-rose-500"
-                        }`}
-                        aria-hidden="true"
-                      />
-                      <span className="text-slate-600 font-mono whitespace-nowrap">
+                    <div>
+                      <div className="flex items-center gap-1.5">
+                        <span
+                          className={`shrink-0 w-1.5 h-1.5 rounded-full ${
+                            sim.lastSentStatus === "success"
+                              ? "bg-emerald-500"
+                              : "bg-rose-500"
+                          }`}
+                          aria-hidden="true"
+                        />
+                        <span className="text-slate-700 whitespace-nowrap">
+                          {formatRelativeTime(sim.lastSentAt)}
+                        </span>
+                      </div>
+                      <div className="text-[10px] text-slate-400 font-mono whitespace-nowrap mt-0.5 pl-3.5">
                         {sim.lastSentAt.replace("T", " ").slice(0, 16)} UTC
-                      </span>
+                      </div>
                     </div>
                   ) : (
                     <span className="text-slate-400">未发过</span>

@@ -50,3 +50,86 @@ describe("todayLocalISODate", () => {
     }
   });
 });
+
+import { formatRelativeTime } from "../lib/date";
+
+describe("formatRelativeTime", () => {
+  const NOW = new Date("2026-07-09T12:00:00Z").getTime();
+
+  it("< 1 分钟 → 刚刚", () => {
+    const past = new Date(NOW - 30 * 1000); // 30 秒前
+    expect(formatRelativeTime(past, NOW)).toBe("刚刚");
+  });
+
+  it("刚好 1 分钟前 → 1 分钟前", () => {
+    expect(formatRelativeTime(new Date(NOW - 60_000), NOW)).toBe("1 分钟前");
+  });
+
+  it("30 分钟前 → 30 分钟前", () => {
+    expect(formatRelativeTime(new Date(NOW - 30 * 60_000), NOW)).toBe("30 分钟前");
+  });
+
+  it("59 分钟前 → 59 分钟前", () => {
+    expect(formatRelativeTime(new Date(NOW - 59 * 60_000), NOW)).toBe("59 分钟前");
+  });
+
+  it("1 小时前 → 1 小时前", () => {
+    expect(formatRelativeTime(new Date(NOW - 60 * 60_000), NOW)).toBe("1 小时前");
+  });
+
+  it("5 小时前 → 5 小时前", () => {
+    expect(formatRelativeTime(new Date(NOW - 5 * 60 * 60_000), NOW)).toBe("5 小时前");
+  });
+
+  it("23 小时前 → 23 小时前", () => {
+    expect(formatRelativeTime(new Date(NOW - 23 * 60 * 60_000), NOW)).toBe("23 小时前");
+  });
+
+  it("1 天前 → 1 天前", () => {
+    expect(formatRelativeTime(new Date(NOW - 24 * 60 * 60_000), NOW)).toBe("1 天前");
+  });
+
+  it("3 天前 → 3 天前", () => {
+    expect(formatRelativeTime(new Date(NOW - 3 * 24 * 60 * 60_000), NOW)).toBe("3 天前");
+  });
+
+  it("6 天前 → 6 天前", () => {
+    expect(formatRelativeTime(new Date(NOW - 6 * 24 * 60 * 60_000), NOW)).toBe("6 天前");
+  });
+
+  it("1 周前 → 1 周前", () => {
+    expect(formatRelativeTime(new Date(NOW - 7 * 24 * 60 * 60_000), NOW)).toBe("1 周前");
+  });
+
+  it("4 周前(28 天)→ 4 周前", () => {
+    expect(formatRelativeTime(new Date(NOW - 28 * 24 * 60 * 60_000), NOW)).toBe("4 周前");
+  });
+
+  it("35 天 → 1 个月前", () => {
+    expect(formatRelativeTime(new Date(NOW - 35 * 24 * 60 * 60_000), NOW)).toBe("1 个月前");
+  });
+
+  it("180 天 → 6 个月前", () => {
+    expect(formatRelativeTime(new Date(NOW - 180 * 24 * 60 * 60_000), NOW)).toBe("6 个月前");
+  });
+
+  it("365 天 → 1 年前", () => {
+    expect(formatRelativeTime(new Date(NOW - 365 * 24 * 60 * 60_000), NOW)).toBe("1 年前");
+  });
+
+  it("2 年前 → 2 年前", () => {
+    expect(formatRelativeTime(new Date(NOW - 2 * 365 * 24 * 60 * 60_000), NOW)).toBe("2 年前");
+  });
+
+  it("未来时间 → 刚刚(防 -1 天前 这种怪话)", () => {
+    expect(formatRelativeTime(new Date(NOW + 60 * 60_000), NOW)).toBe("刚刚");
+  });
+
+  it("支持 string 输入", () => {
+    expect(formatRelativeTime(new Date(NOW - 60_000).toISOString(), NOW)).toBe("1 分钟前");
+  });
+
+  it("支持 number 输入 now(避免 Date 构造开销)", () => {
+    expect(formatRelativeTime(new Date(NOW - 60_000), NOW)).toBe("1 分钟前");
+  });
+});
