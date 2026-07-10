@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import { getCurrentUser } from "@/lib/session";
 import { MeSettingsClient } from "./settings-client";
+import { PushPreview } from "@/app/_components/push-preview";
 
 type Channel = "serverchan" | "bark" | "pushplus" | "telegram";
 
@@ -44,6 +45,30 @@ export default async function MeSettingsPage({ searchParams }: PageProps) {
         isFirstTime={isFirstTime}
         activatedAt={activatedAt}
       />
+
+      {/* 推送样例预览:让用户在保存渠道前就能看到自己将收到的内容。
+          /me 已有同样的 preview,这里再加一份对称(用户主动查 settings 时也能看到)。 */}
+      <details className="mt-6 bg-white rounded-xl shadow-sm border border-slate-200 p-6 group">
+        <summary className="cursor-pointer list-none flex items-center justify-between">
+          <span className="text-sm font-medium text-slate-700">📬 查看推送样例</span>
+          <span aria-hidden="true" className="text-slate-400 group-open:rotate-180 transition-transform">▾</span>
+        </summary>
+        <p className="text-xs text-slate-500 mt-2 mb-3">
+          折叠打开,看系统到日子会给您发什么。模板由管理员设置,改渠道不影响内容。
+        </p>
+        <PushPreview
+          phoneNumber={user.sim.phoneNumber}
+          days={Math.max(
+            0,
+            Math.floor(
+              (Date.now() - new Date(user.sim.lastPortedAt ?? user.sim.activatedAt).getTime()) /
+                (1000 * 60 * 60 * 24)
+            )
+          )}
+          portToken={user.sim.portToken}
+          simIdFallback={user.sim.id}
+        />
+      </details>
     </div>
   );
 }
