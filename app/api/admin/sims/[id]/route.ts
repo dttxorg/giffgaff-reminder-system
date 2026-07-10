@@ -23,10 +23,26 @@ export async function GET(_req: Request, ctx: RouteContext) {
   if (!Number.isFinite(simId)) {
     return NextResponse.json({ ok: false, error: "id 无效" }, { status: 400 });
   }
-  const sim = await prisma.sim.findUnique({
-    where: { id: simId },
-    include: { user: { select: { id: true, channel: true } } },
-  });
+  // 并行取 sim + 最近 5 条推送
+  const [sim, recentReminders] = await Promise.all([
+    prisma.sim.findUnique({
+      where: { id: simId },
+      include: { user: { select: { id: true, channel: true } } },
+    }),
+    prisma.reminderSent.findMany({
+      where: { simId },
+      orderBy: { sentAt: "desc" },
+      take: 5,
+      select: {
+        id: true,
+        dayOffset: true,
+        bucket: true,
+        sentAt: true,
+        status: true,
+        errorMessage: true,
+      },
+    }),
+  ]);
   if (!sim) {
     return NextResponse.json({ ok: false, error: "sim 不存在" }, { status: 404 });
   }
@@ -37,6 +53,14 @@ export async function GET(_req: Request, ctx: RouteContext) {
     lastPortedAt: sim.lastPortedAt?.toISOString().slice(0, 10) ?? null,
     status: sim.status,
     user: sim.user,
+    recentReminders: recentReminders.map((r) => ({
+      id: r.id,
+      dayOffset: r.dayOffset,
+      bucket: r.bucket,
+      sentAt: r.sentAt.toISOString().replace("T", " ").slice(0, 19),
+      status: r.status,
+      errorMessage: r.errorMessage,
+    })),
   });
 }
 
