@@ -17,6 +17,7 @@ import {
 import { PushPreview } from "@/app/_components/push-preview";
 import { ChannelKeyReveal } from "./_components/channel-key-reveal";
 import { CopyPhoneButton } from "./_components/copy-phone-button";
+import { CopyPortLinkButton } from "./_components/copy-port-link-button";
 
 export default async function MePage() {
   const user = await getCurrentUser();
@@ -183,6 +184,16 @@ export default async function MePage() {
       <p className="text-xs text-slate-500 text-center mb-3">
         选个最近一次保号的日期提交,系统从那天重新计时 170 天
       </p>
+      {/* 复制保号链接:用户可分享给其他设备/家人 */}
+      <div className="flex justify-center mb-3 -mt-2">
+        <CopyPortLinkButton
+          portUrl={
+            typeof window !== "undefined"
+              ? `${window.location.origin}/p/${sim.portToken ?? sim.id}`
+              : `/p/${sim.portToken ?? sim.id}`
+          }
+        />
+      </div>
 
       <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
         <div className="flex items-center justify-between mb-1">
