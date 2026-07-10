@@ -3,6 +3,7 @@ import { requireAdmin } from "@/lib/admin-guard";
 import { prisma } from "@/lib/db";
 import { dayOffsetFromBaseline, isInReminderWindow } from "@/lib/bucket";
 import { CsvImportButton } from "./csv-import-button";
+import { EmptyState } from "@/app/_components/empty-state";
 import type { Prisma } from "@/lib/generated/prisma/client";
 
 interface PageProps {
@@ -86,8 +87,14 @@ export default async function SimsPage({ searchParams }: PageProps) {
             <tbody>
               {sims.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="px-3 py-8 text-center text-slate-400">
-                    暂无数据
+                  <td colSpan={8}>
+                    <EmptyState
+                      title="暂无号码"
+                      hint="录入第一个号码让系统开始提醒"
+                      actions={[
+                        { href: "/admin/sims/new", label: "+ 新增号码", primary: true },
+                      ]}
+                    />
                   </td>
                 </tr>
               ) : (

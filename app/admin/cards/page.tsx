@@ -4,6 +4,8 @@ import { prisma } from "@/lib/db";
 import { formatCardCode } from "@/lib/card-key";
 import type { Prisma } from "@/lib/generated/prisma/client";
 import { CardDeleteButton } from "./delete-button";
+import { CopyCodeButton } from "./_components/copy-code-button";
+import { EmptyState } from "@/app/_components/empty-state";
 
 interface PageProps {
   searchParams: Promise<{ used?: string; q?: string }>;
@@ -107,8 +109,14 @@ export default async function CardsPage({ searchParams }: PageProps) {
             <tbody>
               {cards.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="px-3 py-8 text-center text-slate-400">
-                    暂无卡密
+                  <td colSpan={7}>
+                    <EmptyState
+                      title="暂无可用卡密"
+                      hint="生成一批卡密给客户兑换,绑定 sim 后自动开提醒"
+                      actions={[
+                        { href: "/admin/cards/new", label: "+ 生成卡密", primary: true },
+                      ]}
+                    />
                   </td>
                 </tr>
               ) : (
@@ -117,8 +125,13 @@ export default async function CardsPage({ searchParams }: PageProps) {
                     <td className="px-3 py-2 font-mono text-xs text-slate-500">
                       {c.id}
                     </td>
-                    <td className="px-3 py-2 font-mono font-semibold text-indigo-700 tracking-wider">
-                      {formatCardCode(c.code)}
+                    <td className="px-3 py-2">
+                      <div className="flex items-center gap-3">
+                        <span className="font-mono font-semibold text-indigo-700 tracking-wider">
+                          {formatCardCode(c.code)}
+                        </span>
+                        <CopyCodeButton code={formatCardCode(c.code)} />
+                      </div>
                     </td>
                     <td className="px-3 py-2">
                       {c.used ? (

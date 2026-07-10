@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { generateSecurePassword } from "@/lib/password-gen";
+import { EmptyState } from "@/app/_components/empty-state";
 
 interface UserRow {
   id: number;
@@ -106,8 +107,11 @@ export function UsersClient({ users }: UsersClientProps) {
             <tbody>
               {users.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="px-3 py-8 text-center text-slate-400">
-                    暂无用户
+                  <td colSpan={8}>
+                    <EmptyState
+                      title="还没有用户"
+                      hint="新增号码时勾选'一并创建用户',或让客户用卡密兑换"
+                    />
                   </td>
                 </tr>
               ) : (

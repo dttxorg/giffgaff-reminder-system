@@ -335,7 +335,28 @@ export function MeSettingsClient({
       </div>
 
       <PasswordSection />
-      <ActivatedAtSection initialActivatedAt={initialActivatedAt} />
+
+      {/* 危险操作区:默认收起,避免误改激活日期(会重置保号提醒 schedule) */}
+      <details className="mt-6 group rounded-2xl border border-rose-200 bg-rose-50/30 overflow-hidden">
+        <summary className="cursor-pointer list-none px-5 py-4 flex items-center justify-between hover:bg-rose-50/60 transition-colors">
+          <span className="flex items-center gap-2">
+            <span className="inline-flex items-center px-2 py-0.5 rounded-md bg-rose-100 text-rose-700 text-xs font-medium">
+              危险
+            </span>
+            <span className="text-sm font-medium text-slate-900">高级 · 修改 SIM 卡激活日期</span>
+          </span>
+          <span aria-hidden="true" className="text-slate-400 group-open:rotate-180 transition-transform">
+            ▾
+          </span>
+        </summary>
+        <div className="px-5 pb-5">
+          <p className="text-xs text-slate-600 mb-3">
+            会重新计算保号提醒节奏。如果之前填错了兑换时的激活日期,在这里修正。
+            <strong className="text-rose-700">操作不可撤销</strong>,改完即生效。
+          </p>
+          <ActivatedAtSection initialActivatedAt={initialActivatedAt} />
+        </div>
+      </details>
     </div>
   );
 }

@@ -30,7 +30,6 @@ function isParamValid(s: string): boolean {
 
 export default function PortPage() {
   const params = useParams<{ simId: string }>();
-  const router = useRouter();
   const simIdRaw = params.simId;
   const simIdValid = isParamValid(simIdRaw);
   const [sim, setSim] = useState<SimInfo | null>(null);
@@ -72,9 +71,7 @@ export default function PortPage() {
         setError(data.error || "提交失败");
         return;
       }
-      setSuccess(true);
-      // 3 秒后跳走
-      setTimeout(() => router.push("/"), 3000);
+      setSuccess(true); // 跳转交由 SuccessPage 组件管理(可取消)
     } catch (err) {
       setError(err instanceof Error ? err.message : "网络错误");
     } finally {
@@ -85,13 +82,23 @@ export default function PortPage() {
   if (notFound || !simIdValid) {
     return (
       <div className="max-w-md mx-auto px-4 py-12 text-center">
-        <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-8">
+        <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-8 text-center">
           <div className="text-4xl mb-2">404</div>
           <h1 className="text-xl font-bold mb-2">未找到该 SIM 卡</h1>
           <p className="text-slate-600 text-sm mb-4">链接可能已失效</p>
-          <Link href="/" className="text-indigo-600 hover:underline">
-            返回首页
-          </Link>
+          <div className="flex flex-col sm:flex-row gap-2 justify-center text-sm">
+            <Link href="/" className="text-indigo-600 hover:underline">
+              返回首页
+            </Link>
+            <span className="text-slate-300 hidden sm:inline">·</span>
+            <Link href="/redeem" className="text-indigo-600 hover:underline">
+              我有卡密
+            </Link>
+            <span className="text-slate-300 hidden sm:inline">·</span>
+            <Link href="/login" className="text-indigo-600 hover:underline">
+              登录页
+            </Link>
+          </div>
         </div>
       </div>
     );
@@ -106,18 +113,7 @@ export default function PortPage() {
   }
 
   if (success) {
-    return (
-      <div className="max-w-md mx-auto px-4 py-12">
-        <div className="bg-white rounded-2xl shadow-sm border border-emerald-200 p-8 text-center">
-          <div className="text-4xl mb-3">✅</div>
-          <h1 className="text-xl font-bold mb-2 text-emerald-900">已记录</h1>
-          <p className="text-slate-600">
-            新的保号日期已记录,下次提醒将在 170 天后
-          </p>
-          <p className="text-xs text-slate-400 mt-3">3 秒后自动跳回首页...</p>
-        </div>
-      </div>
-    );
+    return <SuccessPage />;
   }
 
   return (
@@ -166,6 +162,27 @@ export default function PortPage() {
             </p>
           </div>
 
+          {/* P5: 解释什么是保号,新用户常问 */}
+          <details className="text-xs text-slate-500">
+            <summary className="cursor-pointer text-slate-600 hover:text-slate-900 list-none flex items-center gap-1">
+              <span aria-hidden="true">?</span>
+              <span>什么是&ldquo;保号&rdquo;?怎么操作?</span>
+            </summary>
+            <div className="mt-2 p-3 rounded-lg bg-slate-50 border border-slate-200 text-slate-700 space-y-1">
+              <p>
+                <strong>保号</strong> = 让运营商知道你这张卡还在用,避免被回收。
+                Giffgaff 卡 6 个月不活跃就会被回收号码。
+              </p>
+              <p>任意付费活动即可保号,简单做法:</p>
+              <ul className="list-disc list-inside pl-1 space-y-0.5">
+                <li>用本机号发一条短信(给自己也算,收月租或套餐内)</li>
+                <li>拨打一个号码(接通即扣月租)</li>
+                <li>用本机号开热点或浏览网页(MB 流量都算)</li>
+              </ul>
+              <p className="text-slate-500">只要做了其中一种,保号日期就更新到今天。</p>
+            </div>
+          </details>
+
           <button
             type="submit"
             disabled={loading}
@@ -174,6 +191,67 @@ export default function PortPage() {
             {loading ? "提交中..." : "提交"}
           </button>
         </form>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * 保号成功页:实时倒计时 + "立即返回" + "撤销" 操作按钮
+ * 让用户掌控节奏,不用瞎等 3 秒也不知道是否会真跳。
+ */
+function SuccessPage() {
+  const router = useRouter();
+  const [secondsLeft, setSecondsLeft] = useState(3);
+  const [cancelled, setCancelled] = useState(false);
+
+  useEffect(() => {
+    if (cancelled) return;
+    if (secondsLeft <= 0) {
+      router.push("/");
+      return;
+    }
+    const timer = setTimeout(() => setSecondsLeft((s) => s - 1), 1000);
+    return () => clearTimeout(timer);
+  }, [secondsLeft, cancelled, router]);
+
+  return (
+    <div className="max-w-md mx-auto px-4 py-12">
+      <div className="bg-white rounded-2xl shadow-sm border border-emerald-200 p-8 text-center">
+        <div className="text-4xl mb-3" aria-hidden="true">✅</div>
+        <h1 className="text-xl font-bold mb-2 text-emerald-900">已记录</h1>
+        <p className="text-slate-600">
+          新的保号日期已记录,下次提醒将在 170 天后
+        </p>
+        {!cancelled ? (
+          <p className="text-xs text-slate-400 mt-3" aria-live="polite">
+            {secondsLeft > 0 ? (
+              <>{secondsLeft} 秒后自动跳回首页...</>
+            ) : (
+              <>正在跳转...</>
+            )}
+          </p>
+        ) : (
+          <p className="text-xs text-slate-400 mt-3">已取消自动跳转</p>
+        )}
+        <div className="flex flex-col sm:flex-row gap-2 justify-center mt-5">
+          <button
+            type="button"
+            onClick={() => router.push("/")}
+            className="px-5 py-2.5 rounded-lg bg-indigo-600 text-white text-sm font-medium hover:bg-indigo-700 transition-colors"
+          >
+            立即返回首页
+          </button>
+          {!cancelled && secondsLeft > 0 && (
+            <button
+              type="button"
+              onClick={() => setCancelled(true)}
+              className="px-5 py-2.5 rounded-lg bg-white border border-slate-200 text-slate-700 text-sm font-medium hover:bg-slate-50 transition-colors"
+            >
+              留在此页
+            </button>
+          )}
+        </div>
       </div>
     </div>
   );

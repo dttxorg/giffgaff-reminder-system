@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import { prisma } from "@/lib/db";
 import Link from "next/link";
 import { getCurrentUser } from "@/lib/session";
 import {
@@ -21,6 +22,20 @@ export default async function MePage() {
   const baseline = sim.lastPortedAt ?? sim.activatedAt;
   const dayOffset = dayOffsetFromBaseline(baseline);
   const inWindow = isInReminderWindow(dayOffset);
+
+  // M3: 最近 5 条发送给自己的提醒 — 透明度,用户能看见系统到底推过啥
+  const recentReminders = await prisma.reminderSent.findMany({
+    where: { simId: sim.id },
+    orderBy: { sentAt: "desc" },
+    take: 5,
+    select: {
+      id: true,
+      dayOffset: true,
+      bucket: true,
+      sentAt: true,
+      status: true,
+    },
+  });
 
   // 计算当前小时的 bucket(用于显示"今天第几次推送")
   const hourOfDay = shanghaiParts(new Date()).hour;
@@ -133,6 +148,45 @@ export default async function MePage() {
               {user.channelKey.slice(0, 12)}****
             </div>
           </>
+        )}
+      </div>
+
+      {/* M3: 最近发送给我的提醒 — 透明度,让用户知道系统到底推过啥 */}
+      <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 mt-4">
+        <div className="flex items-center justify-between mb-2">
+          <div className="text-sm text-slate-500">最近推送给我</div>
+          <span className="text-xs text-slate-400">最多显示 5 条</span>
+        </div>
+        {recentReminders.length === 0 ? (
+          <div className="text-sm text-slate-500 py-4">
+            {inWindow
+              ? "本提醒窗口内还没有推送过(下次 cron 会尝试)"
+              : "还没到提醒窗口(170 天起才会推送)"}
+          </div>
+        ) : (
+          <ul className="text-sm divide-y divide-slate-100">
+            {recentReminders.map((r) => (
+              <li key={r.id} className="py-2 flex items-center justify-between gap-2">
+                <div className="min-w-0">
+                  <div className="text-slate-700">
+                    第 {r.dayOffset} 天 · 第 {r.bucket + 1} 桶
+                  </div>
+                  <div className="text-xs text-slate-400 font-mono">
+                    {r.sentAt.toISOString().replace("T", " ").slice(0, 19)} UTC
+                  </div>
+                </div>
+                <span
+                  className={`shrink-0 px-2 py-0.5 rounded text-xs ${
+                    r.status === "success"
+                      ? "bg-emerald-100 text-emerald-800"
+                      : "bg-rose-100 text-rose-800"
+                  }`}
+                >
+                  {r.status === "success" ? "送达" : "失败"}
+                </span>
+              </li>
+            ))}
+          </ul>
         )}
       </div>
     </div>
