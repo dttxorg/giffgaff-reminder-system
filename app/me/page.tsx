@@ -248,7 +248,22 @@ export default async function MePage() {
           </p>
         )}
         {recentReminders.length === 0 ? (
-          <div className="text-sm text-slate-500 py-4">
+          <div className="text-sm text-slate-500 py-6 text-center flex flex-col items-center gap-2">
+            <svg
+              width={32}
+              height={32}
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth={1.5}
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              aria-hidden="true"
+              className="text-slate-300"
+            >
+              <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
+              <path d="M13.73 21a2 2 0 0 1-3.46 0" />
+            </svg>
             {inWindow
               ? "本提醒窗口内还没有推送过(下次 cron 会尝试)"
               : "还没到提醒窗口(170 天起才会推送)"}
