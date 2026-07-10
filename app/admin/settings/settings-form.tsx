@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { renderTemplate } from "@/lib/template";
 
 const DEFAULT = `【Giffgaff 保号提醒】您的号码 {{phone}} 已激活 {{days}} 天，该保号啦！
@@ -18,6 +18,7 @@ export default function SettingsForm({ initial }: { initial: string }) {
   const [saved, setSaved] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
   // T5:检测"未保存"状态 — template 跟 initial 不同,且没在保存
   const dirty = template !== initial;
 
@@ -78,6 +79,26 @@ export default function SettingsForm({ initial }: { initial: string }) {
     setTemplate(DEFAULT);
   };
 
+  // T3:点击变量按钮 → 在 textarea 光标位置插入
+  const insertAtCursor = (snippet: string) => {
+    const ta = textareaRef.current;
+    if (!ta) {
+      // 兜底:直接 append
+      setTemplate((t) => t + snippet);
+      return;
+    }
+    const start = ta.selectionStart ?? template.length;
+    const end = ta.selectionEnd ?? template.length;
+    const next = template.slice(0, start) + snippet + template.slice(end);
+    setTemplate(next);
+    // 重新聚焦 + 把光标移过插入的 snippet
+    requestAnimationFrame(() => {
+      ta.focus();
+      const pos = start + snippet.length;
+      ta.setSelectionRange(pos, pos);
+    });
+  };
+
   return (
     <div className="space-y-4">
       <div className="bg-white rounded-xl border border-slate-200 p-6">
@@ -85,6 +106,7 @@ export default function SettingsForm({ initial }: { initial: string }) {
       <textarea
         value={template}
         onChange={(e) => setTemplate(e.target.value)}
+        ref={textareaRef}
         rows={10}
         spellCheck={false}
         className="w-full px-3.5 py-2.5 rounded-lg border border-slate-300 font-mono text-sm focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 outline-none"
@@ -99,18 +121,30 @@ export default function SettingsForm({ initial }: { initial: string }) {
         </p>
       )}
         <div className="mt-2 text-xs text-slate-500 space-y-0.5">
-          <p>可用变量（点击下方按钮可插入到光标位置）：</p>
-          <ul className="list-disc list-inside pl-2 space-y-0.5">
-            <li>
-              <code className="bg-slate-100 px-1 rounded">{"{{phone}}"}</code> — 完整手机号
-            </li>
-            <li>
-              <code className="bg-slate-100 px-1 rounded">{"{{days}}"}</code> — 当前 day_offset
-            </li>
-            <li>
-              <code className="bg-slate-100 px-1 rounded">{"{{port_url}}"}</code> — 保号更新链接
-            </li>
-          </ul>
+          <p>可用变量(点击按钮插入到光标位置):</p>
+          <div className="flex flex-wrap gap-1.5 mt-1">
+            <button
+              type="button"
+              onClick={() => insertAtCursor("{{phone}}")}
+              className="px-2 py-1 rounded bg-slate-100 hover:bg-slate-200 text-slate-700 font-mono text-xs"
+            >
+              {"{{phone}}"}
+            </button>
+            <button
+              type="button"
+              onClick={() => insertAtCursor("{{days}}")}
+              className="px-2 py-1 rounded bg-slate-100 hover:bg-slate-200 text-slate-700 font-mono text-xs"
+            >
+              {"{{days}}"}
+            </button>
+            <button
+              type="button"
+              onClick={() => insertAtCursor("{{port_url}}")}
+              className="px-2 py-1 rounded bg-slate-100 hover:bg-slate-200 text-slate-700 font-mono text-xs"
+            >
+              {"{{port_url}}"}
+            </button>
+          </div>
         </div>
 
         {unknownVars.length > 0 && (
