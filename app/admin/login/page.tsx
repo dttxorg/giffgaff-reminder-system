@@ -37,6 +37,19 @@ export default function AdminLoginPage() {
 
   return (
     <div className="min-h-[calc(100vh-100px)] flex items-center justify-center px-4 py-12">
+      {/* A6 修复:admin 登出后只剩这张卡片太孤岛,顶部加一个细窄的 context bar
+          说明这是管理入口,旁边给一个"用户登录"出口,避免被困在 admin 这边。 */}
+      <div className="absolute top-3 left-0 right-0 px-4 flex items-center justify-between text-xs text-slate-500 max-w-3xl mx-auto">
+        <span>
+          <span className="inline-block w-5 h-5 rounded bg-slate-900 text-white text-center leading-5 mr-1.5 align-middle">
+            A
+          </span>
+          <span className="align-middle">管理入口</span>
+        </span>
+        <Link href="/login" className="hover:text-indigo-600 transition-colors">
+          去用户登录 →
+        </Link>
+      </div>
       <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 sm:p-8 w-full max-w-sm">
         <h1 className="text-2xl font-bold mb-1">管理员登录</h1>
         <p className="text-slate-600 text-sm mb-6">首次访问会自动创建默认账号</p>

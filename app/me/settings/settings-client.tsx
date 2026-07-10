@@ -192,6 +192,23 @@ export function MeSettingsClient({
       <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 sm:p-8">
         <h2 className="text-lg font-semibold mb-4">通知渠道</h2>
 
+        {/* S3: 切换渠道时,提示用户需要重新测试推送(否则保存按钮的状态会让人困惑)。
+            仅当 channel ≠ 初始 且 未验证 时显示,验证后自动隐藏。 */}
+        {channel !== initialChannel && !verified && (
+          <div
+            role="status"
+            aria-live="polite"
+            className="mb-3 p-3 rounded-lg bg-amber-50 border border-amber-300 text-amber-900 text-xs flex items-start gap-2"
+          >
+            <span aria-hidden="true" className="shrink-0">⚠️</span>
+            <div>
+              <strong>已切换到 {channelLabel(channel)}</strong>。请在下方填入新渠道的
+              key,然后点&ldquo;测试推送&rdquo;验证新渠道收到消息。
+              <span className="text-amber-700">未验证的渠道保存后不会真正发推送。</span>
+            </div>
+          </div>
+        )}
+
         <div className="space-y-4">
           <div>
             <label className="block text-sm font-medium mb-1.5">推送渠道</label>
@@ -836,4 +853,18 @@ function CooldownRing({ seconds, total }: { seconds: number; total: number }) {
       </span>
     </span>
   );
+}
+
+/** 把 channel id 转成中文展示名(用于 S3 banner) */
+function channelLabel(channel: Channel): string {
+  switch (channel) {
+    case "serverchan":
+      return "Sever酱";
+    case "bark":
+      return "Bark";
+    case "pushplus":
+      return "pushplus";
+    case "telegram":
+      return "Telegram";
+  }
 }
