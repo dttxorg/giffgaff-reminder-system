@@ -4,7 +4,7 @@
 
 ## 功能
 
-- 用户用手机号(或后 6 位)登录,绑定 Sever酱 / Bark 推送渠道
+- 用户用手机号(或后 6 位)登录,绑定 Sever酱 / Bark / pushplus / Telegram 4 种推送渠道
 - 保号时通过链接打开保号页,选日期提交即重新计时 170 天
 - 管理员在后台维护号码库(增删改查、CSV 导入)、编辑提醒文案、查看发送日志
 - 提醒规则:`170-177` 每天 1 次,`178` 每天 3 次,`179` 每天 5 次,`180` 每天 10 次,`>180` 停止
@@ -15,9 +15,9 @@
 - **运行时**:Next.js 16 (App Router)
 - **数据库**:Vercel Postgres (Neon)
 - **ORM**:Prisma 7
-- **推送**:Server酱 / Bark
+- **推送**:Server酱 / Bark / pushplus / Telegram Bot
 - **定时调度**:外部 cron-job.org 每小时触发 `/api/cron/reminders`
-- **认证**:自建 cookie session
+- **认证**:scrypt 密码哈希(失败 5 次锁 15 分钟)+ cookie session
 
 ## 项目结构
 
@@ -29,23 +29,43 @@
 │   │   ├── p/[simId]/       # 保号页相关：GET 拿 sim 信息 / POST 提交保号
 │   │   ├── admin/           # 管理后台 API
 │   │   └── cron/reminders/  # cron 触发提醒
-│   ├── admin/               # 管理后台页面
-│   ├── login/               # 用户登录
-│   ├── me/                  # 用户中心
-│   ├── p/[simId]/           # 保号页(公开)
-│   ├── help/{serverchan,bark}  # 渠道开通教程
+│   ├── admin/               # 管理后台页面(sidebar + breadcrumb)
+│   │   ├── _components/     # NavIcon / AdminStat / Pagination / MobileAdminNav
+│   │   ├── cards/           # 卡密管理(生成 + 列表 + 分页)
+│   │   ├── sims/            # 号码管理(增删改查 + CSV 导入/导出)
+│   │   ├── users/           # 用户管理(详情页 + 删除危险操作)
+│   │   ├── reminders/       # 提醒日志(分页 + 重发 + UTC+上海双显示)
+│   │   ├── settings/        # 文案模板设置(实时预览)
+│   │   └── login/           # 管理员登录(顶部 context bar 避免孤岛)
+│   ├── login/               # 用户登录(tab 切换"我有账号 / 我有卡密")
+│   ├── me/                  # 用户中心(进度条 + 推送样例)
+│   │   ├── settings/        # 用户设置(改渠道 / 改密码 / 改激活日期)
+│   │   └── _components/     # DayOffsetProgress / ChannelKeyReveal
+│   ├── redeem/              # 卡密兑换(自动登录 + 引导设置渠道)
+│   ├── p/[simId]/           # 保号页(公开,token 不可枚举)
+│   ├── help/                # 渠道开通教程(4 channel + 索引)
 │   ├── page.tsx             # 首页
-│   └── layout.tsx           # 根布局
+│   ├── not-found.tsx        # 根 404
+│   └── layout.tsx           # 根布局(skip-to-content + 顶栏)
 ├── lib/                     # 工具层
 │   ├── db.ts                # Prisma client 单例
-│   ├── session.ts           # session 管理
-│   ├── auth.ts              # 密码哈希、cron 鉴权
-│   ├── bucket.ts            # 提醒规则计算
-│   ├── channels.ts          # Sever酱 / Bark 推送
+│   ├── auth.ts              # scrypt 密码哈希 + cron secret 校验
+│   ├── session.ts           # cookie session 管理
+│   ├── admin-guard.ts       # 管理员鉴权
+│   ├── admin-bootstrap.ts   # 首次启动自动创建默认 admin 账号
+│   ├── bucket.ts            # 提醒规则计算(day → bucket 分布)
+│   ├── channels.ts          # 4 渠道推送实现 + sendPush router
 │   ├── template.ts          # 提醒文案模板渲染
 │   ├── phone.ts             # 手机号归一化 + 模糊匹配
-│   ├── reminder.ts          # 提醒扫描主逻辑
-│   └── admin-guard.ts       # 管理员鉴权
+│   ├── card-key.ts          # 卡密生成 + 归一化 + 格式化输入
+│   ├── password-gen.ts      # CSPRNG 安全密码生成
+│   ├── password-strength.ts # 密码强度评分(弱/中/强)
+│   ├── port-token.ts        # 32 字符 url-safe 不可枚举 token
+│   ├── port-token-db.ts     # token DB 持久化 + lazy-backfill
+│   ├── date.ts              # 日期工具(相对时间 / UTC+上海)
+│   ├── reminder.ts          # 提醒扫描主逻辑(cron 调用)
+│   ├── redeem.ts            # 卡密兑换事务(创建 sim + user + 标记已用)
+│   └── template.test.ts     # 业务测试(可在无 DB 环境跑)
 ├── prisma/
 │   ├── schema.prisma        # 数据模型
 │   └── migrations/          # 数据库迁移
@@ -201,6 +221,33 @@ npm run dev
 - **CSV 导入**:首行可带表头 `phone_number,activated_at`,UTF-8 编码
 - **删除 sim**:会级联删除 user 和 reminders_sent
 - **渠道 key 加密**:V1 明文存数据库,V2 加 AES 加密
+
+## 测试
+
+业务逻辑 + UI 组件覆盖,Vitest:
+
+```bash
+npm test              # 跑全部
+npx vitest run        # 跑全部(单次)
+npx vitest run tests/channels.test.ts  # 单文件
+```
+
+测试组织:
+
+- `tests/*.test.ts` — 纯业务逻辑(node 环境)
+  - `bucket.test.ts`:提醒规则(170-180 各 day 的 bucket 分布)
+  - `card-key.test.ts`:卡密生成 / 归一化 / 格式化输入
+  - `channels.test.ts`:4 渠道推送实现(Sever酱 / Bark / pushplus / Telegram)
+  - `date.test.ts`:本地日期 / UTC+上海双显示
+  - `password-gen.test.ts` / `password-strength.test.ts`:安全密码生成 + 强度评分
+  - `phone.test.ts`:手机号归一化 + 后 6 位匹配
+  - `port-token.test.ts`:32 字符 url-safe token + looksLikeToken
+  - `redeem.test.ts`:parseDate / isValidPhone 纯函数
+  - `template.test.ts`:renderTemplate + portUrl
+- `tests/client/*.test.tsx` — 客户端组件(jsdom 环境)
+  - 覆盖 LoginPage / AdminLoginPage / HomePage / MobileAdminNav 等所有 user-facing 组件
+  - PasswordInput / CopyCodeButton / ResendButton / NavIcon / SkipToContent / Spinner 等
+  - DeleteUserButton / ChannelKeyReveal / AdminStat 等
 
 ## License
 
