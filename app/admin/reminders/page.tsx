@@ -15,8 +15,12 @@ interface PageProps {
     /** ISO 日期 (yyyy-MM-dd),按 sentAt 区间过滤 */
     from?: string;
     to?: string;
+    /** 当前页码,默认 1 */
+    page?: string;
   }>;
 }
+
+const PAGE_SIZE = 20;
 
 /**
  * 用与 /admin/sims 页面相同的筛选参数构造 where。
@@ -69,7 +73,11 @@ async function buildWhere(params: URLSearchParams) {
 
 export default async function RemindersPage({ searchParams }: PageProps) {
   await requireAdmin();
-  const { simId, q, status, from, to } = await searchParams;
+  const { simId, q, status, from, to, page } = await searchParams;
+
+  // 分页:page 默认 1,parseInt 失败也 fallback 到 1
+  const currentPage = Math.max(1, parseInt(page || "1", 10) || 1);
+  const skip = (currentPage - 1) * PAGE_SIZE;
 
   const where = await buildWhere(
     new URLSearchParams(
@@ -84,18 +92,22 @@ export default async function RemindersPage({ searchParams }: PageProps) {
   const sp = shanghaiParts(now);
   const todayStartUTC = new Date(Date.UTC(sp.year, sp.month - 1, sp.day));
 
-  const [reminders, totalToday, failedToday] = await Promise.all([
+  const [reminders, totalCount, totalToday, failedToday] = await Promise.all([
     prisma.reminderSent.findMany({
       where,
       orderBy: { sentAt: "desc" },
-      take: 200,
+      skip,
+      take: PAGE_SIZE,
       include: { sim: true, user: true },
     }),
+    prisma.reminderSent.count({ where }),
     prisma.reminderSent.count({ where: { sentAt: { gte: todayStartUTC } } }),
     prisma.reminderSent.count({
       where: { status: "failed", sentAt: { gte: todayStartUTC } },
     }),
   ]);
+
+  const totalPages = Math.max(1, Math.ceil(totalCount / PAGE_SIZE));
 
   const exportQS = new URLSearchParams();
   if (simId) exportQS.set("simId", simId);
@@ -211,6 +223,20 @@ export default async function RemindersPage({ searchParams }: PageProps) {
           </div>
         </div>
       )}
+
+      <Pagination
+        currentPage={currentPage}
+        totalPages={totalPages}
+        totalCount={totalCount}
+        basePath="/admin/reminders"
+        searchParams={
+          new URLSearchParams(
+            Object.entries({ simId, q, status, from, to })
+              .filter(([, v]) => v != null)
+              .map(([k, v]) => [k, String(v)])
+          )
+        }
+      />
     </div>
   );
 }
@@ -284,5 +310,79 @@ function SearchForm({
         </Link>
       )}
     </form>
+  );
+}
+
+/**
+ * 分页控件:上一页 / 下一页 + 总条数
+ * 保留现有所有 searchParams(只覆盖 page)
+ * 文本数量 < PAGE_SIZE 时不显示
+ */
+function Pagination({
+  currentPage,
+  totalPages,
+  totalCount,
+  basePath,
+  searchParams,
+}: {
+  currentPage: number;
+  totalPages: number;
+  totalCount: number;
+  basePath: string;
+  searchParams: URLSearchParams;
+}) {
+  if (totalCount <= 0) return null;
+  if (totalPages <= 1) {
+    return (
+      <p className="text-xs text-slate-500 mt-3 text-center">
+        共 {totalCount} 条
+      </p>
+    );
+  }
+  const makeUrl = (p: number) => {
+    const next = new URLSearchParams(searchParams);
+    if (p <= 1) next.delete("page");
+    else next.set("page", String(p));
+    const s = next.toString();
+    return s ? `${basePath}?${s}` : basePath;
+  };
+  const hasPrev = currentPage > 1;
+  const hasNext = currentPage < totalPages;
+
+  return (
+    <nav
+      className="flex items-center justify-between mt-3 px-2"
+      aria-label="分页"
+    >
+      <p className="text-xs text-slate-500">
+        共 {totalCount} 条 · 第 {currentPage} / {totalPages} 页
+      </p>
+      <div className="flex gap-1">
+        {hasPrev ? (
+          <Link
+            href={makeUrl(currentPage - 1)}
+            className="px-3 py-1.5 text-xs rounded-md border border-slate-300 text-slate-700 bg-white hover:bg-slate-50"
+          >
+            上一页
+          </Link>
+        ) : (
+          <span className="px-3 py-1.5 text-xs rounded-md border border-slate-200 text-slate-300 bg-slate-50">
+            上一页
+          </span>
+        )}
+        {hasNext ? (
+          <Link
+            href={makeUrl(currentPage + 1)}
+            className="px-3 py-1.5 text-xs rounded-md border border-slate-300 text-slate-700 bg-white hover:bg-slate-50"
+          >
+            下一页
+          </Link>
+        ) : (
+          <span className="px-3 py-1.5 text-xs rounded-md border border-slate-200 text-slate-300 bg-slate-50">
+            下一页
+          </span>
+        )}
+      </div>
+    </nav>
   );
 }
