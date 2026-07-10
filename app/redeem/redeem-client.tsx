@@ -261,9 +261,18 @@ function FormPhase({
           required
           className="w-full px-3.5 py-2.5 rounded-lg border border-slate-300 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 outline-none"
         />
+        {/* R2:老用户补录历史日期时,默认是今天,容易直接提交默认值。
+            在用户改之前提示"当前默认:今天",改了之后才换成常规说明。 */}
+        {date === todayLocalISODate() ? (
+          <p className="text-xs text-amber-700 mt-1.5">
+            <strong>当前默认是今天</strong>(如果您是老用户补录历史保号日期,
+            请改成实际保号的那天)
+          </p>
+        ) : (
         <p className="text-xs text-slate-500 mt-1.5">
           从这天起算 170 天开始提醒您保号
         </p>
+        )}
       </div>
 
       <div className="pt-2 border-t border-slate-100">

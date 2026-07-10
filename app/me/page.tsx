@@ -133,10 +133,14 @@ export default async function MePage() {
         // 优先用 portToken(不可枚举);老 sim 可能还没有,fallback 到 id
         // (route handler 会自动 lazy-backfill 第一次访问时)
         href={`/p/${sim.portToken ?? sim.id}`}
-        className="block w-full text-center py-3 rounded-lg bg-indigo-600 text-white font-medium hover:bg-indigo-700 transition-colors shadow-sm mb-3"
+        className="block w-full text-center py-3 rounded-lg bg-indigo-600 text-white font-medium hover:bg-indigo-700 transition-colors shadow-sm"
       >
         {inWindow ? "立即去保号" : "保号（更新日期）"}
       </Link>
+      {/* M4:按钮副标告诉用户会发生什么,避免点进去一脸懵 */}
+      <p className="text-xs text-slate-500 text-center mb-3">
+        选个最近一次保号的日期提交,系统从那天重新计时 170 天
+      </p>
 
       <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
         <div className="flex items-center justify-between mb-1">
