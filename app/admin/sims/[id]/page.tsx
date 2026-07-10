@@ -164,9 +164,20 @@ export default function EditSimPage({ params }: { params: Promise<{ id: string }
         </div>
 
         {sim?.user && (
-          <div className="text-sm text-slate-500 p-3 rounded-lg bg-slate-50">
-            已绑定 user: {sim.user.channel} (id: {sim.user.id})
-          </div>
+          <Link
+            href="/admin/users"
+            className="block text-sm p-3 rounded-lg bg-indigo-50 border border-indigo-200 hover:bg-indigo-100 transition-colors"
+          >
+            <div className="flex items-center justify-between gap-2">
+              <div>
+                <div className="text-xs text-indigo-600 font-medium">已绑定 user</div>
+                <div className="text-slate-700 mt-0.5">
+                  渠道: <span className="font-medium">{sim.user.channel}</span> · ID: {sim.user.id}
+                </div>
+              </div>
+              <span className="text-indigo-600 text-xs shrink-0">查看所有用户 →</span>
+            </div>
+          </Link>
         )}
 
         <div className="flex gap-2">
