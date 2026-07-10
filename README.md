@@ -185,20 +185,33 @@ npm run dev
 ## API 概览
 
 ### 公开
-- `POST /api/auth/send-code` — 发送验证码(Body: `{ simNumber, channel, channelKey }`)
-- `POST /api/auth/verify` — 校验验证码
+- `POST /api/auth/login` — 账号密码登录(Body: `{ simNumber, password }`)
 - `POST /api/auth/logout` — 登出
-- `GET /api/p/[simId]` — 拿 sim 信息(公开)
+- `GET /api/p/[simId]` — 拿 sim 信息(公开,simId 是 token 或老 int id)
 - `POST /api/p/[simId]/port` — 提交保号日期(Body: `{ portedAt: "YYYY-MM-DD" }`)
+- `POST /api/redeem/preview?code=XXX` — 校验卡密(公开预览)
+- `POST /api/redeem` — 卡密兑换(Body: `{ code, phoneNumber, activatedAt, password }`)
 
-### 管理员(需登录)
+### 客户端(需用户 session)
+- `POST /api/me/channel` — 改通知渠道 + key
+- `POST /api/me/password` — 改密码(Body: `{ oldPassword, newPassword }`)
+- `PATCH /api/me/sim` — 改激活日期(Body: `{ activatedAt }`)
+
+### 管理员(需 admin session)
 - `POST /api/admin/auth/login` — 管理员登录
 - `POST /api/admin/auth/logout` — 管理员登出
-- `POST /api/admin/sims` — 新建/更新单个 sim
+- `GET/POST /api/admin/sims` — 列表 / 新建
 - `PATCH /api/admin/sims/[id]` — 更新 sim
-- `DELETE /api/admin/sims/[id]` — 删除 sim
+- `DELETE /api/admin/sims/[id]` — 删除 sim(级联)
+- `GET /api/admin/sims/export` — 导出 CSV
 - `POST /api/admin/sims/import` — CSV 导入
-- `POST /api/admin/settings` — 保存文案模板
+- `GET/POST /api/admin/cards` — 卡密列表 / 生成
+- `DELETE /api/admin/cards/[id]` — 删除卡密
+- `GET /api/admin/cards/export` — 导出 CSV
+- `GET /api/admin/users` — 用户列表(分页 + 筛选)
+- `DELETE /api/admin/users/[id]` — 删除用户
+- `GET /api/admin/users/export` — 导出 CSV
+- `GET/POST /api/admin/settings` — 文案模板 GET / 保存
 
 ### Cron
 - `POST /api/cron/reminders` — 触发提醒扫描(需 `Authorization: Bearer ${CRON_SECRET}`)
