@@ -200,7 +200,22 @@ export function MeSettingsClient({
             aria-live="polite"
             className="mb-3 p-3 rounded-lg bg-amber-50 border border-amber-300 text-amber-900 text-xs flex items-start gap-2"
           >
-            <span aria-hidden="true" className="shrink-0">⚠️</span>
+            <svg
+              width={16}
+              height={16}
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth={2}
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              aria-hidden="true"
+              className="shrink-0 mt-0.5"
+            >
+              <path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0Z" />
+              <line x1="12" y1="9" x2="12" y2="13" />
+              <line x1="12" y1="17" x2="12.01" y2="17" />
+            </svg>
             <div>
               <strong>已切换到 {channelLabel(channel)}</strong>。请在下方填入新渠道的
               key,然后点&ldquo;测试推送&rdquo;验证新渠道收到消息。
@@ -217,7 +232,24 @@ export function MeSettingsClient({
                 这样 grid 永远是干净的 2x2,即使未来再加 channel 也不会乱。 */}
             {channel === "pushplus" && (
               <div className="mb-2 p-3 rounded-lg bg-amber-50 border border-amber-300 text-amber-900 text-xs">
-                <div className="font-semibold mb-1">⚠️ 新用户不建议</div>
+                <div className="font-semibold mb-1 flex items-center gap-1.5">
+                  <svg
+                    width={14}
+                    height={14}
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth={2}
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    aria-hidden="true"
+                  >
+                    <path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0Z" />
+                    <line x1="12" y1="9" x2="12" y2="13" />
+                    <line x1="12" y1="17" x2="12.01" y2="17" />
+                  </svg>
+                  新用户不建议
+                </div>
                 <div>
                   pushplus 现在要求<strong>实名认证</strong>才能发消息,且<strong>实名认证平台要收费</strong>(由 pushplus 收取,跟本系统无关)。
                   新用户建议先选 <strong>Sever酱</strong>(免费,扫码关注公众号即可)
@@ -349,18 +381,59 @@ export function MeSettingsClient({
               )}
               {testStatus === "success" && testMessage && (
                 <span className="text-xs text-emerald-700 flex items-center gap-1">
-                  <span>✅</span>
+                  <svg
+                    width={14}
+                    height={14}
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth={2.5}
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    aria-hidden="true"
+                  >
+                    <polyline points="20 6 9 17 4 12" />
+                  </svg>
                   <span>{testMessage}</span>
                 </span>
               )}
               {testStatus === "error" && testMessage && (
                 <span className="text-xs text-rose-700 flex items-center gap-1">
-                  <span>❌</span>
+                  <svg
+                    width={14}
+                    height={14}
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth={2.5}
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    aria-hidden="true"
+                  >
+                    <circle cx="12" cy="12" r="10" />
+                    <line x1="15" y1="9" x2="9" y2="15" />
+                    <line x1="9" y1="9" x2="15" y2="15" />
+                  </svg>
                   <span>{testMessage}</span>
                 </span>
               )}
               {verified && testStatus !== "success" && (
-                <span className="text-xs text-emerald-700">✓ 渠道已验证</span>
+                <span className="text-xs text-emerald-700 flex items-center gap-1">
+                  <svg
+                    width={12}
+                    height={12}
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth={3}
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    aria-hidden="true"
+                  >
+                    <polyline points="20 6 9 17 4 12" />
+                  </svg>
+                  渠道已验证
+                </span>
               )}
             </div>
           </div>
