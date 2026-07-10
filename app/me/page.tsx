@@ -111,9 +111,19 @@ export default async function MePage() {
           />
         )}
 
-        {!inWindow && dayOffset > 180 && (
+        {!inWindow && (
           <div className="mt-4 p-3 rounded-lg bg-slate-100 border border-slate-200 text-slate-700 text-sm">
-            已超过 180 天,系统不再自动提醒。请尽快保号并提交新日期。
+            {dayOffset > 180 ? (
+              <>已超过 180 天,系统不再自动提醒。请尽快保号并提交新日期。</>
+            ) : (
+              <>
+                距提醒开始还有{" "}
+                <strong className="text-slate-900">
+                  {170 - dayOffset} 天
+                </strong>
+                ,提醒窗口 170-180 天。
+              </>
+            )}
           </div>
         )}
       </div>
