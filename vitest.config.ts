@@ -20,6 +20,11 @@ const projectAlias = {
 
 export default defineConfig({
   test: {
+    // lib/db.ts 模块加载时会立刻检查 DATABASE_URL。测试不需要真的连 DB,
+    // 给个 dummy URL 让 import 不报错;真正用 prisma 的路径会单独 mock。
+    env: {
+      DATABASE_URL: "postgresql://test:test@localhost:5432/test",
+    },
     projects: [
       {
         ...projectAlias,

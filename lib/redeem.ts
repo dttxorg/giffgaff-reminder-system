@@ -41,8 +41,9 @@ export type RedeemResult =
 
 /**
  * 校验并解析 yyyy-MM-dd → Date (UTC 0:00)
+ * (导出供测试,被 redeemCard 内部使用)
  */
-function parseDate(input: string): { ok: true; date: Date } | { ok: false } {
+export function parseDate(input: string): { ok: true; date: Date } | { ok: false } {
   const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(input);
   if (!m) return { ok: false };
   const [y, mo, d] = [Number(m[1]), Number(m[2]), Number(m[3])];
@@ -62,7 +63,7 @@ function parseDate(input: string): { ok: true; date: Date } | { ok: false } {
 /**
  * 手机号：6-15 位数字
  */
-function isValidPhone(input: string): boolean {
+export function isValidPhone(input: string): boolean {
   return /^\d{6,15}$/.test(input);
 }
 
