@@ -13,6 +13,7 @@ import {
   DayOffsetProgress,
   ReminderWindowAlert,
 } from "./_components/day-offset-progress";
+import { PushPreview } from "@/app/_components/push-preview";
 
 export default async function MePage() {
   const user = await getCurrentUser();
@@ -189,6 +190,24 @@ export default async function MePage() {
           </ul>
         )}
       </div>
+
+      {/* M3 推送样例预览:让用户看到自己会收到什么内容 */}
+      <details className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 mt-4 group">
+        <summary className="cursor-pointer list-none flex items-center justify-between">
+          <span className="text-sm font-medium text-slate-700">📬 查看推送样例</span>
+          <span aria-hidden="true" className="text-slate-400 group-open:rotate-180 transition-transform">▾</span>
+        </summary>
+        <p className="text-xs text-slate-500 mt-2 mb-3">
+          折叠打开,看系统到日子会给您发什么。
+          {channelMissing && " 推送前需先设置通知渠道。"}
+        </p>
+        <PushPreview
+          phoneNumber={sim.phoneNumber}
+          days={dayOffset}
+          portToken={sim.portToken}
+          simIdFallback={sim.id}
+        />
+      </details>
     </div>
   );
 }

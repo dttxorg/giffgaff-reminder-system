@@ -5,12 +5,19 @@ import { normalizePhone } from "@/lib/phone";
 import { ResendButton } from "./_components/resend-button";
 
 interface PageProps {
-  searchParams: Promise<{ simId?: string; q?: string; status?: string }>;
+  searchParams: Promise<{
+    simId?: string;
+    q?: string;
+    status?: string;
+    /** ISO 日期 (yyyy-MM-dd),按 sentAt 区间过滤 */
+    from?: string;
+    to?: string;
+  }>;
 }
 
 export default async function RemindersPage({ searchParams }: PageProps) {
   await requireAdmin();
-  const { simId, q, status } = await searchParams;
+  const { simId, q, status, from, to } = await searchParams;
 
   const where: {
     simId?: number | { in: number[] };
@@ -29,7 +36,7 @@ export default async function RemindersPage({ searchParams }: PageProps) {
       return (
         <div className="p-6 sm:p-8">
           <h1 className="text-2xl font-bold mb-6">提醒日志</h1>
-          <SearchForm simId={simId} q={q} status={status} />
+          <SearchForm simId={simId} q={q} status={status} from={from} to={to} />
           <div className="bg-white rounded-xl border border-slate-200 p-8 text-center text-slate-500 text-sm">
             没有找到匹配 &quot;{q}&quot; 的号码
           </div>
@@ -57,7 +64,7 @@ export default async function RemindersPage({ searchParams }: PageProps) {
     <div className="p-6 sm:p-8">
       <h1 className="text-2xl font-bold mb-6">提醒日志</h1>
 
-      <SearchForm simId={simId} q={q} status={status} />
+      <SearchForm simId={simId} q={q} status={status} from={from} to={to} />
 
       <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
         <div className="overflow-x-auto">
@@ -131,13 +138,19 @@ function SearchForm({
   simId,
   q,
   status,
+  from,
+  to,
 }: {
   simId?: string;
   q?: string;
   status?: string;
+  from?: string;
+  to?: string;
 }) {
+  // 显示"清除"快捷链接 — 当任一筛选生效时
+  const hasFilter = !!(simId || q || status || from || to);
   return (
-    <form className="mb-4 flex gap-2 flex-wrap">
+    <form className="mb-4 flex gap-2 flex-wrap items-center">
       <input
         name="simId"
         defaultValue={simId}
@@ -161,12 +174,35 @@ function SearchForm({
         <option value="success">success</option>
         <option value="failed">failed</option>
       </select>
+      <input
+        name="from"
+        defaultValue={from}
+        placeholder="起始日期"
+        type="date"
+        className="px-3 py-2 rounded-lg border border-slate-300 text-sm focus:border-indigo-500 outline-none"
+      />
+      <span className="text-slate-400">→</span>
+      <input
+        name="to"
+        defaultValue={to}
+        placeholder="结束日期"
+        type="date"
+        className="px-3 py-2 rounded-lg border border-slate-300 text-sm focus:border-indigo-500 outline-none"
+      />
       <button
         type="submit"
         className="px-4 py-2 rounded-lg bg-indigo-600 text-white text-sm font-medium hover:bg-indigo-700"
       >
         搜索
       </button>
+      {hasFilter && (
+        <Link
+          href="/admin/reminders"
+          className="px-3 py-2 text-sm text-slate-600 hover:text-slate-900"
+        >
+          清除
+        </Link>
+      )}
     </form>
   );
 }

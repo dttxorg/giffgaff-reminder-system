@@ -144,8 +144,14 @@ export default async function CardsPage({ searchParams }: PageProps) {
                         </span>
                       )}
                     </td>
-                    <td className="px-3 py-2 text-xs text-slate-500 max-w-[200px] truncate">
-                      {c.notes || "—"}
+                    <td className="px-3 py-2 text-xs text-slate-700 max-w-xs">
+                      {c.notes ? (
+                        <span className="block whitespace-pre-wrap break-words leading-relaxed">
+                          {c.notes}
+                        </span>
+                      ) : (
+                        <span className="text-slate-400">—</span>
+                      )}
                     </td>
                     <td className="px-3 py-2 font-mono text-xs text-slate-500">
                       {c.createdAt.toISOString().slice(0, 10)}

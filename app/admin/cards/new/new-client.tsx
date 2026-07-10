@@ -154,10 +154,13 @@ export function NewCardClient() {
           type="text"
           value={notes}
           onChange={(e) => setNotes(e.target.value)}
-          placeholder="如: 第一批 / 给某分销商"
+          placeholder="如：第一批 / 给某分销商 / 双十一活动"
           maxLength={100}
           className="w-full px-3.5 py-2.5 rounded-lg border border-slate-300 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 outline-none"
         />
+        <p className="text-xs text-slate-500 mt-1.5">
+          批次或来源标识,可在卡密列表搜索。例:【2026-01-微信群】【线下活动3月】
+        </p>
       </div>
 
       <div className="flex gap-2">
