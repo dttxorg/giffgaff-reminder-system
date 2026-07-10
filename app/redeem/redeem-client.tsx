@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { normalizePhone } from "@/lib/phone";
 import { todayLocalISODate } from "@/lib/date";
 import { PasswordInput } from "@/app/_components/password-input";
+import { Spinner } from "@/app/_components/skip-to-content";
 
 type Phase =
   | { kind: "input" }
@@ -115,8 +116,9 @@ export function RedeemClient({ initialCode }: RedeemClientProps) {
       )}
 
       {phase.kind === "redeeming" && (
-        <div className="text-center py-8 text-slate-500 text-sm">
-          兑换中…
+        <div className="text-center py-10">
+          <Spinner size={20} label="兑换中" />
+          <p className="text-sm text-slate-600 mt-3">正在创建您的账户...</p>
         </div>
       )}
 
@@ -216,10 +218,17 @@ function FormPhase({
       </div>
 
       {notes && (
-        <div className="text-sm text-slate-600 bg-slate-50 rounded p-3 border border-slate-200">
-          {notes}
-        </div>
-      )}
+            <div className="p-3 rounded-lg bg-amber-50 border border-amber-200 text-sm">
+              <div className="flex items-center gap-1.5 text-amber-900 font-medium mb-0.5">
+                <span aria-hidden="true">🏷️</span>
+                <span>卡密备注</span>
+              </div>
+              <div className="text-amber-800">{notes}</div>
+              <p className="text-xs text-amber-700 mt-1">
+                这条备注仅作识别,不会出现在您的账户信息里
+              </p>
+            </div>
+          )}
 
       <div>
         <label className="block text-sm font-medium mb-1.5">
