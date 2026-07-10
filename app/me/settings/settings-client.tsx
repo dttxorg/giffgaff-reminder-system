@@ -507,7 +507,10 @@ export function MeSettingsClient({
       <PasswordSection />
 
       {/* 危险操作区:默认收起,避免误改激活日期(会重置保号提醒 schedule) */}
-      <details className="mt-6 group rounded-xl border border-rose-200 bg-rose-50/30 overflow-hidden">
+      <details
+        id="sim-info"
+        className="mt-6 group rounded-xl border border-rose-200 bg-rose-50/30 overflow-hidden scroll-mt-20"
+      >
         <summary className="cursor-pointer list-none px-5 py-4 flex items-center justify-between hover:bg-rose-50/60 transition-colors">
           <span className="flex items-center gap-2">
             <span className="inline-flex items-center px-2 py-0.5 rounded-md bg-rose-100 text-rose-700 text-xs font-medium">
