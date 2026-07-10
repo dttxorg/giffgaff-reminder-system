@@ -2,7 +2,7 @@ interface AdminStatProps {
   label: string;
   value: number | string | undefined;
   sub?: string;
-  tone?: "indigo" | "amber" | "rose" | "slate";
+  tone?: "indigo" | "amber" | "emerald" | "rose" | "slate";
   subTone?: "indigo" | "amber" | "rose" | "slate";
 }
 
@@ -22,6 +22,8 @@ export function AdminStat({
       ? "text-indigo-600"
       : tone === "amber"
       ? "text-amber-600"
+      : tone === "emerald"
+      ? "text-emerald-600"
       : tone === "rose"
       ? "text-rose-600"
       : "text-slate-900";

@@ -4,6 +4,7 @@ import { prisma } from "@/lib/db";
 import { dayOffsetFromBaseline, isInReminderWindow } from "@/lib/bucket";
 import { CsvImportButton } from "./csv-import-button";
 import { EmptyState } from "@/app/_components/empty-state";
+import { AdminStat } from "../_components/admin-stat";
 import { SimsBulkTable } from "./_components/sims-bulk-table";
 import type { Prisma } from "@/lib/generated/prisma/client";
 
@@ -24,20 +25,26 @@ export default async function SimsPage({ searchParams }: PageProps) {
     where.status = status;
   }
 
-  const sims = await prisma.sim.findMany({
-    where,
-    orderBy: { id: "desc" },
-    take: 200,
-    // N6: 拉取最近一次发送的时间+状态,join 在单次 SQL 里完成,避免 N+1
-    include: {
-      user: true,
-      reminders: {
-        orderBy: { sentAt: "desc" },
-        take: 1,
-        select: { sentAt: true, status: true },
+  // 列表 + 概览计数并行(无 filter,全量)
+  const [sims, totalSims, activeSims, pausedSims] = await Promise.all([
+    prisma.sim.findMany({
+      where,
+      orderBy: { id: "desc" },
+      take: 200,
+      // N6: 拉取最近一次发送的时间+状态,join 在单次 SQL 里完成,避免 N+1
+      include: {
+        user: true,
+        reminders: {
+          orderBy: { sentAt: "desc" },
+          take: 1,
+          select: { sentAt: true, status: true },
+        },
       },
-    },
-  });
+    }),
+    prisma.sim.count(),
+    prisma.sim.count({ where: { status: "active" } }),
+    prisma.sim.count({ where: { status: "paused" } }),
+  ]);
 
   // 把 server 数据序列化给 client 组件(传给 <SimsBulkTable>)
   const rows = sims.map((sim) => {
@@ -62,8 +69,23 @@ export default async function SimsPage({ searchParams }: PageProps) {
 
   return (
     <div className="p-6 sm:p-8">
-      <div className="flex items-center justify-between mb-6 flex-wrap gap-3">
-        <h1 className="text-2xl font-bold">号码管理</h1>
+      <h1 className="text-2xl font-bold mb-4">号码管理</h1>
+      <div className="grid grid-cols-3 gap-3 mb-6">
+        <AdminStat label="号码总数" value={totalSims} />
+        <AdminStat
+          label="active"
+          value={activeSims}
+          sub={totalSims > 0 ? `占比 ${Math.round((activeSims / totalSims) * 100)}%` : "—"}
+          tone="emerald"
+        />
+        <AdminStat
+          label="paused"
+          value={pausedSims}
+          sub={totalSims > 0 ? `占比 ${Math.round((pausedSims / totalSims) * 100)}%` : "—"}
+          tone="slate"
+        />
+      </div>
+      <div className="flex items-center justify-end mb-6 flex-wrap gap-3">
         <div className="flex gap-2">
           <Link
             href="/admin/sims/new"

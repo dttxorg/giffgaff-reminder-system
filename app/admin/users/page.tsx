@@ -3,6 +3,7 @@ import Link from "next/link";
 import { requireAdmin } from "@/lib/admin-guard";
 import { prisma } from "@/lib/db";
 import { UsersClient } from "./users-client";
+import { AdminStat } from "../_components/admin-stat";
 import type { Prisma } from "@/lib/generated/prisma/client";
 
 interface PageProps {
@@ -26,12 +27,18 @@ export default async function UsersPage({ searchParams }: PageProps) {
   if (password === "yes") where.passwordHash = { not: null };
   if (password === "no") where.passwordHash = null;
 
-  const users = await prisma.user.findMany({
-    where,
-    orderBy: { id: "desc" },
-    take: 200,
-    include: { sim: true, _count: { select: { reminders: true } } },
-  });
+  // 列表 + 概览并行(无 filter)
+  const [users, totalUsers, withPwd, noPwd] = await Promise.all([
+    prisma.user.findMany({
+      where,
+      orderBy: { id: "desc" },
+      take: 200,
+      include: { sim: true, _count: { select: { reminders: true } } },
+    }),
+    prisma.user.count(),
+    prisma.user.count({ where: { passwordHash: { not: null } } }),
+    prisma.user.count({ where: { passwordHash: null } }),
+  ]);
 
   const rows = users.map((u) => ({
     id: u.id,
@@ -45,8 +52,23 @@ export default async function UsersPage({ searchParams }: PageProps) {
 
   return (
     <div className="p-6 sm:p-8">
-      <div className="flex items-center justify-between mb-6 flex-wrap gap-3">
-        <h1 className="text-2xl font-bold">用户列表</h1>
+      <h1 className="text-2xl font-bold mb-4">用户列表</h1>
+      <div className="grid grid-cols-3 gap-3 mb-6">
+        <AdminStat label="用户总数" value={totalUsers} />
+        <AdminStat
+          label="已设密码"
+          value={withPwd}
+          sub={totalUsers > 0 ? `占比 ${Math.round((withPwd / totalUsers) * 100)}%` : "—"}
+          tone="emerald"
+        />
+        <AdminStat
+          label="未设密码"
+          value={noPwd}
+          sub={totalUsers > 0 ? `占比 ${Math.round((noPwd / totalUsers) * 100)}%` : "—"}
+          tone="amber"
+        />
+      </div>
+      <div className="flex items-center justify-end mb-6 flex-wrap gap-3">
         <a
           href={`/api/admin/users/export${buildExportQS(channel, password)}`}
           className="inline-flex items-center px-4 py-2 rounded-lg bg-white border border-slate-200 text-slate-700 text-sm font-medium hover:bg-slate-50 hover:border-slate-300 transition-colors"

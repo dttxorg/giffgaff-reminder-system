@@ -1,258 +1,288 @@
-"use client";
-
-import { use, useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Spinner } from "@/app/_components/skip-to-content";
+import { requireAdmin } from "@/lib/admin-guard";
+import { prisma } from "@/lib/db";
+import { normalizePhone } from "@/lib/phone";
 import { formatRelativeTime } from "@/lib/date";
+import { shanghaiParts } from "@/lib/bucket";
+import { AdminStat } from "../_components/admin-stat";
+import { ResendButton } from "./_components/resend-button";
 
-interface SimData {
-  id: number;
-  phoneNumber: string;
-  activatedAt: string;
-  lastPortedAt: string | null;
-  status: "active" | "paused";
-  user: { id: number; channel: string } | null;
-  recentReminders: {
-    id: number;
-    dayOffset: number;
-    bucket: number;
-    sentAt: string;
-    status: "success" | "failed";
-    errorMessage: string | null;
-  }[];
+interface PageProps {
+  searchParams: Promise<{
+    simId?: string;
+    q?: string;
+    status?: string;
+    /** ISO 日期 (yyyy-MM-dd),按 sentAt 区间过滤 */
+    from?: string;
+    to?: string;
+  }>;
 }
 
-export default function EditSimPage({ params }: { params: Promise<{ id: string }> }) {
-  const { id } = use(params);
-  const router = useRouter();
-  const [sim, setSim] = useState<SimData | null>(null);
-  const [phoneNumber, setPhoneNumber] = useState("");
-  const [activatedAt, setActivatedAt] = useState("");
-  const [lastPortedAt, setLastPortedAt] = useState<string>("");
-  const [status, setStatus] = useState<"active" | "paused">("active");
-  const [error, setError] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
+/**
+ * 用与 /admin/sims 页面相同的筛选参数构造 where。
+ * 复制一份以保持导出 API 独立(便于以后改格式不影响查询逻辑)。
+ */
+async function buildWhere(params: URLSearchParams) {
+  const where: {
+    simId?: number | { in: number[] };
+    status?: "success" | "failed";
+    sentAt?: { gte?: Date; lt?: Date };
+  } = {};
+  const simId = params.get("simId");
+  const q = params.get("q");
+  const status = params.get("status");
 
-  useEffect(() => {
-    fetch(`/api/admin/sims/${id}`)
-      .then((r) => (r.ok ? r.json() : Promise.reject(r.status)))
-      .then((data: SimData) => {
-        setSim(data);
-        setPhoneNumber(data.phoneNumber);
-        setActivatedAt(data.activatedAt);
-        setLastPortedAt(data.lastPortedAt || "");
-        setStatus(data.status);
-      })
-      .catch(() => setError("加载失败"));
-  }, [id]);
+  if (simId) where.simId = parseInt(simId, 10);
 
-  const onSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError(null);
-    setLoading(true);
-    try {
-      const resp = await fetch(`/api/admin/sims/${id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          phoneNumber,
-          activatedAt,
-          lastPortedAt: lastPortedAt || null,
-          status,
-        }),
-      });
-      const data = await resp.json();
-      if (!data.ok) {
-        setError(data.error || "保存失败");
-        return;
-      }
-      router.push("/admin/sims");
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "网络错误");
-    } finally {
-      setLoading(false);
+  if (q) {
+    const cleaned = normalizePhone(q);
+    const matchedSims = await prisma.sim.findMany({
+      where: { phoneNumber: { contains: cleaned || q } },
+      select: { id: true },
+      take: 200,
+    });
+    const ids = matchedSims.map((s) => s.id);
+    if (where.simId) {
+      const sid = where.simId as number;
+      where.simId = ids.includes(sid) ? sid : { in: [] };
+    } else {
+      where.simId = { in: ids };
     }
-  };
-
-  const onDelete = async () => {
-    if (!confirm("确认删除该号码?所有相关 user / reminder 也会被级联删除。")) return;
-    setLoading(true);
-    try {
-      const resp = await fetch(`/api/admin/sims/${id}`, { method: "DELETE" });
-      const data = await resp.json();
-      if (!data.ok) {
-        setError(data.error || "删除失败");
-        return;
-      }
-      router.push("/admin/sims");
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "网络错误");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  if (!sim && !error) {
-    return (
-      <div className="p-8 text-slate-500">
-        <Spinner size={18} label="加载中" />
-      </div>
-    );
   }
 
+  if (status === "success" || status === "failed") where.status = status;
+
+  const from = params.get("from");
+  const to = params.get("to");
+  const range: { gte?: Date; lt?: Date } = {};
+  if (from && /^\d{4}-\d{2}-\d{2}$/.test(from)) {
+    range.gte = new Date(from + "T00:00:00Z");
+  }
+  if (to && /^\d{4}-\d{2}-\d{2}$/.test(to)) {
+    range.lt = new Date(to + "T00:00:00Z");
+    range.lt.setUTCDate(range.lt.getUTCDate() + 1);
+  }
+  if (range.gte || range.lt) where.sentAt = range;
+
+  return where;
+}
+
+export default async function RemindersPage({ searchParams }: PageProps) {
+  await requireAdmin();
+  const { simId, q, status, from, to } = await searchParams;
+
+  const where = await buildWhere(
+    new URLSearchParams(
+      Object.entries({ simId, q, status, from, to })
+        .filter(([, v]) => v != null)
+        .map(([k, v]) => [k, String(v)])
+    )
+  );
+
+  // 列表 + 概览并行(无 filter,全量)
+  const now = new Date();
+  const sp = shanghaiParts(now);
+  const todayStartUTC = new Date(Date.UTC(sp.year, sp.month - 1, sp.day));
+
+  const [reminders, totalToday, failedToday] = await Promise.all([
+    prisma.reminderSent.findMany({
+      where,
+      orderBy: { sentAt: "desc" },
+      take: 200,
+      include: { sim: true, user: true },
+    }),
+    prisma.reminderSent.count({ where: { sentAt: { gte: todayStartUTC } } }),
+    prisma.reminderSent.count({
+      where: { status: "failed", sentAt: { gte: todayStartUTC } },
+    }),
+  ]);
+
+  const exportQS = new URLSearchParams();
+  if (simId) exportQS.set("simId", simId);
+  if (q) exportQS.set("q", q);
+  if (status) exportQS.set("status", status);
+  if (from) exportQS.set("from", from);
+  if (to) exportQS.set("to", to);
+  const exportUrl = `/api/admin/reminders/export${
+    exportQS.toString() ? "?" + exportQS.toString() : ""
+  }`;
+
   return (
-    <div className="p-6 sm:p-8 max-w-xl">
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold">编辑号码 #{id}</h1>
-        <Link href="/admin/sims" className="text-sm text-slate-500 hover:text-slate-900">
-          ← 返回列表
-        </Link>
+    <div className="p-6 sm:p-8">
+      <div className="flex items-center justify-between mb-4 flex-wrap gap-3">
+        <h1 className="text-2xl font-bold">提醒日志</h1>
+        <a
+          href={exportUrl}
+          className="inline-flex items-center px-4 py-2 rounded-lg bg-white border border-slate-200 text-slate-700 text-sm font-medium hover:bg-slate-50 hover:border-slate-300 transition-colors"
+        >
+          ⬇ 导出 CSV
+        </a>
       </div>
 
-      {error && (
-        <div className="mb-4 p-3 rounded-lg bg-rose-50 border border-rose-200 text-rose-700 text-sm">
-          {error}
+      <div className="grid grid-cols-2 gap-3 mb-6 max-w-md">
+        <AdminStat label="今日发送" value={totalToday} tone="indigo" />
+        <AdminStat
+          label="今日失败"
+          value={failedToday}
+          tone={failedToday > 0 ? "rose" : "slate"}
+          sub={failedToday > 0 ? "需排查" : "全部成功"}
+        />
+      </div>
+
+      <SearchForm
+        simId={simId}
+        q={q}
+        status={status}
+        from={from}
+        to={to}
+      />
+
+      {reminders.length === 0 && q ? (
+        <div className="bg-white rounded-xl border border-slate-200 p-8 text-center text-slate-500 text-sm">
+          没有找到匹配 &quot;{q}&quot; 的号码
+        </div>
+      ) : (
+        <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead className="bg-slate-50 text-slate-600">
+                <tr>
+                  <th className="text-left px-3 py-2 hidden md:table-cell">ID</th>
+                  <th className="text-left px-3 py-2">时间 (UTC)</th>
+                  <th className="text-left px-3 py-2">号码</th>
+                  <th className="text-left px-3 py-2 hidden md:table-cell">day/bucket</th>
+                  <th className="text-left px-3 py-2">状态</th>
+                  <th className="text-left px-3 py-2 min-w-[200px]">错误</th>
+                  <th className="text-left px-3 py-2">操作</th>
+                </tr>
+              </thead>
+              <tbody>
+                {reminders.length === 0 ? (
+                  <tr>
+                    <td colSpan={7} className="px-3 py-8 text-center text-slate-400">
+                      暂无日志
+                    </td>
+                  </tr>
+                ) : (
+                  reminders.map((r) => (
+                    <tr key={r.id} className="border-t border-slate-100 align-top">
+                      <td className="px-3 py-2 font-mono text-xs text-slate-500 hidden md:table-cell">
+                        {r.id}
+                      </td>
+                      <td className="px-3 py-2 text-xs whitespace-nowrap">
+                        <div className="text-slate-700">{formatRelativeTime(r.sentAt)}</div>
+                        <div className="text-slate-400 font-mono text-[10px]">
+                          {r.sentAt.toISOString().replace("T", " ").slice(0, 16)} UTC
+                        </div>
+                      </td>
+                      <td className="px-3 py-2 font-mono whitespace-nowrap">
+                        <Link
+                          href={`/admin/sims/${r.simId}`}
+                          className="text-indigo-600 hover:underline"
+                        >
+                          {r.sim.phoneNumber}
+                        </Link>
+                      </td>
+                      <td className="px-3 py-2 font-mono text-xs whitespace-nowrap hidden md:table-cell">
+                        d{r.dayOffset}/b{r.bucket}
+                      </td>
+                      <td className="px-3 py-2 whitespace-nowrap">
+                        <span
+                          className={`px-2 py-0.5 rounded text-xs ${
+                            r.status === "success"
+                              ? "bg-emerald-100 text-emerald-800"
+                              : "bg-rose-100 text-rose-800"
+                          }`}
+                        >
+                          {r.status}
+                        </span>
+                      </td>
+                      <td className="px-3 py-2 text-xs text-slate-700 max-w-md break-words">
+                        {r.errorMessage || <span className="text-slate-300">—</span>}
+                      </td>
+                      <td className="px-3 py-2 whitespace-nowrap">
+                        <ResendButton reminderId={r.id} />
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
         </div>
       )}
-
-      <form onSubmit={onSubmit} className="bg-white rounded-xl border border-slate-200 p-6 space-y-4">
-        <div>
-          <label className="block text-sm font-medium mb-1.5">手机号</label>
-          <input
-            type="text"
-            value={phoneNumber}
-            onChange={(e) => setPhoneNumber(e.target.value)}
-            required
-            className="w-full px-3.5 py-2.5 rounded-lg border border-slate-300 font-mono focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 outline-none"
-          />
-        </div>
-        <div>
-          <label className="block text-sm font-medium mb-1.5">激活日期</label>
-          <input
-            type="date"
-            value={activatedAt}
-            onChange={(e) => setActivatedAt(e.target.value)}
-            required
-            className="w-full px-3.5 py-2.5 rounded-lg border border-slate-300 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 outline-none"
-          />
-        </div>
-        <div>
-          <label className="block text-sm font-medium mb-1.5">上次保号日期 (留空表示未保过)</label>
-          <input
-            type="date"
-            value={lastPortedAt}
-            onChange={(e) => setLastPortedAt(e.target.value)}
-            min={activatedAt || undefined}
-            disabled={!activatedAt}
-            className="w-full px-3.5 py-2.5 rounded-lg border border-slate-300 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 outline-none disabled:bg-slate-100 disabled:cursor-not-allowed"
-          />
-          <p className="text-xs text-slate-500 mt-1">
-            不能早于激活日期
-          </p>
-        </div>
-        <div>
-          <label className="block text-sm font-medium mb-1.5">状态</label>
-          <select
-            value={status}
-            onChange={(e) => setStatus(e.target.value as "active" | "paused")}
-            className="w-full px-3.5 py-2.5 rounded-lg border border-slate-300 focus:border-indigo-500 outline-none"
-          >
-            <option value="active">active</option>
-            <option value="paused">paused</option>
-          </select>
-        </div>
-
-        {sim?.user && (
-          <div className="text-sm text-slate-500 p-3 rounded-lg bg-slate-50">
-            已绑定 user: {sim.user.channel} (id: {sim.user.id})
-          </div>
-        )}
-
-        <div className="flex gap-2">
-          <button
-            type="submit"
-            disabled={loading}
-            className="px-4 py-2 rounded-lg bg-indigo-600 text-white text-sm font-medium hover:bg-indigo-700 disabled:opacity-50"
-          >
-            {loading ? "保存中..." : "保存"}
-          </button>
-          <button
-            type="button"
-            onClick={onDelete}
-            disabled={loading}
-            className="px-4 py-2 rounded-lg bg-rose-50 text-rose-700 text-sm font-medium hover:bg-rose-100 disabled:opacity-50"
-          >
-            删除
-          </button>
-        </div>
-      </form>
-
-      {/* 最近推送记录: admin 排错最常用信息(为什么最近没收到/失败了) */}
-      <div className="mt-6 bg-white rounded-xl border border-slate-200 p-6">
-        <div className="flex items-center justify-between mb-3">
-          <h2 className="text-sm font-semibold text-slate-900">最近 5 条推送</h2>
-          <Link
-            href={`/admin/reminders?simId=${sim?.id ?? id}`}
-            className="text-xs text-indigo-600 hover:underline"
-          >
-            查看全部 →
-          </Link>
-        </div>
-        {!sim?.recentReminders || sim.recentReminders.length === 0 ? (
-          <p className="text-sm text-slate-500 py-4 text-center">
-            暂无推送记录
-          </p>
-        ) : (
-          <ul className="space-y-2">
-            {sim.recentReminders.map((r) => (
-              <li
-                key={r.id}
-                className="flex items-start gap-3 px-3 py-2 rounded-lg bg-slate-50 border border-slate-100"
-              >
-                <span
-                  className={`shrink-0 w-2 h-2 rounded-full mt-1.5 ${
-                    r.status === "success" ? "bg-emerald-500" : "bg-rose-500"
-                  }`}
-                  aria-hidden="true"
-                />
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-baseline justify-between gap-2">
-                    <span className="text-sm text-slate-700">
-                      第 {r.dayOffset} 天 · 第 {r.bucket + 1} 桶
-                    </span>
-                    <span
-                      className={`shrink-0 px-1.5 py-0.5 rounded text-xs ${
-                        r.status === "success"
-                          ? "bg-emerald-100 text-emerald-800"
-                          : "bg-rose-100 text-rose-800"
-                      }`}
-                    >
-                      {r.status === "success" ? "送达" : "失败"}
-                    </span>
-                  </div>
-                  <div className="text-xs text-slate-700 mt-0.5">
-                    {formatRelativeTime(r.sentAt)}
-                  </div>
-                  <div className="text-[10px] text-slate-400 font-mono">
-                    {r.sentAt} UTC
-                  </div>
-                  {r.errorMessage && (
-                    <div
-                      className="text-xs text-rose-700 mt-1 break-words"
-                      title={r.errorMessage}
-                    >
-                      {r.errorMessage.length > 80
-                        ? r.errorMessage.slice(0, 80) + "…"
-                        : r.errorMessage}
-                    </div>
-                  )}
-                </div>
-              </li>
-            ))}
-          </ul>
-        )}
-      </div>
     </div>
+  );
+}
+
+function SearchForm({
+  simId,
+  q,
+  status,
+  from,
+  to,
+}: {
+  simId?: string;
+  q?: string;
+  status?: string;
+  from?: string;
+  to?: string;
+}) {
+  const hasFilter = !!(simId || q || status || from || to);
+  return (
+    <form className="mb-4 flex gap-2 flex-wrap items-center">
+      <input
+        name="simId"
+        defaultValue={simId}
+        placeholder="simId"
+        type="number"
+        className="px-3 py-2 rounded-lg border border-slate-300 text-sm w-24 focus:border-indigo-500 outline-none"
+      />
+      <input
+        name="q"
+        defaultValue={q}
+        placeholder="手机号（支持后 6 位）"
+        inputMode="numeric"
+        className="px-3 py-2 rounded-lg border border-slate-300 text-sm w-48 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 outline-none"
+      />
+      <select
+        name="status"
+        defaultValue={status || ""}
+        className="px-3 py-2 rounded-lg border border-slate-300 text-sm focus:border-indigo-500 outline-none"
+      >
+        <option value="">全部状态</option>
+        <option value="success">success</option>
+        <option value="failed">failed</option>
+      </select>
+      <input
+        name="from"
+        defaultValue={from}
+        placeholder="起始日期"
+        type="date"
+        className="px-3 py-2 rounded-lg border border-slate-300 text-sm focus:border-indigo-500 outline-none"
+      />
+      <span className="text-slate-400">→</span>
+      <input
+        name="to"
+        defaultValue={to}
+        placeholder="结束日期"
+        type="date"
+        className="px-3 py-2 rounded-lg border border-slate-300 text-sm focus:border-indigo-500 outline-none"
+      />
+      <button
+        type="submit"
+        className="px-4 py-2 rounded-lg bg-indigo-600 text-white text-sm font-medium hover:bg-indigo-700"
+      >
+        搜索
+      </button>
+      {hasFilter && (
+        <Link
+          href="/admin/reminders"
+          className="px-3 py-2 text-sm text-slate-600 hover:text-slate-900"
+        >
+          清除
+        </Link>
+      )}
+    </form>
   );
 }
