@@ -117,7 +117,17 @@ export default async function MePage() {
         </div>
         <div className="flex items-baseline gap-2 mb-3">
           <span className="text-sm text-slate-500">已激活</span>
-          <span className="text-3xl font-bold text-indigo-600">{dayOffset}</span>
+          <span
+            className={
+              dayOffset > 180
+                ? "text-3xl font-bold text-rose-600"
+                : inWindow
+                  ? "text-3xl font-bold text-amber-600"
+                  : "text-3xl font-bold text-indigo-600"
+            }
+          >
+            {dayOffset}
+          </span>
           <span className="text-base font-normal text-slate-500">天</span>
         </div>
         <DayOffsetProgress dayOffset={dayOffset} />
