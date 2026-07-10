@@ -142,7 +142,7 @@ export default async function MePage() {
                   : "text-3xl font-bold text-indigo-600"
             }
           >
-            {dayOffset}
+            {dayOffset === 0 ? "今天" : dayOffset}
           </span>
           <span className="text-base font-normal text-slate-500">天</span>
         </div>
