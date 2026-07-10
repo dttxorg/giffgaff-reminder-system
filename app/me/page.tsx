@@ -28,7 +28,7 @@ export default async function MePage() {
 
   // M3: 最近 5 条 + lifetime 总数(并行)
   // 总数让用户知道系统"一直在跑",透明度提升
-  const [recentReminders, lifetimeCount] = await Promise.all([
+  const [recentReminders, lifetimeCount, successCount, failedCount] = await Promise.all([
     prisma.reminderSent.findMany({
       where: { simId: sim.id },
       orderBy: { sentAt: "desc" },
@@ -42,7 +42,18 @@ export default async function MePage() {
       },
     }),
     prisma.reminderSent.count({ where: { simId: sim.id } }),
+    prisma.reminderSent.count({
+      where: { simId: sim.id, status: "success" },
+    }),
+    prisma.reminderSent.count({
+      where: { simId: sim.id, status: "failed" },
+    }),
   ]);
+  // 推送成功率(默认 100% 避免除以 0;有 failed 才显示真实数字)
+  const successRate =
+    lifetimeCount > 0
+      ? Math.round((successCount / lifetimeCount) * 100)
+      : 100;
 
   // 计算当前小时的 bucket(用于显示"今天第几次推送")
   const hourOfDay = shanghaiParts(new Date()).hour;
@@ -206,6 +217,27 @@ export default async function MePage() {
               {lifetimeCount}
               <span className="text-sm font-normal text-slate-500 ml-1.5">条累计</span>
             </div>
+            {lifetimeCount > 0 && (
+              <p className="text-xs text-slate-500 mt-1">
+                送达率
+                <strong
+                  className={
+                    successRate >= 95
+                      ? "text-emerald-700"
+                      : successRate >= 80
+                        ? "text-amber-700"
+                        : "text-rose-700"
+                  }
+                >
+                  {successRate}%
+                </strong>
+                {failedCount > 0 && (
+                  <span className="ml-1.5 text-rose-600">
+                    ({failedCount} 条失败)
+                  </span>
+                )}
+              </p>
+            )}
           </div>
           <span className="text-xs text-slate-400">显示最近 5 条</span>
         </div>
