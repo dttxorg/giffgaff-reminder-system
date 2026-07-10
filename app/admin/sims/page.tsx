@@ -27,7 +27,15 @@ export default async function SimsPage({ searchParams }: PageProps) {
     where,
     orderBy: { id: "desc" },
     take: 200,
-    include: { user: true },
+    // N6: 拉取最近一次发送的时间+状态,join 在单次 SQL 里完成,避免 N+1
+    include: {
+      user: true,
+      reminders: {
+        orderBy: { sentAt: "desc" },
+        take: 1,
+        select: { sentAt: true, status: true },
+      },
+    },
   });
 
   return (
@@ -81,13 +89,14 @@ export default async function SimsPage({ searchParams }: PageProps) {
                 <th className="text-left px-3 py-2">天数</th>
                 <th className="text-left px-3 py-2">状态</th>
                 <th className="text-left px-3 py-2">绑定</th>
+                <th className="text-left px-3 py-2">上次发送</th>
                 <th className="text-left px-3 py-2">操作</th>
               </tr>
             </thead>
             <tbody>
               {sims.length === 0 ? (
                 <tr>
-                  <td colSpan={8}>
+                  <td colSpan={9}>
                     <EmptyState
                       title="暂无号码"
                       hint="录入第一个号码让系统开始提醒"
@@ -135,6 +144,29 @@ export default async function SimsPage({ searchParams }: PageProps) {
                           <span className="text-slate-700">{sim.user.channel}</span>
                         ) : (
                           <span className="text-slate-400">未绑定</span>
+                        )}
+                      </td>
+                      <td className="px-3 py-2 text-xs">
+                        {sim.reminders.length > 0 ? (
+                          <div className="flex items-center gap-1.5">
+                            <span
+                              className={`shrink-0 w-1.5 h-1.5 rounded-full ${
+                                sim.reminders[0].status === "success"
+                                  ? "bg-emerald-500"
+                                  : "bg-rose-500"
+                              }`}
+                              aria-hidden="true"
+                            />
+                            <span className="text-slate-600 font-mono whitespace-nowrap">
+                              {sim.reminders[0].sentAt
+                                .toISOString()
+                                .replace("T", " ")
+                                .slice(0, 16)}{" "}
+                              UTC
+                            </span>
+                          </div>
+                        ) : (
+                          <span className="text-slate-400">未发过</span>
                         )}
                       </td>
                       <td className="px-3 py-2">

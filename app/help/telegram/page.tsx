@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { ExternalLink } from "@/app/_components/external-link";
 
 const BOTFATHER_URL = "https://t.me/BotFather";
 const USERINFOBOT_URL = "https://t.me/userinfobot";
@@ -7,6 +8,11 @@ const GETUPDATES_HINT = "https://api.telegram.org/bot<YOUR_BOT_TOKEN>/getUpdates
 export default function TelegramHelpPage() {
   return (
     <article className="max-w-2xl mx-auto px-4 py-8 sm:py-12 prose prose-slate">
+      <div className="mb-4">
+        <Link href="/me" className="text-xs text-slate-500 hover:text-slate-900">
+          ← 返回用户中心
+        </Link>
+      </div>
       <h1>Telegram Bot 开通教程</h1>
       <p>
         Telegram Bot 是 Telegram 内置的机器人,可以主动给您的私聊发消息。开通后,本系统给您发提醒时,您的 Telegram 会立即收到一条带 <code>保号链接</code> 的消息。
@@ -17,29 +23,19 @@ export default function TelegramHelpPage() {
       </p>
 
       <div className="not-prose my-6 flex flex-wrap gap-3">
-        <a
-          href="https://telegram.org/"
-          target="_blank"
-          rel="noreferrer"
-          className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg bg-sky-500 text-white font-medium hover:bg-sky-600 transition-colors shadow-sm"
-        >
+        <ExternalLink href="https://telegram.org/" className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg bg-sky-500 text-white font-medium hover:bg-sky-600 transition-colors shadow-sm">
           ✈️ 打开 Telegram
-        </a>
-        <a
-          href={BOTFATHER_URL}
-          target="_blank"
-          rel="noreferrer"
-          className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg bg-white border border-slate-300 text-slate-700 font-medium hover:bg-slate-50 transition-colors"
-        >
+        </ExternalLink>
+        <ExternalLink href={BOTFATHER_URL} className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg bg-white border border-slate-300 text-slate-700 font-medium hover:bg-slate-50 transition-colors">
           🤖 打开 @BotFather
-        </a>
+        </ExternalLink>
       </div>
 
       <div className="not-prose my-6 p-4 rounded-lg bg-amber-50 border border-amber-200 text-amber-900 text-sm">
         <strong>📱 还没装 Telegram?</strong>
         <p className="mt-1">
           Telegram 是免费 App,国内可直连。直接在 App Store / Google Play 搜 <code>Telegram</code> 下载,
-          或访问 <a href="https://telegram.org/" target="_blank" rel="noreferrer" className="underline">telegram.org</a>。
+          或访问 <ExternalLink href="https://telegram.org/" className="underline">telegram.org</ExternalLink>。
         </p>
       </div>
 
@@ -49,7 +45,7 @@ export default function TelegramHelpPage() {
         <li>
           <strong>创建一个 Telegram Bot(用 @BotFather)</strong>
           <p>
-            在 Telegram 里搜索 <a href={BOTFATHER_URL} target="_blank" rel="noreferrer">@BotFather</a> 并打开对话,
+            在 Telegram 里搜索 <ExternalLink href={BOTFATHER_URL} className="">@BotFather</ExternalLink> 并打开对话,
             点"Start"开始。
           </p>
           <p>
@@ -83,7 +79,7 @@ export default function TelegramHelpPage() {
           <strong>拿到自己的 Chat ID(你的数字 ID)</strong>
           <p>有两种方法,选一种就行:</p>
           <p>
-            <strong>方法 A(推荐,1 步搞定)</strong>:在 Telegram 搜索 <a href={USERINFOBOT_URL} target="_blank" rel="noreferrer">@userinfobot</a>,
+            <strong>方法 A(推荐,1 步搞定)</strong>:在 Telegram 搜索 <ExternalLink href={USERINFOBOT_URL} className="">@userinfobot</ExternalLink>,
             点进去点 <strong>Start</strong>,它会立刻回复你一行字,里面 <code>Id:</code> 后面的数字就是你的 Chat ID。
           </p>
           <p>
@@ -124,7 +120,7 @@ export default function TelegramHelpPage() {
       <details>
         <summary>Bot Token 在哪里找?</summary>
         <p>
-          在 Telegram 里打开 <a href={BOTFATHER_URL} target="_blank" rel="noreferrer">@BotFather</a>,
+          在 Telegram 里打开 <ExternalLink href={BOTFATHER_URL} className="">@BotFather</ExternalLink>,
           发送 <code>/token</code> 或 <code>/mybots</code> → 选择你的 bot →
           "<strong>API Token</strong>" 即可看到。
         </p>
@@ -138,7 +134,7 @@ export default function TelegramHelpPage() {
         <summary>Chat ID 在哪里找?(快速复述)</summary>
         <ul>
           <li>
-            <strong>最简单</strong>:打开 <a href={USERINFOBOT_URL} target="_blank" rel="noreferrer">@userinfobot</a> 发 <code>/start</code>,回复里 <code>Id:</code> 后面就是
+            <strong>最简单</strong>:打开 <ExternalLink href={USERINFOBOT_URL} className="">@userinfobot</ExternalLink> 发 <code>/start</code>,回复里 <code>Id:</code> 后面就是
           </li>
           <li>
             <strong>备用</strong>:浏览器访问 <code>https://api.telegram.org/bot&lt;token&gt;/getUpdates</code> 找 <code>chat.id</code>

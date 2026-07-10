@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { ExternalLink } from "@/app/_components/external-link";
 
 const PUSHPLUS_HOME = "https://www.pushplus.plus/";
 const PUSHPLUS_LOGIN = "https://www.pushplus.plus/login.html";
@@ -7,6 +8,11 @@ const PUSHPLUS_TOKEN_PAGE = "https://www.pushplus.plus/uc.html";
 export default function PushPlusHelpPage() {
   return (
     <article className="max-w-2xl mx-auto px-4 py-8 sm:py-12 prose prose-slate">
+      <div className="mb-4">
+        <Link href="/me" className="text-xs text-slate-500 hover:text-slate-900">
+          ← 返回用户中心
+        </Link>
+      </div>
       <h1>pushplus 开通教程</h1>
       <p>
         pushplus(推送加)是一个<strong>微信公众号推送</strong>平台,从 2019 年上线至今稳定运营。
@@ -59,33 +65,18 @@ export default function PushPlusHelpPage() {
         <div className="text-sm text-emerald-800 mb-3">
           登录后在「个人中心 → 我的token」复制 token,然后直接到第 4 步配置本系统。
         </div>
-        <a
-          href={PUSHPLUS_TOKEN_PAGE}
-          target="_blank"
-          rel="noreferrer"
-          className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-emerald-600 text-white text-sm font-medium hover:bg-emerald-700 shadow-sm"
-        >
+        <ExternalLink href={PUSHPLUS_TOKEN_PAGE} className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-emerald-600 text-white text-sm font-medium hover:bg-emerald-700 shadow-sm">
           🔑 直接拿 token
-        </a>
+        </ExternalLink>
       </div>
 
       <div className="not-prose my-6 flex flex-wrap gap-3">
-        <a
-          href={PUSHPLUS_HOME}
-          target="_blank"
-          rel="noreferrer"
-          className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg bg-blue-600 text-white font-medium hover:bg-blue-700 transition-colors shadow-sm"
-        >
+        <ExternalLink href={PUSHPLUS_HOME} className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg bg-blue-600 text-white font-medium hover:bg-blue-700 transition-colors shadow-sm">
           🔗 打开 pushplus 官网
-        </a>
-        <a
-          href={PUSHPLUS_LOGIN}
-          target="_blank"
-          rel="noreferrer"
-          className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg bg-white border border-slate-300 text-slate-700 font-medium hover:bg-slate-50 transition-colors"
-        >
+        </ExternalLink>
+        <ExternalLink href={PUSHPLUS_LOGIN} className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg bg-white border border-slate-300 text-slate-700 font-medium hover:bg-slate-50 transition-colors">
           直接登录 (已有账号)
-        </a>
+        </ExternalLink>
       </div>
 
       <h2>步骤详解</h2>
@@ -94,7 +85,7 @@ export default function PushPlusHelpPage() {
         <li>
           <strong>用微信注册 pushplus 账号</strong>
           <p>
-            打开 <a href={PUSHPLUS_HOME} target="_blank" rel="noreferrer">pushplus.plus</a>,
+            打开 <ExternalLink href={PUSHPLUS_HOME} className="">pushplus.plus</ExternalLink>,
             点右上角"登录" → 选"<strong>微信扫码登录</strong>"。
           </p>
           <div className="not-prose mt-2 p-3 rounded-lg bg-amber-50 border border-amber-200 text-amber-900 text-sm">
@@ -200,7 +191,7 @@ export default function PushPlusHelpPage() {
       <details>
         <summary>token 在哪里找 / 丢了?</summary>
         <p>
-          登录 <a href={PUSHPLUS_LOGIN} target="_blank" rel="noreferrer">pushplus.plus</a> 后,
+          登录 <ExternalLink href={PUSHPLUS_LOGIN} className="">pushplus.plus</ExternalLink> 后,
           顶部菜单 → 「<strong>个人中心</strong>」 → 左边栏 → 「<strong>我的token</strong>」。
         </p>
         <p>

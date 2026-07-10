@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { ExternalLink } from "@/app/_components/external-link";
 
 const SEVERCHAN_HOME = "https://sct.ftqq.com";
 const SEVERCHAN_LOGIN = "https://sct.ftqq.com/login";
@@ -7,6 +8,11 @@ const SEVERCHAN_SENDKEY_PAGE = "https://sct.ftqq.com/sendkey";
 export default function ServerChanHelpPage() {
   return (
     <article className="max-w-2xl mx-auto px-4 py-8 sm:py-12 prose prose-slate">
+      <div className="mb-4">
+        <Link href="/me" className="text-xs text-slate-500 hover:text-slate-900">
+          ← 返回用户中心
+        </Link>
+      </div>
       <h1>Sever酱 开通教程</h1>
       <p>
         Sever酱 是一个把消息推送到<strong>微信公众号</strong>的服务。开通后,本系统给您发提醒时,微信会立即收到一条消息。
@@ -23,42 +29,22 @@ export default function ServerChanHelpPage() {
           登录后首页就有您的 SendKey,点"复制"按钮,然后直接到第 3 步配置本系统。
         </div>
         <div className="flex flex-wrap gap-2">
-          <a
-            href={SEVERCHAN_SENDKEY_PAGE}
-            target="_blank"
-            rel="noreferrer"
-            className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-emerald-600 text-white text-sm font-medium hover:bg-emerald-700 shadow-sm"
-          >
+          <ExternalLink href={SEVERCHAN_SENDKEY_PAGE} className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-emerald-600 text-white text-sm font-medium hover:bg-emerald-700 shadow-sm">
             🔑 直接拿 SendKey
-          </a>
-          <a
-            href={SEVERCHAN_LOGIN}
-            target="_blank"
-            rel="noreferrer"
-            className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-white border border-emerald-300 text-emerald-800 text-sm font-medium hover:bg-emerald-50"
-          >
+          </ExternalLink>
+          <ExternalLink href={SEVERCHAN_LOGIN} className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-white border border-emerald-300 text-emerald-800 text-sm font-medium hover:bg-emerald-50">
             登录页 →
-          </a>
+          </ExternalLink>
         </div>
       </div>
 
       <div className="not-prose my-6 flex flex-wrap gap-3">
-        <a
-          href={SEVERCHAN_HOME}
-          target="_blank"
-          rel="noreferrer"
-          className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg bg-emerald-600 text-white font-medium hover:bg-emerald-700 transition-colors shadow-sm"
-        >
+        <ExternalLink href={SEVERCHAN_HOME} className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg bg-emerald-600 text-white font-medium hover:bg-emerald-700 transition-colors shadow-sm">
           🔗 打开 Sever酱 官网
-        </a>
-        <a
-          href={SEVERCHAN_LOGIN}
-          target="_blank"
-          rel="noreferrer"
-          className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg bg-white border border-slate-300 text-slate-700 font-medium hover:bg-slate-50 transition-colors"
-        >
+        </ExternalLink>
+        <ExternalLink href={SEVERCHAN_LOGIN} className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg bg-white border border-slate-300 text-slate-700 font-medium hover:bg-slate-50 transition-colors">
           直接登录 (已有账号)
-        </a>
+        </ExternalLink>
       </div>
 
       <h2>步骤详解</h2>
@@ -67,7 +53,7 @@ export default function ServerChanHelpPage() {
         <li>
           <strong>打开 Sever酱 官网,扫首页二维码关注公众号</strong>
           <p>
-            打开 <a href={SEVERCHAN_HOME} target="_blank" rel="noreferrer">sct.ftqq.com</a>,
+            打开 <ExternalLink href={SEVERCHAN_HOME} className="">sct.ftqq.com</ExternalLink>,
             首页会看到一个 <strong>二维码</strong>(写着"微信扫码关注")。
           </p>
           <p>用微信 <strong>扫一扫</strong> 扫这个二维码 → 弹出"Server酱"公众号 → 点 <strong>关注</strong>。</p>
@@ -90,10 +76,10 @@ export default function ServerChanHelpPage() {
         <li>
           <strong>登录 Sever酱 拿到 SendKey</strong>
           <p>
-            访问 <a href={SEVERCHAN_LOGIN} target="_blank" rel="noreferrer">sct.ftqq.com/login</a>,
+            访问 <ExternalLink href={SEVERCHAN_LOGIN} className="">sct.ftqq.com/login</ExternalLink>,
             用刚关注的微信扫页面上的登录二维码 → 微信会弹出"确认登录"提示,点确认。
           </p>
-          <p>登录后会自动跳到 <a href={SEVERCHAN_SENDKEY_PAGE} target="_blank" rel="noreferrer">SendKey 页面</a>。</p>
+          <p>登录后会自动跳到 <ExternalLink href={SEVERCHAN_SENDKEY_PAGE} className="">SendKey 页面</ExternalLink>。</p>
           <div className="not-prose mt-2 p-3 rounded-lg bg-slate-50 border border-slate-200 text-sm">
             <div className="font-semibold text-slate-900 mb-1">SendKey 长这样:</div>
             <code className="text-slate-800 break-all">SCT2abcdefGhijKLMNopQRstUVwxYz123456789</code>
@@ -133,8 +119,8 @@ export default function ServerChanHelpPage() {
       <details>
         <summary>SendKey 在哪里找 / 忘了?</summary>
         <p>
-          登录 <a href={SEVERCHAN_LOGIN} target="_blank" rel="noreferrer">sct.ftqq.com/login</a> 后,
-          直接访问 <a href={SEVERCHAN_SENDKEY_PAGE} target="_blank" rel="noreferrer">sct.ftqq.com/sendkey</a> 就能看到。
+          登录 <ExternalLink href={SEVERCHAN_LOGIN} className="">sct.ftqq.com/login</ExternalLink> 后,
+          直接访问 <ExternalLink href={SEVERCHAN_SENDKEY_PAGE} className="">sct.ftqq.com/sendkey</ExternalLink> 就能看到。
           同一账号 SendKey 长期不变,丢了不需要重新注册。
         </p>
       </details>

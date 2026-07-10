@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { ExternalLink } from "@/app/_components/external-link";
 
 const BARK_APP_STORE_URL = "https://apps.apple.com/cn/app/bark-%E7%BB%99%E4%BD%A0%E7%9A%84%E6%89%8B%E6%9C%BA%E5%8F%91%E6%8E%A8%E9%80%81/id1403753865";
 const BARK_APP_STORE_EN_URL = "https://apps.apple.com/us/app/bark-custom-notifications/id1403753865";
@@ -8,6 +9,11 @@ const BARK_GITHUB_RELEASES_URL = "https://github.com/finb/bark/releases";
 export default function BarkHelpPage() {
   return (
     <article className="max-w-2xl mx-auto px-4 py-8 sm:py-12 prose prose-slate">
+      <div className="mb-4">
+        <Link href="/me" className="text-xs text-slate-500 hover:text-slate-900">
+          ← 返回用户中心
+        </Link>
+      </div>
       <h1>Bark 开通教程</h1>
       <p>
         Bark 是一个 <strong>iOS</strong> 推送 App,直接推送到您的 iPhone / iPad。
@@ -18,14 +24,9 @@ export default function BarkHelpPage() {
       </p>
 
       <div className="not-prose my-6 flex flex-wrap gap-3">
-        <a
-          href={BARK_APP_STORE_URL}
-          target="_blank"
-          rel="noreferrer"
-          className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg bg-slate-900 text-white font-medium hover:bg-slate-800 transition-colors shadow-sm"
-        >
+        <ExternalLink href={BARK_APP_STORE_URL} className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg bg-slate-900 text-white font-medium hover:bg-slate-800 transition-colors shadow-sm">
           🍎 iOS - 跳转 App Store 下载
-        </a>
+        </ExternalLink>
       </div>
 
       <div className="not-prose my-6 p-4 rounded-lg bg-amber-50 border border-amber-200 text-amber-900 text-sm">
@@ -117,7 +118,7 @@ export default function BarkHelpPage() {
         <p>
           可以。如果官方 <code>api.day.app</code> 不稳定,可以自己部署 Bark Server,推送更可靠。
           <br />
-          详见 <a href={BARK_GITHUB_URL} target="_blank" rel="noreferrer">finb/bark GitHub</a>。
+          详见 <ExternalLink href={BARK_GITHUB_URL} className="">finb/bark GitHub</ExternalLink>。
         </p>
         <p>自建后,把 URL 换成您自己服务器地址即可,无需改其他步骤。</p>
       </details>
