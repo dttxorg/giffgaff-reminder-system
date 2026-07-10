@@ -96,11 +96,11 @@ export function UsersClient({ users }: UsersClientProps) {
               <tr>
                 <th className="text-left px-3 py-2">ID</th>
                 <th className="text-left px-3 py-2">绑定 sim</th>
-                <th className="text-left px-3 py-2">后 6 位</th>
-                <th className="text-left px-3 py-2">渠道</th>
-                <th className="text-left px-3 py-2">密码</th>
-                <th className="text-left px-3 py-2">提醒数</th>
-                <th className="text-left px-3 py-2">注册时间 (UTC)</th>
+                <th className="text-left px-3 py-2 hidden md:table-cell">后 6 位</th>
+                <th className="text-left px-3 py-2 hidden md:table-cell">渠道</th>
+                <th className="text-left px-3 py-2 hidden md:table-cell">密码</th>
+                <th className="text-left px-3 py-2 hidden md:table-cell">提醒数</th>
+                <th className="text-left px-3 py-2 hidden md:table-cell">注册时间 (UTC)</th>
                 <th className="text-left px-3 py-2">操作</th>
               </tr>
             </thead>
@@ -117,10 +117,10 @@ export function UsersClient({ users }: UsersClientProps) {
               ) : (
                 users.map((u) => (
                   <tr key={u.id} className="border-t border-slate-100">
-                    <td className="px-3 py-2 font-mono text-xs text-slate-500">{u.id}</td>
+                    <td className="px-3 py-2 font-mono text-xs text-slate-500 hidden md:table-cell">{u.id}</td>
                     <td className="px-3 py-2 font-mono">{u.simPhone}</td>
-                    <td className="px-3 py-2 font-mono text-slate-500">{u.simLookupKey}</td>
-                    <td className="px-3 py-2">{u.channel}</td>
+                    <td className="px-3 py-2 font-mono text-slate-500 hidden md:table-cell">{u.simLookupKey}</td>
+                    <td className="px-3 py-2 hidden md:table-cell">{u.channel}</td>
                     <td className="px-3 py-2">
                       {u.hasPassword ? (
                         <span className="text-emerald-700 text-xs">✓ 已设</span>
@@ -128,7 +128,7 @@ export function UsersClient({ users }: UsersClientProps) {
                         <span className="text-rose-700 text-xs">未设</span>
                       )}
                     </td>
-                    <td className="px-3 py-2 text-slate-500">{u.reminderCount}</td>
+                    <td className="px-3 py-2 text-slate-500 hidden md:table-cell">{u.reminderCount}</td>
                     <td className="px-3 py-2 font-mono text-xs text-slate-500">
                       {u.createdAt}
                     </td>

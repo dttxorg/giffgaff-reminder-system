@@ -100,9 +100,9 @@ export default async function CardsPage({ searchParams }: PageProps) {
                 <th className="text-left px-3 py-2">ID</th>
                 <th className="text-left px-3 py-2">卡密</th>
                 <th className="text-left px-3 py-2">状态</th>
-                <th className="text-left px-3 py-2">备注</th>
-                <th className="text-left px-3 py-2">创建时间</th>
-                <th className="text-left px-3 py-2">兑换时间</th>
+                <th className="text-left px-3 py-2 hidden md:table-cell">备注</th>
+                <th className="text-left px-3 py-2 hidden md:table-cell">创建时间</th>
+                <th className="text-left px-3 py-2 hidden md:table-cell">兑换时间</th>
                 <th className="text-left px-3 py-2">操作</th>
               </tr>
             </thead>
@@ -144,7 +144,7 @@ export default async function CardsPage({ searchParams }: PageProps) {
                         </span>
                       )}
                     </td>
-                    <td className="px-3 py-2 text-xs text-slate-700 max-w-xs">
+                    <td className="px-3 py-2 text-xs text-slate-700 max-w-xs hidden md:table-cell">
                       {c.notes ? (
                         <span className="block whitespace-pre-wrap break-words leading-relaxed">
                           {c.notes}
@@ -153,7 +153,7 @@ export default async function CardsPage({ searchParams }: PageProps) {
                         <span className="text-slate-400">—</span>
                       )}
                     </td>
-                    <td className="px-3 py-2 font-mono text-xs text-slate-500">
+                    <td className="px-3 py-2 font-mono text-xs text-slate-500 hidden md:table-cell">
                       {c.createdAt.toISOString().slice(0, 10)}
                     </td>
                     <td className="px-3 py-2 font-mono text-xs text-slate-500">

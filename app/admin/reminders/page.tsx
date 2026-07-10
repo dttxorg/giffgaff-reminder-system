@@ -79,10 +79,10 @@ export default async function RemindersPage({ searchParams }: PageProps) {
           <table className="w-full text-sm">
             <thead className="bg-slate-50 text-slate-600">
               <tr>
-                <th className="text-left px-3 py-2">ID</th>
+                <th className="text-left px-3 py-2 hidden md:table-cell">ID</th>
                 <th className="text-left px-3 py-2">时间 (UTC)</th>
                 <th className="text-left px-3 py-2">号码</th>
-                <th className="text-left px-3 py-2">day/bucket</th>
+                <th className="text-left px-3 py-2 hidden md:table-cell">day/bucket</th>
                 <th className="text-left px-3 py-2">状态</th>
                 <th className="text-left px-3 py-2 min-w-[200px]">错误</th>
                 <th className="text-left px-3 py-2">操作</th>
@@ -98,7 +98,7 @@ export default async function RemindersPage({ searchParams }: PageProps) {
               ) : (
                 reminders.map((r) => (
                   <tr key={r.id} className="border-t border-slate-100 align-top">
-                    <td className="px-3 py-2 font-mono text-xs text-slate-500">{r.id}</td>
+                    <td className="px-3 py-2 font-mono text-xs text-slate-500 hidden md:table-cell">{r.id}</td>
                     <td className="px-3 py-2 font-mono text-xs whitespace-nowrap">
                       {r.sentAt.toISOString().replace("T", " ").slice(0, 19)}
                     </td>
@@ -107,7 +107,7 @@ export default async function RemindersPage({ searchParams }: PageProps) {
                         {r.sim.phoneNumber}
                       </Link>
                     </td>
-                    <td className="px-3 py-2 font-mono text-xs whitespace-nowrap">
+                    <td className="px-3 py-2 font-mono text-xs whitespace-nowrap hidden md:table-cell">
                       d{r.dayOffset}/b{r.bucket}
                     </td>
                     <td className="px-3 py-2 whitespace-nowrap">

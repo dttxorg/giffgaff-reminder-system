@@ -193,14 +193,14 @@ export function SimsBulkTable({ sims }: SimsBulkTableProps) {
                 className="w-4 h-4 cursor-pointer accent-indigo-600"
               />
             </th>
-            <th className="text-left px-3 py-2">ID</th>
+            <th className="text-left px-3 py-2 hidden md:table-cell">ID</th>
             <th className="text-left px-3 py-2">手机号</th>
-            <th className="text-left px-3 py-2">激活日期</th>
-            <th className="text-left px-3 py-2">上次保号</th>
-            <th className="text-left px-3 py-2">天数</th>
+            <th className="text-left px-3 py-2 hidden md:table-cell">激活日期</th>
+            <th className="text-left px-3 py-2 hidden md:table-cell">上次保号</th>
+            <th className="text-left px-3 py-2 hidden md:table-cell">天数</th>
             <th className="text-left px-3 py-2">状态</th>
-            <th className="text-left px-3 py-2">绑定</th>
-            <th className="text-left px-3 py-2">上次发送</th>
+            <th className="text-left px-3 py-2 hidden md:table-cell">绑定</th>
+            <th className="text-left px-3 py-2 hidden md:table-cell">上次发送</th>
             <th className="text-left px-3 py-2">操作</th>
           </tr>
         </thead>
