@@ -62,7 +62,7 @@ export default async function SimsPage({ searchParams }: PageProps) {
         </select>
         <button
           type="submit"
-          className="px-4 py-2 rounded-lg bg-slate-900 text-white text-sm font-medium hover:bg-slate-800"
+          className="px-4 py-2 rounded-lg bg-indigo-600 text-white text-sm font-medium hover:bg-indigo-700"
         >
           搜索
         </button>

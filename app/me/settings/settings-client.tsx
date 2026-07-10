@@ -311,14 +311,20 @@ export function MeSettingsClient({
           </div>
         )}
 
-        <div className="mt-6 flex gap-2">
+        <div className="mt-6 flex flex-wrap items-center gap-3">
           <button
             onClick={onSave}
             disabled={saveStatus === "saving"}
+            // 这里不直接禁用 — 让用户点了能看到错误,而不是无声禁用
             className="px-5 py-2.5 rounded-lg bg-indigo-600 text-white text-sm font-medium hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
           >
             {saveStatus === "saving" ? "保存中..." : "保存"}
           </button>
+          {!verified && !saveMessage && (
+            <span className="text-xs text-amber-700">
+              ⚠ 提示: 点击保存前请先在上方点&ldquo;测试推送&rdquo;验证渠道
+            </span>
+          )}
           <Link
             href="/me"
             className="px-5 py-2.5 rounded-lg text-slate-600 hover:bg-slate-100 text-sm"
@@ -348,6 +354,16 @@ function ActivatedAtSection({
     kind: "success" | "error";
     text: string;
   } | null>(null);
+
+  // Esc 关闭激活日期确认弹窗
+  useEffect(() => {
+    if (!confirmOpen || saving) return;
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setConfirmOpen(false);
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [confirmOpen, saving]);
 
   // 本地时区今天的 yyyy-MM-dd（详见 lib/date.ts）
   const today = todayLocalISODate();

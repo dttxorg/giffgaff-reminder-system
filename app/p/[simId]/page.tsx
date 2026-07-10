@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
+import { Spinner } from "@/app/_components/skip-to-content";
 import { todayLocalISODate } from "@/lib/date";
 
 interface SimInfo {
@@ -99,7 +100,7 @@ export default function PortPage() {
   if (!sim) {
     return (
       <div className="max-w-md mx-auto px-4 py-12 text-center text-slate-500">
-        加载中...
+        <Spinner size={18} label="加载中" />
       </div>
     );
   }

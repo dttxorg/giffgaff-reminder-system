@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 
 export default function AdminLoginPage() {
   const router = useRouter();
@@ -72,7 +73,7 @@ export default function AdminLoginPage() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full py-2.5 rounded-lg bg-slate-900 text-white font-medium hover:bg-slate-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            className="w-full py-2.5 rounded-lg bg-indigo-600 text-white font-medium hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
           >
             {loading ? "登录中..." : "登录"}
           </button>
@@ -82,6 +83,11 @@ export default function AdminLoginPage() {
           默认账号 <code className="bg-white px-1 rounded">admin</code> / 密码 <code className="bg-white px-1 rounded">admin123</code>
           <br />
           生产环境请通过 Vercel 环境变量 <code className="bg-white px-1 rounded">ADMIN_USERNAME</code> / <code className="bg-white px-1 rounded">ADMIN_PASSWORD</code> 修改
+        </div>
+        <div className="mt-3 text-center text-xs text-slate-500">
+          <Link href="/" className="hover:text-indigo-600 transition-colors">
+            ← 返回首页
+          </Link>
         </div>
       </div>
     </div>

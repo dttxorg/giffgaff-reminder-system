@@ -3,6 +3,7 @@ import { Suspense } from "react";
 import "./globals.css";
 import Link from "next/link";
 import { UserNav, UserNavFallback } from "./_components/user-nav";
+import { SkipToContent } from "./_components/skip-to-content";
 
 export const metadata: Metadata = {
   title: "Giffgaff 保号提醒",
@@ -25,6 +26,7 @@ export default function RootLayout({
   return (
     <html lang="zh-CN" className="h-full antialiased">
       <body className="min-h-full flex flex-col bg-gradient-to-br from-slate-50 via-white to-indigo-50 text-slate-900">
+        <SkipToContent />
         <header className="border-b border-slate-200 bg-white/80 backdrop-blur-sm sticky top-0 z-30">
           <div className="max-w-5xl mx-auto px-4 sm:px-6 py-3 flex items-center justify-between">
             <Link href="/" className="flex items-center gap-2 font-semibold text-lg text-indigo-600">
@@ -40,7 +42,7 @@ export default function RootLayout({
             </nav>
           </div>
         </header>
-        <main className="flex-1">{children}</main>
+        <main id="main-content" className="flex-1">{children}</main>
         <footer className="border-t border-slate-200 bg-white/60 py-4 text-center text-xs text-slate-500">
           <div className="max-w-5xl mx-auto px-4 flex items-center justify-center gap-3">
             <span>Giffgaff 保号提醒 · V1</span>

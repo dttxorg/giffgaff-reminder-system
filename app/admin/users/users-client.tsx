@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { generateSecurePassword } from "@/lib/password-gen";
 
@@ -43,6 +43,16 @@ export function UsersClient({ users }: UsersClientProps) {
     setResetMessage(null);
     setGeneratedPassword(null);
   };
+
+  // Esc 关闭 modal — 与点击遮罩关闭一致的键盘可达性
+  useEffect(() => {
+    if (resettingId === null) return;
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === "Escape") closeReset();
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [resettingId]);
 
   const generatePassword = () => {
     // 使用 crypto.getRandomValues(CSPRNG),而非 Math.random,避免被预测
@@ -135,9 +145,18 @@ export function UsersClient({ users }: UsersClientProps) {
       </div>
 
       {resettingId !== null && (
-        <div className="fixed inset-0 z-50 bg-slate-900/50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl shadow-xl max-w-md w-full p-6">
-            <h2 className="text-lg font-semibold mb-1">重置用户密码</h2>
+        <div
+          className="fixed inset-0 z-50 bg-slate-900/50 flex items-center justify-center p-4"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="reset-pwd-title"
+          onClick={closeReset}
+        >
+          <div
+            className="bg-white rounded-2xl shadow-xl max-w-md w-full p-6"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h2 id="reset-pwd-title" className="text-lg font-semibold mb-1">重置用户密码</h2>
             <p className="text-xs text-slate-500 mb-4">
               用户 ID = {resettingId}。重置后请把新密码通过安全渠道告知客户。
             </p>
@@ -157,7 +176,7 @@ export function UsersClient({ users }: UsersClientProps) {
                 </div>
                 <button
                   onClick={closeReset}
-                  className="w-full py-2.5 rounded-lg bg-slate-900 text-white text-sm font-medium hover:bg-slate-800"
+                  className="w-full py-2.5 rounded-lg bg-indigo-600 text-white text-sm font-medium hover:bg-indigo-700"
                 >
                   关闭
                 </button>

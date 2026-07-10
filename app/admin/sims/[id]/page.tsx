@@ -3,6 +3,7 @@
 import { use, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { Spinner } from "@/app/_components/skip-to-content";
 
 interface SimData {
   id: number;
@@ -84,7 +85,11 @@ export default function EditSimPage({ params }: { params: Promise<{ id: string }
   };
 
   if (!sim && !error) {
-    return <div className="p-8 text-slate-500">加载中...</div>;
+    return (
+      <div className="p-8 text-slate-500">
+        <Spinner size={18} label="加载中" />
+      </div>
+    );
   }
 
   return (

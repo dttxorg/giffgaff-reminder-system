@@ -12,6 +12,7 @@ export function NewCardClient() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [created, setCreated] = useState<string[] | null>(null);
+  const [copied, setCopied] = useState(false);
 
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -58,16 +59,25 @@ export function NewCardClient() {
           </div>
         </div>
         <div className="flex gap-2 flex-wrap">
-          <button
-            type="button"
-            onClick={() => {
-              navigator.clipboard.writeText(created.join("\n"));
-              alert("已复制全部卡密到剪贴板");
-            }}
-            className="px-4 py-2 rounded-lg bg-slate-900 text-white text-sm font-medium hover:bg-slate-800"
-          >
-            复制全部
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => {
+                navigator.clipboard.writeText(created.join("\n"));
+                setCopied(true);
+                setTimeout(() => setCopied(false), 2000);
+              }}
+              className="px-4 py-2 rounded-lg bg-indigo-600 text-white text-sm font-medium hover:bg-indigo-700"
+            >
+              复制全部
+            </button>
+            {copied && (
+              <span className="text-xs text-emerald-700 flex items-center gap-1">
+                <span>✓</span>
+                <span>已复制</span>
+              </span>
+            )}
+          </div>
           {/* 下载 .txt:关闭页面后仍能找回卡密(浏览器下载的文件持久化) */}
           <button
             type="button"
