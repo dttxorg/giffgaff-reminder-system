@@ -174,6 +174,18 @@ export default function ServerChanHelpPage() {
         </p>
       </details>
 
+      <h2>数据流 / 隐私</h2>
+      <p>
+        每次发提醒时,本系统会向 Sever酱 接口 <code>https://sct.ftqq.com/{`{SendKey}`}.send</code> POST 一条消息。
+      </p>
+      <ul>
+        <li>请求内容:<strong>推送标题 + 正文</strong>(例如 &quot;还有 5 天到期&quot;)</li>
+        <li>可标识信息:<strong>仅 sim 编号和后 6 位</strong>,不传完整手机号</li>
+        <li>不会发送:激活日期、保号历史、IMEI、设备信息等</li>
+        <li>Sever酱 再把消息转给<strong>微信公众号</strong>(通过微信官方接口)</li>
+        <li>注意:Sever酱 推送会显示<strong>来自「Sever酱」公众号</strong>的消息(不是私人号)</li>
+      </ul>
+
       {/* 完成检查清单 */}
       <div className="not-prose mt-8 p-4 rounded-lg bg-slate-50 border border-slate-200">
         <div className="font-semibold text-slate-900 mb-2">✅ 完成检查清单</div>

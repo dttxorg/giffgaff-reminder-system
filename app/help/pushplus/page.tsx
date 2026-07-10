@@ -240,6 +240,19 @@ export default function PushPlusHelpPage() {
         </p>
       </details>
 
+      <h2>数据流 / 隐私</h2>
+      <p>
+        每次发提醒时,本系统会向 pushplus 接口 <code>https://www.pushplus.plus/send</code> POST 一条消息,
+        带上您的 token 和推送内容。
+      </p>
+      <ul>
+        <li>请求内容:<strong>推送标题 + 正文</strong>(例如 &quot;还有 5 天到期&quot;)</li>
+        <li>可标识信息:<strong>仅 sim 编号和后 6 位</strong>,不传完整手机号</li>
+        <li>不会发送:激活日期、保号历史、IMEI、设备信息等</li>
+        <li>pushplus 再把消息转给<strong>微信公众号</strong>(「pushplus 推送加」公众号)</li>
+        <li>注意:pushplus 推送会显示<strong>来自「pushplus 推送加」公众号</strong>的消息</li>
+      </ul>
+
       {/* 完成检查清单 */}
       <div className="not-prose mt-8 p-4 rounded-lg bg-slate-50 border border-slate-200">
         <div className="font-semibold text-slate-900 mb-2">✅ 完成检查清单</div>

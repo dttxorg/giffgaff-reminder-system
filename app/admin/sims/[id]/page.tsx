@@ -173,6 +173,14 @@ export default function EditSimPage({ params }: { params: Promise<{ id: string }
                   已超 180 天
                 </span>
               )}
+              {sim.lastPortedAt && (
+                <Link
+                  href={`/admin/reminders?simId=${sim.id}`}
+                  className="text-indigo-600 hover:underline ml-auto"
+                >
+                  查看该 sim 推送日志 →
+                </Link>
+              )}
             </div>
           );
         })()}

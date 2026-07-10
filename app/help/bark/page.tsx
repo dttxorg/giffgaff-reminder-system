@@ -121,6 +121,19 @@ export default function BarkHelpPage() {
         <p>自建后,把 URL 换成您自己服务器地址即可,无需改其他步骤。</p>
       </details>
 
+      <h2>数据流 / 隐私</h2>
+      <p>
+        每次发提醒时,本系统会向 <code>{`{您填的 Bark URL}`}</code> 发起一次 HTTPS GET 请求,
+        URL 里带推送标题和正文。
+      </p>
+      <ul>
+        <li>请求内容:<strong>推送标题 + 正文</strong>(例如 &quot;还有 5 天到期&quot;)</li>
+        <li>可标识信息:<strong>仅 sim 编号和后 6 位</strong>(用于在 Bark 端打组),不传完整手机号</li>
+        <li>不会发送:激活日期、保号历史、IMEI、设备信息等</li>
+        <li>官方服务器 <code>api.day.app</code>:由 Bark 项目方运营,服务稳定</li>
+        <li>自建服务器:数据只到您自己,完全可控(推荐给注重隐私的用户)</li>
+      </ul>
+
       {/* 完成检查清单 — 与 Sever酱/Pushplus 教程对齐 */}
       <div className="not-prose mt-8 p-4 rounded-lg bg-slate-50 border border-slate-200">
         <div className="font-semibold text-slate-900 mb-2">✅ 完成检查清单</div>

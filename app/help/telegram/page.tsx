@@ -205,6 +205,22 @@ export default function TelegramHelpPage() {
         </p>
       </details>
 
+      <h2>数据流 / 隐私</h2>
+      <p>
+        每次发提醒时,本系统会调用 Telegram 官方 Bot API:
+        <code>https://api.telegram.org/bot{`{botToken}`}/sendMessage</code>,把消息 POST 给您的 chat_id。
+      </p>
+      <ul>
+        <li>请求内容:<strong>推送标题 + 正文</strong>(例如 &quot;还有 5 天到期&quot;)</li>
+        <li>可标识信息:<strong>仅 sim 编号和后 6 位</strong>,不传完整手机号</li>
+        <li>不会发送:激活日期、保号历史、IMEI、设备信息等</li>
+        <li>消息直发到您的 Telegram,<strong>不经过任何第三方</strong></li>
+        <li>Telegram 端的消息会被 Telegram 公司存档(这是 Telegram 自身的服务条款,非本系统行为)</li>
+      </ul>
+      <p className="text-sm text-slate-700">
+        如果您是<strong>自己创建</strong>的 Bot,您随时可以在 <code>@BotFather</code> 里 revoke token 重置。
+      </p>
+
       {/* 完成检查清单 — 与 Sever酱/Bark/Pushplus 教程对齐 */}
       <div className="not-prose mt-8 p-4 rounded-lg bg-slate-50 border border-slate-200">
         <div className="font-semibold text-slate-900 mb-2">✅ 完成检查清单</div>

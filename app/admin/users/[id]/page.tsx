@@ -6,6 +6,7 @@ import { dayOffsetFromBaseline, isInReminderWindow } from "@/lib/bucket";
 import { formatPhoneForDisplay } from "@/lib/phone";
 import { formatRelativeTime } from "@/lib/date";
 import { UsersClient } from "../users-client";
+import { DeleteUserButton } from "./delete-user-button";
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -20,7 +21,7 @@ export default async function UserDetailPage({ params }: PageProps) {
   }
 
   // 并行取 user + 最近 5 条推送
-  const [user, recentReminders] = await Promise.all([
+  const [user, recentReminders, reminderCount] = await Promise.all([
     prisma.user.findUnique({
       where: { id: userId },
       include: { sim: true },
@@ -39,6 +40,7 @@ export default async function UserDetailPage({ params }: PageProps) {
         simId: true,
       },
     }),
+    prisma.reminderSent.count({ where: { userId } }),
   ]);
 
   if (!user) {
@@ -237,6 +239,15 @@ export default async function UserDetailPage({ params }: PageProps) {
             ))}
           </ul>
         )}
+      </div>
+
+      {/* 危险操作 */}
+      <div className="mt-6 bg-rose-50 border border-rose-200 rounded-xl p-5">
+        <h2 className="text-sm font-semibold text-rose-900 mb-2">危险操作</h2>
+        <p className="text-xs text-rose-700 mb-3">
+          删除用户是不可逆操作。sim 号码会保留,可被新用户兑换认领。
+        </p>
+        <DeleteUserButton userId={user.id} reminderCount={reminderCount} />
       </div>
     </div>
   );
