@@ -16,6 +16,7 @@ import {
 } from "./_components/day-offset-progress";
 import { PushPreview } from "@/app/_components/push-preview";
 import { ChannelKeyReveal } from "./_components/channel-key-reveal";
+import { CopyPhoneButton } from "./_components/copy-phone-button";
 
 export default async function MePage() {
   const user = await getCurrentUser();
@@ -105,7 +106,10 @@ export default async function MePage() {
       )}
 
       <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 mb-4">
-        <div className="text-sm text-slate-500 mb-1">我的号码</div>
+        <div className="flex items-center justify-between mb-1">
+          <div className="text-sm text-slate-500">我的号码</div>
+          <CopyPhoneButton phone={sim.phoneNumber} />
+        </div>
         <div className="text-2xl font-mono font-semibold mb-3 tracking-wider">
           {formatPhoneForDisplay(sim.phoneNumber)}
         </div>
