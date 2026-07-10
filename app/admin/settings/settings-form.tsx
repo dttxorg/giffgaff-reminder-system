@@ -18,6 +18,8 @@ export default function SettingsForm({ initial }: { initial: string }) {
   const [saved, setSaved] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // T5:检测"未保存"状态 — template 跟 initial 不同,且没在保存
+  const dirty = template !== initial;
 
   // 实时预览(纯前端,不发请求)
   const previewBody = useMemo(
@@ -80,13 +82,22 @@ export default function SettingsForm({ initial }: { initial: string }) {
     <div className="space-y-4">
       <div className="bg-white rounded-xl border border-slate-200 p-6">
         <label className="block text-sm font-medium mb-2">提醒文案模板</label>
-        <textarea
-          value={template}
-          onChange={(e) => setTemplate(e.target.value)}
-          rows={6}
-          spellCheck={false}
-          className="w-full px-3.5 py-2.5 rounded-lg border border-slate-300 font-mono text-sm focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 outline-none"
-        />
+      <textarea
+        value={template}
+        onChange={(e) => setTemplate(e.target.value)}
+        rows={10}
+        spellCheck={false}
+        className="w-full px-3.5 py-2.5 rounded-lg border border-slate-300 font-mono text-sm focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 outline-none"
+      />
+      {dirty && (
+        <p className="mt-1.5 text-xs text-amber-700 flex items-center gap-1">
+          <span
+            className="inline-block w-1.5 h-1.5 rounded-full bg-amber-500"
+            aria-hidden="true"
+          />
+          有未保存的修改
+        </p>
+      )}
         <div className="mt-2 text-xs text-slate-500 space-y-0.5">
           <p>可用变量（点击下方按钮可插入到光标位置）：</p>
           <ul className="list-disc list-inside pl-2 space-y-0.5">
