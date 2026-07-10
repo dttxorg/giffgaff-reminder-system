@@ -2,7 +2,7 @@ import Link from "next/link";
 import { requireAdmin } from "@/lib/admin-guard";
 import { prisma } from "@/lib/db";
 import { normalizePhone } from "@/lib/phone";
-import { formatRelativeTime } from "@/lib/date";
+import { formatRelativeTime, formatUtcShanghaiDual } from "@/lib/date";
 import { shanghaiParts } from "@/lib/bucket";
 import { AdminStat } from "../_components/admin-stat";
 import { Pagination } from "../_components/pagination";
@@ -184,8 +184,11 @@ export default async function RemindersPage({ searchParams }: PageProps) {
                       </td>
                       <td className="px-3 py-2 text-xs whitespace-nowrap">
                         <div className="text-slate-700">{formatRelativeTime(r.sentAt)}</div>
-                        <div className="text-slate-400 font-mono text-[10px]">
-                          {r.sentAt.toISOString().replace("T", " ").slice(0, 16)} UTC
+                        <div
+                          className="text-slate-500 font-mono text-[10px]"
+                          title={r.sentAt.toISOString()}
+                        >
+                          {formatUtcShanghaiDual(r.sentAt)}
                         </div>
                       </td>
                       <td className="px-3 py-2 font-mono whitespace-nowrap">

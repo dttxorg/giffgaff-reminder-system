@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { requireAdmin } from "@/lib/admin-guard";
 import { prisma } from "@/lib/db";
+import { formatRelativeTime, formatUtcShanghaiDual } from "@/lib/date";
 import { AdminStat } from "./_components/admin-stat";
 
 export default async function AdminDashboard() {
@@ -178,8 +179,14 @@ export default async function AdminDashboard() {
               <tbody>
                 {recent.map((r) => (
                   <tr key={r.id} className="border-t border-slate-100 align-top">
-                    <td className="px-3 py-2 font-mono text-xs whitespace-nowrap">
-                      {r.sentAt.toISOString().replace("T", " ").slice(0, 19)}
+                    <td className="px-3 py-2 text-xs whitespace-nowrap">
+                      <div className="text-slate-700">{formatRelativeTime(r.sentAt)}</div>
+                      <div
+                        className="text-slate-500 font-mono text-[10px]"
+                        title={r.sentAt.toISOString()}
+                      >
+                        {formatUtcShanghaiDual(r.sentAt)}
+                      </div>
                     </td>
                     <td className="px-3 py-2 font-mono whitespace-nowrap">
                       <Link

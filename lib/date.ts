@@ -54,3 +54,34 @@ export function formatRelativeTime(past: Date | string, now: Date | number = Dat
   const years = Math.floor(days / 365);
   return `${years} 年前`;
 }
+
+/**
+ * 把 Date / ISO 字符串格式化成上海时区(UTC+8)的"yyyy-MM-dd HH:mm"。
+ * 用途:admin / cron 日志在 server 端统一显示上海时间,而不是用户本地时区。
+ *
+ * 注:Vercel/Neon 的 Date.now() 给的是 UTC,数据库存的也是 UTC。
+ * Admin 看上海时间方便排错(国内业务)。
+ */
+export function formatShanghaiDateTime(input: Date | string): string {
+  const d = typeof input === "string" ? new Date(input) : input;
+  // UTC 时间 + 8 小时 = 上海时间
+  const shanghaiMs = d.getTime() + 8 * 60 * 60 * 1000;
+  const sh = new Date(shanghaiMs);
+  const yyyy = sh.getUTCFullYear();
+  const mm = String(sh.getUTCMonth() + 1).padStart(2, "0");
+  const dd = String(sh.getUTCDate()).padStart(2, "0");
+  const HH = String(sh.getUTCHours()).padStart(2, "0");
+  const MM = String(sh.getUTCMinutes()).padStart(2, "0");
+  return `${yyyy}-${mm}-${dd} ${HH}:${MM}`;
+}
+
+/**
+ * 紧凑版:同时给出 UTC 和上海时间,空格分隔,适合表格副标。
+ * 例:"2025-12-08 14:30 UTC · 22:30 (UTC+8)"
+ */
+export function formatUtcShanghaiDual(input: Date | string): string {
+  const d = typeof input === "string" ? new Date(input) : input;
+  const utc = d.toISOString().replace("T", " ").slice(0, 16);
+  const sh = formatShanghaiDateTime(d).slice(11); // 只取 HH:MM
+  return `${utc} UTC · ${sh} (UTC+8)`;
+}

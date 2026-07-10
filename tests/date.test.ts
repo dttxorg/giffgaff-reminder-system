@@ -133,3 +133,44 @@ describe("formatRelativeTime", () => {
     expect(formatRelativeTime(new Date(NOW - 60_000), NOW)).toBe("1 分钟前");
   });
 });
+
+import { formatShanghaiDateTime, formatUtcShanghaiDual } from "../lib/date";
+
+describe("formatShanghaiDateTime", () => {
+  it("UTC 14:30 → Shanghai 22:30", () => {
+    const d = new Date("2025-12-08T14:30:00Z");
+    expect(formatShanghaiDateTime(d)).toBe("2025-12-08 22:30");
+  });
+
+  it("UTC 16:00 → Shanghai 次日 00:00 (跨天)", () => {
+    const d = new Date("2025-12-08T16:00:00Z");
+    expect(formatShanghaiDateTime(d)).toBe("2025-12-09 00:00");
+  });
+
+  it("UTC 00:30 → Shanghai 08:30 (当天)", () => {
+    const d = new Date("2025-12-08T00:30:00Z");
+    expect(formatShanghaiDateTime(d)).toBe("2025-12-08 08:30");
+  });
+
+  it("接受 ISO 字符串", () => {
+    expect(formatShanghaiDateTime("2025-12-08T14:30:00Z")).toBe("2025-12-08 22:30");
+  });
+
+  it("分钟 < 10 要补 0", () => {
+    const d = new Date("2025-12-08T14:05:00Z");
+    expect(formatShanghaiDateTime(d)).toBe("2025-12-08 22:05");
+  });
+});
+
+describe("formatUtcShanghaiDual", () => {
+  it("返回 UTC + 上海时间双显示", () => {
+    const d = new Date("2025-12-08T14:30:00Z");
+    expect(formatUtcShanghaiDual(d)).toBe("2025-12-08 14:30 UTC · 22:30 (UTC+8)");
+  });
+
+  it("跨天时只显示上海时间 HH:MM", () => {
+    const d = new Date("2025-12-08T16:00:00Z");
+    // UTC: 2025-12-08 16:00, Shanghai: 2025-12-09 00:00 → 00:00
+    expect(formatUtcShanghaiDual(d)).toBe("2025-12-08 16:00 UTC · 00:00 (UTC+8)");
+  });
+});
