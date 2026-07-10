@@ -184,6 +184,19 @@ export function MeSettingsClient({
     }
   };
 
+  // 快捷键 Cmd/Ctrl+S → 触发保存
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === "s") {
+        e.preventDefault();
+        void onSave();
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [verified, channel, channelKey, saveStatus]);
+
   return (
     <div>
       {isFirstTime && (
