@@ -93,6 +93,16 @@ export function MeSettingsClient({
     }
   }, [verified, testStatus, testMessage, channel, channelKey]);
 
+  // hash=#sim-info 时自动展开危险区 details(从 /me '修改' 链接跳转过来)
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (window.location.hash !== "#sim-info") return;
+    const el = document.getElementById("sim-info");
+    if (el && el.tagName === "DETAILS") {
+      (el as HTMLDetailsElement).open = true;
+    }
+  }, []);
+
   const startCooldown = (seconds: number) => {
     setCooldown(seconds);
     if (cooldownTimer.current) clearInterval(cooldownTimer.current);
