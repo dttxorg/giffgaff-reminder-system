@@ -5,16 +5,21 @@ import { dayOffsetFromBaseline, isInReminderWindow } from "@/lib/bucket";
 import { CsvImportButton } from "./csv-import-button";
 import { EmptyState } from "@/app/_components/empty-state";
 import { AdminStat } from "../_components/admin-stat";
+import { Pagination } from "../_components/pagination";
 import { SimsBulkTable } from "./_components/sims-bulk-table";
 import type { Prisma } from "@/lib/generated/prisma/client";
 
 interface PageProps {
-  searchParams: Promise<{ q?: string; status?: string }>;
+  searchParams: Promise<{ q?: string; status?: string; page?: string }>;
 }
+
+const PAGE_SIZE = 20;
 
 export default async function SimsPage({ searchParams }: PageProps) {
   await requireAdmin();
-  const { q, status } = await searchParams;
+  const { q, status, page } = await searchParams;
+  const currentPage = Math.max(1, parseInt(page || "1", 10) || 1);
+  const skip = (currentPage - 1) * PAGE_SIZE;
 
   const where: Prisma.SimWhereInput = {};
   if (q) {
@@ -26,11 +31,12 @@ export default async function SimsPage({ searchParams }: PageProps) {
   }
 
   // 列表 + 概览计数并行(无 filter,全量)
-  const [sims, totalSims, activeSims, pausedSims] = await Promise.all([
+  const [sims, totalSims, activeSims, pausedSims, totalCount] = await Promise.all([
     prisma.sim.findMany({
       where,
       orderBy: { id: "desc" },
-      take: 200,
+      skip,
+      take: PAGE_SIZE,
       // N6: 拉取最近一次发送的时间+状态,join 在单次 SQL 里完成,避免 N+1
       include: {
         user: true,
@@ -44,6 +50,8 @@ export default async function SimsPage({ searchParams }: PageProps) {
     prisma.sim.count(),
     prisma.sim.count({ where: { status: "active" } }),
     prisma.sim.count({ where: { status: "paused" } }),
+    prisma.sim.count({ where }), // 用于分页
+    prisma.sim.count({ where }), // 用于分页(应用了 where 过滤)
   ]);
 
   // 把 server 数据序列化给 client 组件(传给 <SimsBulkTable>)
@@ -66,6 +74,8 @@ export default async function SimsPage({ searchParams }: PageProps) {
       lastSentStatus: last?.status ?? null,
     };
   });
+
+  const totalPages = Math.max(1, Math.ceil(totalCount / PAGE_SIZE));
 
   return (
     <div className="p-6 sm:p-8">
@@ -141,11 +151,19 @@ export default async function SimsPage({ searchParams }: PageProps) {
             <SimsBulkTable sims={rows} />
           </div>
         )}
-        {sims.length === 200 && (
-          <div className="px-4 py-2 text-xs text-slate-500 border-t border-slate-100 bg-slate-50">
-            仅显示最近 200 条,请用搜索缩小范围
-          </div>
-        )}
+        <Pagination
+          currentPage={currentPage}
+          totalPages={totalPages}
+          totalCount={totalCount}
+          basePath="/admin/sims"
+          searchParams={
+            new URLSearchParams(
+              Object.entries({ q, status })
+                .filter(([, v]) => v != null)
+                .map(([k, v]) => [k, String(v)])
+            )
+          }
+        />
       </div>
     </div>
   );

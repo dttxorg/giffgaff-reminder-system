@@ -4,15 +4,20 @@ import { requireAdmin } from "@/lib/admin-guard";
 import { prisma } from "@/lib/db";
 import { UsersClient } from "./users-client";
 import { AdminStat } from "../_components/admin-stat";
+import { Pagination } from "../_components/pagination";
 import type { Prisma } from "@/lib/generated/prisma/client";
 
 interface PageProps {
-  searchParams: Promise<{ channel?: string; password?: string }>;
+  searchParams: Promise<{ channel?: string; password?: string; page?: string }>;
 }
+
+const PAGE_SIZE = 20;
 
 export default async function UsersPage({ searchParams }: PageProps) {
   await requireAdmin();
-  const { channel, password } = await searchParams;
+  const { channel, password, page } = await searchParams;
+  const currentPage = Math.max(1, parseInt(page || "1", 10) || 1);
+  const skip = (currentPage - 1) * PAGE_SIZE;
 
   // U5: 按 channel 和 password 状态筛选
   const where: Prisma.UserWhereInput = {};
@@ -28,16 +33,18 @@ export default async function UsersPage({ searchParams }: PageProps) {
   if (password === "no") where.passwordHash = null;
 
   // 列表 + 概览并行(无 filter)
-  const [users, totalUsers, withPwd, noPwd] = await Promise.all([
+  const [users, totalUsers, withPwd, noPwd, totalCount] = await Promise.all([
     prisma.user.findMany({
       where,
       orderBy: { id: "desc" },
-      take: 200,
+      skip,
+      take: PAGE_SIZE,
       include: { sim: true, _count: { select: { reminders: true } } },
     }),
     prisma.user.count(),
     prisma.user.count({ where: { passwordHash: { not: null } } }),
     prisma.user.count({ where: { passwordHash: null } }),
+    prisma.user.count({ where }), // 用于分页
   ]);
 
   const rows = users.map((u) => ({
@@ -49,6 +56,8 @@ export default async function UsersPage({ searchParams }: PageProps) {
     createdAt: u.createdAt.toISOString().replace("T", " ").slice(0, 19),
     hasPassword: !!u.passwordHash,
   }));
+
+  const totalPages = Math.max(1, Math.ceil(totalCount / PAGE_SIZE));
 
   return (
     <div className="p-6 sm:p-8">
@@ -116,6 +125,20 @@ export default async function UsersPage({ searchParams }: PageProps) {
       </form>
 
       <UsersClient users={rows} />
+
+      <Pagination
+        currentPage={currentPage}
+        totalPages={totalPages}
+        totalCount={totalCount}
+        basePath="/admin/users"
+        searchParams={
+          new URLSearchParams(
+            Object.entries({ channel, password })
+              .filter(([, v]) => v != null)
+              .map(([k, v]) => [k, String(v)])
+          )
+        }
+      />
     </div>
   );
 }
