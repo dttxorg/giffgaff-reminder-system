@@ -222,6 +222,42 @@ npm run dev
 - **删除 sim**:会级联删除 user 和 reminders_sent
 - **渠道 key 加密**:V1 明文存数据库,V2 加 AES 加密
 
+## 开发工作流
+
+### 添加新推送渠道
+
+1. 在 `lib/channels.ts` 加 `sendXxx()` 异步函数,返回 `{ ok, errorMessage? }`
+2. 在 `sendPush` router 里加分支
+3. `prisma/schema.prisma` 的 `Channel` enum 加值
+4. 跑 `npx prisma migrate dev` 改 DB
+5. 创建 `app/help/xxx/page.tsx` 教程页(参考 bark/pushplus)
+6. 在 `/help` 索引页加新 channel
+7. 在 `/me/settings` 的 channel grid 加按钮
+
+### 添加新管理后台页
+
+1. 创建 `app/admin/xxx/page.tsx`(server component)
+2. 用 `requireAdmin()` 鉴权
+3. 用 `<AdminStat>` / `<EmptyState>` / `<Pagination>` 共享组件
+4. 加 `app/admin/_components/breadcrumb.tsx` LABELS 加新页
+
+### 提交前自检
+
+```bash
+npx tsc --noEmit     # 类型
+npx eslint .        # lint(自动 fix: --fix)
+npx vitest run      # 327+ 测试
+npx next build --webpack  # 完整构建
+```
+
+### 代码风格
+
+- 客户端组件:`"use client"` 开头,文件名 `_components/` 下划线前缀
+- 共享组件:`app/_components/` 或 `app/admin/_components/`
+- 纯函数工具:`lib/`,优先写单元测试在 `tests/`
+- 不用 emoji(用 SVG `<svg>`);不用全角标点;ASCII 优先
+- 危险操作(改激活日期、删除用户)必加二次确认 modal
+
 ## 测试
 
 业务逻辑 + UI 组件覆盖,Vitest,共 327+ 个测试:
