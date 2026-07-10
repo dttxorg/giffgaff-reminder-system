@@ -78,3 +78,68 @@ describe("<ResendButton />", () => {
     expect(btn).toHaveTextContent("发送中...");
   });
 });
+
+describe("<ResendButton /> 边缘", () => {
+  beforeEach(() => {
+    mockFetch.mockReset();
+    mockConfirm.mockReset();
+    mockConfirm.mockReturnValue(true);
+  });
+
+  it("fetch 网络错误(throw)→ 显示 e.message;loading 结束按钮恢复", async () => {
+    mockFetch.mockRejectedValueOnce(new Error("network down"));
+    render(<ResendButton reminderId={42} />);
+    screen.getByRole("button", { name: "重发" }).click();
+    await waitFor(() =>
+      expect(screen.getByText("network down")).toBeInTheDocument()
+    );
+    // loading 已结束,按钮恢复
+    const btn = screen.getByRole("button", { name: "重发" });
+    expect(btn).not.toBeDisabled();
+  });
+
+  it("fetch throw 且 e 不是 Error → 显示 '网络错误' fallback", async () => {
+    // ts-expect-error testing 字符串 throw
+    mockFetch.mockRejectedValueOnce("字符串错误" as never);
+    render(<ResendButton reminderId={42} />);
+    screen.getByRole("button", { name: "重发" }).click();
+    await waitFor(() =>
+      expect(screen.getByText("网络错误")).toBeInTheDocument()
+    );
+  });
+
+  it("API 返回 ok=false 但无 error 字段 → fallback '重发失败'", async () => {
+    mockFetch.mockResolvedValue({
+      ok: false,
+      json: async () => ({ ok: false }),
+    });
+    render(<ResendButton reminderId={42} />);
+    screen.getByRole("button", { name: "重发" }).click();
+    await waitFor(() =>
+      expect(screen.getByText("重发失败")).toBeInTheDocument()
+    );
+  });
+
+  it("loading 中 → button 文字变 '发送中...' 且 disabled", async () => {
+    mockFetch.mockReturnValueOnce(new Promise(() => {})); // 永远 pending
+    render(<ResendButton reminderId={42} />);
+    screen.getByRole("button", { name: "重发" }).click();
+    await waitFor(() => {
+      const btn = screen.getByRole("button", { name: /发送中/ });
+      expect(btn).toBeDisabled();
+      expect(btn).toHaveTextContent("发送中...");
+    });
+  });
+
+  it("reminderId 为 99 → URL 正确", async () => {
+    mockFetch.mockResolvedValue({ ok: true, json: async () => ({ ok: true }) });
+    render(<ResendButton reminderId={99} />);
+    screen.getByRole("button", { name: "重发" }).click();
+    await waitFor(() =>
+      expect(mockFetch).toHaveBeenCalledWith(
+        "/api/admin/reminders/99/resend",
+        expect.objectContaining({ method: "POST" })
+      )
+    );
+  });
+});
