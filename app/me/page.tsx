@@ -15,6 +15,7 @@ import {
   ReminderWindowAlert,
 } from "./_components/day-offset-progress";
 import { PushPreview } from "@/app/_components/push-preview";
+import { ChannelKeyReveal } from "./_components/channel-key-reveal";
 
 export default async function MePage() {
   const user = await getCurrentUser();
@@ -160,9 +161,7 @@ export default async function MePage() {
                 ? "pushplus"
                 : "Telegram"}
             </div>
-            <div className="text-xs text-slate-400 font-mono break-all">
-              {user.channelKey.slice(0, 12)}****
-            </div>
+            <ChannelKeyReveal channelKey={user.channelKey} />
           </>
         )}
       </div>
