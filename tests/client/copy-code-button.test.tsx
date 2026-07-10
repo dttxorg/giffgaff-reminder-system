@@ -41,7 +41,7 @@ describe("<CopyCodeButton />", () => {
       await Promise.resolve();
     });
     expect(mockWriteText).toHaveBeenCalledWith("ABCD-1234-EFGH-5678");
-    expect(screen.getByRole("button")).toHaveTextContent("✓ 已复制");
+    expect(screen.getByRole("button").textContent).toContain("已复制");
   });
 
   it("fireEvent click → 调 writeText", () => {
@@ -61,7 +61,7 @@ describe("<CopyCodeButton />", () => {
       await Promise.resolve();
     });
     expect(createSpy).toHaveBeenCalledWith("textarea");
-    expect(screen.getByRole("button")).toHaveTextContent("✓ 已复制");
+    expect(screen.getByRole("button").textContent).toContain("已复制");
   });
 
   it("aria-label 包含卡密", () => {

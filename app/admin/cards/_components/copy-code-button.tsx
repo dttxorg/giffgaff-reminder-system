@@ -46,7 +46,26 @@ export function CopyCodeButton({ code }: CopyCodeButtonProps) {
       className="text-xs text-indigo-600 hover:underline whitespace-nowrap"
       aria-label={`复制卡密 ${code}`}
     >
-      {copied ? "✓ 已复制" : "复制"}
+      {copied ? (
+        <span className="inline-flex items-center gap-1">
+          <svg
+            width={12}
+            height={12}
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth={3}
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            aria-hidden="true"
+          >
+            <polyline points="20 6 9 17 4 12" />
+          </svg>
+          已复制
+        </span>
+      ) : (
+        "复制"
+      )}
     </button>
   );
 }
