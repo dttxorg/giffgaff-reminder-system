@@ -502,7 +502,24 @@ export function MeSettingsClient({
           </button>
           {!verified && !saveMessage && (
             <span className="text-xs text-amber-700">
-              ⚠ 提示: 点击保存前请先在上方点&ldquo;测试推送&rdquo;验证渠道
+              <span className="inline-flex items-center gap-1">
+                <svg
+                  width={12}
+                  height={12}
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth={2}
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  aria-hidden="true"
+                >
+                  <path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0Z" />
+                  <line x1="12" y1="9" x2="12" y2="13" />
+                  <line x1="12" y1="17" x2="12.01" y2="17" />
+                </svg>
+                提示: 点击保存前请先在上方点&ldquo;测试推送&rdquo;验证渠道
+              </span>
             </span>
           )}
           <Link
@@ -727,7 +744,24 @@ function ActivatedAtSection({
                 <code className="bg-indigo-50 text-indigo-700 px-1.5 py-0.5 rounded">{value}</code>。
               </p>
               <div className="p-3 rounded-lg bg-amber-50 border border-amber-200 text-amber-900 text-xs">
-                <div className="font-semibold mb-1">⚠️ 影响</div>
+                <div className="font-semibold mb-1 flex items-center gap-1.5">
+                  <svg
+                    width={14}
+                    height={14}
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth={2}
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    aria-hidden="true"
+                  >
+                    <path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0Z" />
+                    <line x1="12" y1="9" x2="12" y2="13" />
+                    <line x1="12" y1="17" x2="12.01" y2="17" />
+                  </svg>
+                  影响
+                </div>
                 <ul className="list-disc list-inside space-y-0.5">
                   <li>会重新计算「已激活天数」</li>
                   <li>如果之后没有保号记录,系统将从 {value} 重新计时 170 天</li>
