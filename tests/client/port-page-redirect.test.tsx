@@ -9,21 +9,24 @@ vi.mock("next/navigation", () => ({
   useRouter: () => ({ replace: mockReplace }),
 }));
 
-// 用 spy 替换 globalThis.fetch
-let mockFetch = vi.fn();
+// 用 spy 替换 globalThis.fetch。注意:不要用 vi.clearAllMocks() 删 spy 的实现,
+// 只清 mock 函数自身的调用历史。clearAllMocks 会重置 mock 函数的实现为 undefined。
+const mockFetch = vi.fn();
 const fetchSpy = vi.spyOn(globalThis, "fetch").mockImplementation(mockFetch);
 
 const { default: PortPage } = await import("../../app/p/[simId]/page");
 
 beforeEach(() => {
   mockReplace.mockReset();
-  mockFetch = vi.fn();
-  fetchSpy.mockImplementation(mockFetch);
+  mockFetch.mockReset(); // 只清调用历史,不动 spy 实现
   mockParams = { simId: "42" };
 });
 
 afterEach(() => {
-  vi.clearAllMocks();
+  // 不调 vi.clearAllMocks — 会把 fetchSpy 的实现也清掉
+  vi.restoreAllMocks();
+  // 重新挂上(下一个 test 还需要)
+  fetchSpy.mockImplementation(mockFetch);
 });
 
 describe("<PortPage /> — P6 redirect (int → portToken)", () => {
