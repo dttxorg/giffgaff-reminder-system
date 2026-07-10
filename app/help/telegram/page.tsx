@@ -206,6 +206,21 @@ export default function TelegramHelpPage() {
         </p>
       </details>
 
+      {/* 完成检查清单 — 与 Sever酱/Bark/Pushplus 教程对齐 */}
+      <div className="not-prose mt-8 p-4 rounded-lg bg-slate-50 border border-slate-200">
+        <div className="font-semibold text-slate-900 mb-2">✅ 完成检查清单</div>
+        <ul className="text-sm text-slate-700 space-y-1">
+          <li>☐ Telegram 已下载并打开</li>
+          <li>☐ 已在 @BotFather 创建 bot 并拿到 Bot Token</li>
+          <li>☐ 已给 bot 发过 <code className="bg-white px-1 rounded">/start</code> 并通过 @userinfobot(或 getUpdates)拿到 Chat ID</li>
+          <li>☐ 已在 <Link href="/me/settings?channel=telegram" className="text-indigo-600 hover:underline">/me/settings?channel=telegram</Link> 选 Telegram、粘贴 <code className="bg-white px-1 rounded">token|chatId</code>、测试推送成功</li>
+          <li>☐ Telegram 已收到测试消息</li>
+        </ul>
+        <div className="mt-3 text-xs text-slate-500">
+          全打勾 = 配置完成。后续 170 天开始会自动推提醒。
+        </div>
+      </div>
+
       <div className="not-prose mt-6 flex gap-3 flex-wrap">
         <Link
           href="/me/settings?channel=telegram"

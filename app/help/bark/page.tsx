@@ -123,6 +123,20 @@ export default function BarkHelpPage() {
         <p>自建后,把 URL 换成您自己服务器地址即可,无需改其他步骤。</p>
       </details>
 
+      {/* 完成检查清单 — 与 Sever酱/Pushplus 教程对齐 */}
+      <div className="not-prose mt-8 p-4 rounded-lg bg-slate-50 border border-slate-200">
+        <div className="font-semibold text-slate-900 mb-2">✅ 完成检查清单</div>
+        <ul className="text-sm text-slate-700 space-y-1">
+          <li>☐ App Store 已下载并打开 Bark</li>
+          <li>☐ 已复制 App 首页显示的 Bark URL(以 <code className="bg-white px-1 rounded">https://</code> 开头)</li>
+          <li>☐ 已在 <Link href="/me/settings?channel=bark" className="text-indigo-600 hover:underline">/me/settings?channel=bark</Link> 选 Bark、粘贴 URL、测试推送成功</li>
+          <li>☐ Bark App 已收到测试消息</li>
+        </ul>
+        <div className="mt-3 text-xs text-slate-500">
+          全打勾 = 配置完成。后续 170 天开始会自动推提醒,不用再做任何操作。
+        </div>
+      </div>
+
       <div className="not-prose mt-6 flex gap-3 flex-wrap">
         <Link
           href="/me/settings?channel=bark"

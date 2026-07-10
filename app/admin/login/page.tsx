@@ -37,7 +37,7 @@ export default function AdminLoginPage() {
 
   return (
     <div className="min-h-[calc(100vh-100px)] flex items-center justify-center px-4 py-12">
-      <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 sm:p-8 w-full max-w-sm">
+      <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 sm:p-8 w-full max-w-sm">
         <h1 className="text-2xl font-bold mb-1">管理员登录</h1>
         <p className="text-slate-600 text-sm mb-6">首次访问会自动创建默认账号</p>
 

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { PasswordInput } from "@/app/_components/password-input";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 
@@ -38,7 +39,7 @@ export default function LoginPage() {
 
   return (
     <div className="max-w-md mx-auto px-4 py-8 sm:py-12">
-      <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 sm:p-8">
+      <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 sm:p-8">
         <h1 className="text-2xl font-bold mb-1">登录</h1>
         <p className="text-slate-600 text-sm mb-6">
           输入您的 giffgaff 号码和登录密码。首次登录后会被引导设置通知渠道。
@@ -72,14 +73,12 @@ export default function LoginPage() {
 
         <div>
           <label className="block text-sm font-medium mb-1.5">登录密码</label>
-          <input
-            type="password"
+          <PasswordInput
             value={password}
-            onChange={(e) => setPassword(e.target.value)}
+            onChange={setPassword}
             placeholder="您的登录密码（兑换时设置或管理员提供）"
             required
             autoComplete="current-password"
-            className="w-full px-3.5 py-2.5 rounded-lg border border-slate-300 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 outline-none transition"
           />
         </div>
 

@@ -4,6 +4,7 @@ import { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { todayLocalISODate } from "@/lib/date";
+import { PasswordInput } from "@/app/_components/password-input";
 
 type Channel = "serverchan" | "bark" | "pushplus" | "telegram";
 type TestStatus = "idle" | "sending" | "success" | "error";
@@ -139,7 +140,7 @@ export function MeSettingsClient({
         </div>
       )}
 
-      <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 sm:p-8">
+      <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 sm:p-8">
         <h2 className="text-lg font-semibold mb-4">通知渠道</h2>
 
         <div className="space-y-4">
@@ -337,7 +338,7 @@ export function MeSettingsClient({
       <PasswordSection />
 
       {/* 危险操作区:默认收起,避免误改激活日期(会重置保号提醒 schedule) */}
-      <details className="mt-6 group rounded-2xl border border-rose-200 bg-rose-50/30 overflow-hidden">
+      <details className="mt-6 group rounded-xl border border-rose-200 bg-rose-50/30 overflow-hidden">
         <summary className="cursor-pointer list-none px-5 py-4 flex items-center justify-between hover:bg-rose-50/60 transition-colors">
           <span className="flex items-center gap-2">
             <span className="inline-flex items-center px-2 py-0.5 rounded-md bg-rose-100 text-rose-700 text-xs font-medium">
@@ -438,7 +439,7 @@ function ActivatedAtSection({
   };
 
   return (
-    <div id="sim-info" className="mt-6 bg-white rounded-2xl shadow-sm border border-slate-200 p-6 sm:p-8">
+    <div id="sim-info" className="mt-6 bg-white rounded-xl shadow-sm border border-slate-200 p-6 sm:p-8">
       <h2 className="text-lg font-semibold mb-1">SIM 卡激活日期</h2>
       <p className="text-xs text-slate-500 mb-4">
         兑换时填错了激活日期？在这里可以自行更正（不晚于今天）。
@@ -530,7 +531,7 @@ function ActivatedAtSection({
           aria-labelledby="confirm-activated-title"
         >
           <div
-            className="bg-white rounded-2xl shadow-xl max-w-md w-full p-6"
+            className="bg-white rounded-xl shadow-xl max-w-md w-full p-6"
             onClick={(e) => e.stopPropagation()}
           >
             <h2 id="confirm-activated-title" className="text-lg font-semibold mb-2">
@@ -619,7 +620,7 @@ function PasswordSection() {
   };
 
   return (
-    <div className="mt-6 bg-white rounded-2xl shadow-sm border border-slate-200 p-6 sm:p-8">
+    <div className="mt-6 bg-white rounded-xl shadow-sm border border-slate-200 p-6 sm:p-8">
       <h2 className="text-lg font-semibold mb-1">修改登录密码</h2>
       <p className="text-xs text-slate-500 mb-4">
         建议把管理员给的初始密码改为您自己熟悉的密码
@@ -628,28 +629,21 @@ function PasswordSection() {
       <div className="space-y-3">
         <div>
           <label className="block text-sm font-medium mb-1.5">当前密码</label>
-          <input
-            type="password"
+          <PasswordInput
             value={oldPassword}
-            onChange={(e) => setOldPassword(e.target.value)}
+            onChange={setOldPassword}
             autoComplete="current-password"
-            className="w-full px-3.5 py-2.5 rounded-lg border border-slate-300 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 outline-none"
           />
         </div>
         <div>
           <label className="block text-sm font-medium mb-1.5">新密码</label>
-          <input
-            type="password"
+          <PasswordInput
             value={newPassword}
-            onChange={(e) => setNewPassword(e.target.value)}
+            onChange={setNewPassword}
             placeholder="至少 8 位"
             autoComplete="new-password"
             minLength={8}
-            className={`w-full px-3.5 py-2.5 rounded-lg border outline-none ${
-              newPassword && newPassword.length < 8
-                ? "border-rose-300 focus:border-rose-500 focus:ring-2 focus:ring-rose-100"
-                : "border-slate-300 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
-            }`}
+            invalid={!!(newPassword && newPassword.length < 8)}
           />
           {newPassword && newPassword.length < 8 && (
             <p className="text-xs text-rose-600 mt-1.5">
@@ -661,17 +655,12 @@ function PasswordSection() {
           <label className="block text-sm font-medium mb-1.5">
             再次输入新密码
           </label>
-          <input
-            type="password"
+          <PasswordInput
             value={newPasswordConfirm}
-            onChange={(e) => setNewPasswordConfirm(e.target.value)}
+            onChange={setNewPasswordConfirm}
             autoComplete="new-password"
             minLength={8}
-            className={`w-full px-3.5 py-2.5 rounded-lg border outline-none ${
-              newPasswordConfirm && !match
-                ? "border-rose-300 focus:border-rose-500 focus:ring-2 focus:ring-rose-100"
-                : "border-slate-300 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
-            }`}
+            invalid={!!(newPasswordConfirm && !match)}
           />
           {newPasswordConfirm && !match && (
             <p className="text-xs text-rose-600 mt-1">两次密码不一致</p>

@@ -69,7 +69,7 @@ export default async function MePage() {
         </Link>
       )}
 
-      <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 mb-4">
+      <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 mb-4">
         <div className="text-sm text-slate-500 mb-1">我的号码</div>
         <div className="text-2xl font-mono font-semibold mb-3 tracking-wider">
           {formatPhoneForDisplay(sim.phoneNumber)}
@@ -121,7 +121,7 @@ export default async function MePage() {
         {inWindow ? "立即去保号" : "保号（更新日期）"}
       </Link>
 
-      <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
+      <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
         <div className="flex items-center justify-between mb-1">
           <div className="text-sm text-slate-500">推送渠道</div>
           <Link
@@ -152,7 +152,7 @@ export default async function MePage() {
       </div>
 
       {/* M3: 最近发送给我的提醒 — 透明度,让用户知道系统到底推过啥 */}
-      <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 mt-4">
+      <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 mt-4">
         <div className="flex items-center justify-between mb-2">
           <div className="text-sm text-slate-500">最近推送给我</div>
           <span className="text-xs text-slate-400">最多显示 5 条</span>

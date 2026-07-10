@@ -157,7 +157,7 @@ export function UsersClient({ users }: UsersClientProps) {
           onClick={closeReset}
         >
           <div
-            className="bg-white rounded-2xl shadow-xl max-w-md w-full p-6"
+            className="bg-white rounded-xl shadow-xl max-w-md w-full p-6"
             onClick={(e) => e.stopPropagation()}
           >
             <h2 id="reset-pwd-title" className="text-lg font-semibold mb-1">重置用户密码</h2>

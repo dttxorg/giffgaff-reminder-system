@@ -82,7 +82,7 @@ export default function PortPage() {
   if (notFound || !simIdValid) {
     return (
       <div className="max-w-md mx-auto px-4 py-12 text-center">
-        <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-8 text-center">
+        <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-8 text-center">
           <div className="text-4xl mb-2">404</div>
           <h1 className="text-xl font-bold mb-2">未找到该 SIM 卡</h1>
           <p className="text-slate-600 text-sm mb-4">链接可能已失效</p>
@@ -118,7 +118,7 @@ export default function PortPage() {
 
   return (
     <div className="max-w-md mx-auto px-4 py-8 sm:py-12">
-      <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 sm:p-8">
+      <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 sm:p-8">
         <h1 className="text-2xl font-bold mb-1">Giffgaff 保号</h1>
         <p className="text-slate-600 text-sm mb-6">
           保号后系统按新日期重新计时 170 天
@@ -217,7 +217,7 @@ function SuccessPage() {
 
   return (
     <div className="max-w-md mx-auto px-4 py-12">
-      <div className="bg-white rounded-2xl shadow-sm border border-emerald-200 p-8 text-center">
+      <div className="bg-white rounded-xl shadow-sm border border-emerald-200 p-8 text-center">
         <div className="text-4xl mb-3" aria-hidden="true">✅</div>
         <h1 className="text-xl font-bold mb-2 text-emerald-900">已记录</h1>
         <p className="text-slate-600">
