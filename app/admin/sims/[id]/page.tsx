@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Spinner } from "@/app/_components/skip-to-content";
 import { formatRelativeTime } from "@/lib/date";
+import { dayOffsetFromBaseline, isInReminderWindow } from "@/lib/bucket";
 
 interface SimData {
   id: number;
@@ -151,6 +152,31 @@ export default function EditSimPage({ params }: { params: Promise<{ id: string }
             不能早于激活日期
           </p>
         </div>
+        {/* 已激活 X 天指示:复用 lib/bucket 的 dayOffsetFromBaseline 计算 */}
+        {sim && (() => {
+          const baseline = sim.lastPortedAt ?? sim.activatedAt;
+          const days = dayOffsetFromBaseline(new Date(baseline));
+          const inWindow = isInReminderWindow(days);
+          return (
+            <div className="text-xs text-slate-500 px-1 flex items-center gap-3 flex-wrap">
+              <span>
+                <span className="text-slate-700 font-medium">{days}</span> 天
+                {sim.lastPortedAt ? " 自上次保号" : " 自激活"}
+              </span>
+              {inWindow && (
+                <span className="px-1.5 py-0.5 rounded bg-amber-100 text-amber-800">
+                  提醒窗口内(170-180)
+                </span>
+              )}
+              {days > 180 && (
+                <span className="px-1.5 py-0.5 rounded bg-rose-100 text-rose-800">
+                  已超 180 天
+                </span>
+              )}
+            </div>
+          );
+        })()}
+
         <div>
           <label className="block text-sm font-medium mb-1.5">状态</label>
           <select
