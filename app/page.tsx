@@ -1,5 +1,43 @@
 import Link from "next/link";
 
+/** 首页 feature card 用的 SVG 图标 — H1 修复,从 emoji 改为一致品牌 */
+function HomeIcon({ name }: { name: "calendar" | "alert" | "bell" }) {
+  const common = {
+    width: 24,
+    height: 24,
+    viewBox: "0 0 24 24",
+    fill: "none",
+    stroke: "currentColor",
+    strokeWidth: 1.75,
+    strokeLinecap: "round" as const,
+    strokeLinejoin: "round" as const,
+    "aria-hidden": true,
+    className: "text-indigo-600",
+  };
+  if (name === "calendar") {
+    return (
+      <svg {...common}>
+        <rect x="3" y="4" width="18" height="18" rx="2" />
+        <path d="M16 2v4M8 2v4M3 10h18" />
+      </svg>
+    );
+  }
+  if (name === "alert") {
+    return (
+      <svg {...common}>
+        <circle cx="12" cy="12" r="10" />
+        <path d="M12 6v6l4 2" />
+      </svg>
+    );
+  }
+  return (
+    <svg {...common}>
+      <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
+      <path d="M13.73 21a2 2 0 0 1-3.46 0" />
+    </svg>
+  );
+}
+
 export default function HomePage() {
   return (
     <div className="max-w-3xl mx-auto px-4 sm:px-6 py-10 sm:py-16">
@@ -14,17 +52,23 @@ export default function HomePage() {
 
       <div className="grid sm:grid-cols-3 gap-4 mb-12">
         <div className="bg-white rounded-xl p-5 shadow-sm border border-slate-100">
-          <div className="text-2xl mb-2">📅</div>
+          <div className="mb-2">
+            <HomeIcon name="calendar" />
+          </div>
           <h3 className="font-semibold mb-1">从激活第 170 天起</h3>
           <p className="text-sm text-slate-600">系统自动开始提醒您保号</p>
         </div>
         <div className="bg-white rounded-xl p-5 shadow-sm border border-slate-100">
-          <div className="text-2xl mb-2">⏰</div>
+          <div className="mb-2">
+            <HomeIcon name="alert" />
+          </div>
           <h3 className="font-semibold mb-1">越临近越频繁</h3>
           <p className="text-sm text-slate-600">第 178 天 3 次 / 179 天 5 次 / 180 天 10 次</p>
         </div>
         <div className="bg-white rounded-xl p-5 shadow-sm border border-slate-100">
-          <div className="text-2xl mb-2">📲</div>
+          <div className="mb-2">
+            <HomeIcon name="bell" />
+          </div>
           <h3 className="font-semibold mb-1">Sever酱 / Bark 推送</h3>
           <p className="text-sm text-slate-600">绑定一次,自动提醒</p>
         </div>

@@ -99,7 +99,11 @@ export default async function AdminDashboard() {
           sub={simCount > 0 ? `覆盖率 ${channelCoverage}%` : "—"}
           tone={channelCoverage >= 80 ? "indigo" : channelCoverage >= 50 ? "amber" : "rose"}
         />
-        <AdminStat label="用户数" value={userCount} />
+        <AdminStat
+          label="用户数"
+          value={userCount}
+          sub={simCount > 0 ? `绑定率 ${Math.round((userCount / simCount) * 100)}%` : "—"}
+        />
         <AdminStat
           label="今日发送"
           value={todaySent}

@@ -178,7 +178,8 @@ function LoginForm({
         <button
           type="submit"
           disabled={loading}
-          className="w-full py-2.5 rounded-lg bg-indigo-600 text-white font-medium hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors inline-flex items-center justify-center gap-2"
+          // L4:disabled 时文字色也变浅(不只 opacity),色盲/弱视用户更易识别禁用
+          className="w-full py-2.5 rounded-lg bg-indigo-600 text-white font-medium hover:bg-indigo-700 disabled:opacity-60 disabled:text-slate-300 disabled:cursor-not-allowed transition-colors inline-flex items-center justify-center gap-2"
         >
           {loading ? (
             <>

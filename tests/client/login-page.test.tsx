@@ -158,3 +158,21 @@ describe("<LoginPage />", () => {
     expect(btn).toBeDisabled();
   });
 });
+
+describe("<LoginPage /> disabled 视觉(L4)", () => {
+  it("提交中(disabled=true)→ 按钮文字色 text-slate-300 (跟未禁用区分)", async () => {
+    const user = userEvent.setup();
+    mockFetch.mockImplementation(
+      () => new Promise(() => {})
+    );
+    render(<LoginPage />);
+    await user.type(screen.getByPlaceholderText(/07724/), "07724215611");
+    await user.type(document.querySelector('input[type="password"]')!, "secret123");
+    await user.click(screen.getByRole("button", { name: "登录" }));
+
+    const btn = screen.getByRole("button", { name: /登录中/ });
+    // 加载时按钮被禁用,文字色应跟未禁用不同(text-slate-300)
+    expect(btn.className).toContain("disabled:text-slate-300");
+    expect(btn).toBeDisabled();
+  });
+});

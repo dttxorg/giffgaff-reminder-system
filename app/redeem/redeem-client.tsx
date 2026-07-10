@@ -175,7 +175,8 @@ function InputPhase({
       <button
         type="submit"
         disabled={!value.trim()}
-        className="mt-5 w-full py-2.5 rounded-lg bg-indigo-600 text-white font-medium hover:bg-indigo-700 disabled:opacity-50 transition-colors"
+        // L4:disabled 时文字色也变浅,跟 login 按钮一致
+        className="mt-5 w-full py-2.5 rounded-lg bg-indigo-600 text-white font-medium hover:bg-indigo-700 disabled:opacity-60 disabled:text-slate-300 transition-colors"
       >
         下一步
       </button>
