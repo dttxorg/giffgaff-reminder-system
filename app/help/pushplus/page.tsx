@@ -86,12 +86,12 @@ export default function PushPlusHelpPage() {
           <strong>用微信注册 pushplus 账号</strong>
           <p>
             打开 <ExternalLink href={PUSHPLUS_HOME} className="">pushplus.plus</ExternalLink>,
-            点右上角"登录" → 选"<strong>微信扫码登录</strong>"。
+            点右上角&quot;登录&quot; → 选&quot;<strong>微信扫码登录</strong>&quot;。
           </p>
           <div className="not-prose mt-2 p-3 rounded-lg bg-amber-50 border border-amber-200 text-amber-900 text-sm">
             <div className="font-semibold mb-1">⚠️ 必做:关注公众号</div>
             首次登录会弹窗引导你<strong>关注微信公众号「pushplus 推送加」</strong>。
-            <strong>必须关注</strong>才能收到推送。点弹窗里的"关注"按钮即可。
+            <strong>必须关注</strong>才能收到推送。点弹窗里的&quot;关注&quot;按钮即可。
           </div>
           <div className="not-prose mt-2 p-3 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-900 text-sm">
             <div className="font-semibold mb-1">✅ 做到这步你应该看到</div>
@@ -106,8 +106,8 @@ export default function PushPlusHelpPage() {
           </p>
           <p>操作路径:</p>
           <ol className="text-sm">
-            <li>pushplus 顶部菜单 → "<strong>个人中心</strong>"</li>
-            <li>左边栏 → "<strong>实名认证</strong>"</li>
+            <li>pushplus 顶部菜单 → &quot;<strong>个人中心</strong>&quot;</li>
+            <li>左边栏 → &quot;<strong>实名认证</strong>&quot;</li>
             <li>填<strong>身份证号 + 姓名</strong>,几秒完成认证</li>
             <li>按页面提示完成<strong>付费</strong>(金额以 pushplus 页面为准,几元到几十元)</li>
           </ol>
@@ -130,15 +130,15 @@ export default function PushPlusHelpPage() {
           <strong>拿到你的 pushplus token</strong>
           <p>操作路径:</p>
           <ol className="text-sm">
-            <li>pushplus 顶部菜单 → "<strong>个人中心</strong>"</li>
-            <li>左边栏 → "<strong>我的token</strong>"</li>
-            <li>点 token 旁边的"复制"按钮</li>
+            <li>pushplus 顶部菜单 → &quot;<strong>个人中心</strong>&quot;</li>
+            <li>左边栏 → &quot;<strong>我的token</strong>&quot;</li>
+            <li>点 token 旁边的&quot;复制&quot;按钮</li>
           </ol>
           <div className="not-prose mt-2 p-3 rounded-lg bg-slate-50 border border-slate-200 text-sm">
             <div className="font-semibold text-slate-900 mb-1">token 长这样:</div>
             <code className="text-slate-800 break-all">a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5p6</code>
             <div className="text-slate-600 mt-1 text-xs">
-              一串字母数字混合,无空格无横线,长度 32 位左右。点"复制"按钮,不要手动选中。
+              一串字母数字混合,无空格无横线,长度 32 位左右。点&quot;复制&quot;按钮,不要手动选中。
             </div>
           </div>
           <p className="text-amber-700 bg-amber-50 p-3 rounded text-sm mt-3">
@@ -151,7 +151,7 @@ export default function PushPlusHelpPage() {
           <p>根据您当前的状态,路径略有不同:</p>
           <ul>
             <li>
-              <strong>首次设置(用户中心顶部有红色横幅)</strong>:点横幅里的"立即设置" → 跳到 <code>/me/settings</code>
+              <strong>首次设置(用户中心顶部有红色横幅)</strong>:点横幅里的&quot;立即设置&quot; → 跳到 <code>/me/settings</code>
             </li>
             <li>
               <strong>已登录要改渠道</strong>:直接访问 <Link href="/me/settings?channel=pushplus">/me/settings?channel=pushplus</Link>
@@ -216,15 +216,15 @@ export default function PushPlusHelpPage() {
           <li>检查 token 是否复制完整(32 位左右,无空格无换行)</li>
           <li>在 pushplus 网站 → 「<strong>历史消息</strong>」看是否真的发出(显示 200 OK = 成功)</li>
           <li>部分企业微信/钉钉环境可能拦截公众号消息,换一个网络环境试试</li>
-          <li>微信可能收纳到"服务通知"折叠区,下拉微信聊天列表找</li>
+          <li>微信可能收纳到&quot;服务通知&quot;折叠区,下拉微信聊天列表找</li>
         </ol>
       </details>
 
       <details>
-        <summary>提示 "token 无效" / "鉴权失败"?</summary>
+        <summary>提示 &quot;token 无效&quot; / &quot;鉴权失败&quot;?</summary>
         <ul>
           <li>token 复制时多带了空格或换行 — 重新复制,粘贴后用鼠标确认两边没有空白</li>
-          <li>token 不是 32 位字母数字 — 可能复制错了字段(注意是"我的token",不是"我的UID"等)</li>
+          <li>token 不是 32 位字母数字 — 可能复制错了字段(注意是&quot;我的token&quot;,不是&quot;我的UID&quot;等)</li>
           <li>实名未完成或未付费 — 调接口会被拒,完成付费后等 5 分钟再试</li>
         </ul>
       </details>

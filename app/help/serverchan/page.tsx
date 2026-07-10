@@ -26,7 +26,7 @@ export default function ServerChanHelpPage() {
       <div className="not-prose my-6 p-4 rounded-lg bg-emerald-50 border border-emerald-300">
         <div className="font-semibold text-emerald-900 mb-1">⚡ 已经有 Sever酱 账号?直接拿 SendKey</div>
         <div className="text-sm text-emerald-800 mb-3">
-          登录后首页就有您的 SendKey,点"复制"按钮,然后直接到第 3 步配置本系统。
+          登录后首页就有您的 SendKey,点&quot;复制&quot;按钮,然后直接到第 3 步配置本系统。
         </div>
         <div className="flex flex-wrap gap-2">
           <ExternalLink href={SEVERCHAN_SENDKEY_PAGE} className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-emerald-600 text-white text-sm font-medium hover:bg-emerald-700 shadow-sm">
@@ -54,9 +54,9 @@ export default function ServerChanHelpPage() {
           <strong>打开 Sever酱 官网,扫首页二维码关注公众号</strong>
           <p>
             打开 <ExternalLink href={SEVERCHAN_HOME} className="">sct.ftqq.com</ExternalLink>,
-            首页会看到一个 <strong>二维码</strong>(写着"微信扫码关注")。
+            首页会看到一个 <strong>二维码</strong>(写着&quot;微信扫码关注&quot;)。
           </p>
-          <p>用微信 <strong>扫一扫</strong> 扫这个二维码 → 弹出"Server酱"公众号 → 点 <strong>关注</strong>。</p>
+          <p>用微信 <strong>扫一扫</strong> 扫这个二维码 → 弹出&quot;Server酱&quot;公众号 → 点 <strong>关注</strong>。</p>
           <div className="not-prose mt-2 p-3 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-900 text-sm">
             <div className="font-semibold mb-1">✅ 做到这步你应该看到</div>
             微信通讯录里多了一个公众号 <strong>「Server酱」</strong>(也叫「方糖气球」,运营品牌同名),
@@ -77,14 +77,14 @@ export default function ServerChanHelpPage() {
           <strong>登录 Sever酱 拿到 SendKey</strong>
           <p>
             访问 <ExternalLink href={SEVERCHAN_LOGIN} className="">sct.ftqq.com/login</ExternalLink>,
-            用刚关注的微信扫页面上的登录二维码 → 微信会弹出"确认登录"提示,点确认。
+            用刚关注的微信扫页面上的登录二维码 → 微信会弹出&quot;确认登录&quot;提示,点确认。
           </p>
           <p>登录后会自动跳到 <ExternalLink href={SEVERCHAN_SENDKEY_PAGE} className="">SendKey 页面</ExternalLink>。</p>
           <div className="not-prose mt-2 p-3 rounded-lg bg-slate-50 border border-slate-200 text-sm">
             <div className="font-semibold text-slate-900 mb-1">SendKey 长这样:</div>
             <code className="text-slate-800 break-all">SCT2abcdefGhijKLMNopQRstUVwxYz123456789</code>
             <div className="text-slate-600 mt-1 text-xs">
-              以 <code>SCT</code> 开头,后面跟几十位字母数字,点旁边的"复制"按钮。
+              以 <code>SCT</code> 开头,后面跟几十位字母数字,点旁边的&quot;复制&quot;按钮。
             </div>
           </div>
           <p className="text-amber-700 bg-amber-50 p-3 rounded text-sm mt-3">
@@ -97,7 +97,7 @@ export default function ServerChanHelpPage() {
           <p>根据您当前的状态,路径略有不同:</p>
           <ul>
             <li>
-              <strong>首次设置(用户中心顶部有红色横幅)</strong>:点横幅里的"立即设置" → 跳到 <code>/me/settings</code>
+              <strong>首次设置(用户中心顶部有红色横幅)</strong>:点横幅里的&quot;立即设置&quot; → 跳到 <code>/me/settings</code>
             </li>
             <li>
               <strong>已登录要改渠道</strong>:直接访问 <Link href="/me/settings?channel=serverchan">/me/settings?channel=serverchan</Link>
@@ -131,12 +131,12 @@ export default function ServerChanHelpPage() {
           <li>检查微信网络是否正常(部分代理/办公网会拦截二维码)</li>
           <li>用手机微信直接扫(不要用电脑端微信,扫不上)</li>
           <li>等 30 秒,微信推送有延迟</li>
-          <li>Sever酱 网站顶部会显示"等待扫码..."状态,扫了会变绿色</li>
+          <li>Sever酱 网站顶部会显示&quot;等待扫码...&quot;状态,扫了会变绿色</li>
         </ul>
       </details>
 
       <details>
-        <summary>提示 "SendKey 无效" / "鉴权失败"?</summary>
+        <summary>提示 &quot;SendKey 无效&quot; / &quot;鉴权失败&quot;?</summary>
         <ul>
           <li>SendKey 复制时多带了空格或换行 — 重新复制,粘贴后用鼠标确认两边没有空白字符</li>
           <li>SendKey 不是以 <code>SCT</code> 开头 — 复制错了,可能复制成了别的内容</li>
@@ -147,11 +147,11 @@ export default function ServerChanHelpPage() {
       <details>
         <summary>测试推送收不到 / 微信没响?</summary>
         <ol>
-          <li>检查微信公众号"Server酱"是否<strong>已关注</strong>(没关注收不到,这是最常见原因)</li>
+          <li>检查微信公众号&quot;Server酱&quot;是否<strong>已关注</strong>(没关注收不到,这是最常见原因)</li>
           <li>检查 SendKey 是否以 <code>SCT</code> 开头且长度对(几十位)</li>
           <li>等 1-2 分钟,微信推送有延迟</li>
-          <li>在 Sever酱 网站 → "发送记录" 看是否真的发出(显示 200 OK = 成功,微信收不到是微信侧的问题)</li>
-          <li>微信可能被收纳到"服务通知"折叠区,下拉微信聊天列表找</li>
+          <li>在 Sever酱 网站 → &quot;发送记录&quot; 看是否真的发出(显示 200 OK = 成功,微信收不到是微信侧的问题)</li>
+          <li>微信可能被收纳到&quot;服务通知&quot;折叠区,下拉微信聊天列表找</li>
         </ol>
       </details>
 

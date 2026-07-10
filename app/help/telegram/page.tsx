@@ -46,7 +46,7 @@ export default function TelegramHelpPage() {
           <strong>创建一个 Telegram Bot(用 @BotFather)</strong>
           <p>
             在 Telegram 里搜索 <ExternalLink href={BOTFATHER_URL} className="">@BotFather</ExternalLink> 并打开对话,
-            点"Start"开始。
+            点&quot;Start&quot;开始。
           </p>
           <p>
             发送命令 <code>/newbot</code>,按提示操作:
@@ -87,7 +87,7 @@ export default function TelegramHelpPage() {
             <br />
             <code>https://api.telegram.org/bot&lt;你的bot token&gt;/getUpdates</code>
             <br />
-            替换成你的 bot token。在返回的 JSON 里找 <code>"chat":&#123;"id": 123456789, ...&#125;</code>,那个数字就是你的 Chat ID。
+            替换成你的 bot token。在返回的 JSON 里找 <code>&quot;chat&quot;:&#123;&quot;id&quot;: 123456789, ...&#125;</code>,那个数字就是你的 Chat ID。
           </p>
           <p className="text-amber-700 bg-amber-50 p-3 rounded text-sm">
             <strong>注意</strong>:
@@ -110,7 +110,7 @@ export default function TelegramHelpPage() {
             格式严格:<code>botToken</code> + 竖线 + <code>chatId</code>,中间<strong>不要有空格</strong>。
           </p>
           <p>
-            点 <strong>测试推送</strong>,Telegram 应立即收到一条带 <code>Giffgaff 保号提醒 - 测试</code> 标题的消息,说明配置成功。点"保存"完成。
+            点 <strong>测试推送</strong>,Telegram 应立即收到一条带 <code>Giffgaff 保号提醒 - 测试</code> 标题的消息,说明配置成功。点&quot;保存&quot;完成。
           </p>
         </li>
       </ol>
@@ -122,7 +122,7 @@ export default function TelegramHelpPage() {
         <p>
           在 Telegram 里打开 <ExternalLink href={BOTFATHER_URL} className="">@BotFather</ExternalLink>,
           发送 <code>/token</code> 或 <code>/mybots</code> → 选择你的 bot →
-          "<strong>API Token</strong>" 即可看到。
+          &quot;<strong>API Token</strong>&quot; 即可看到。
         </p>
         <p className="text-slate-500 text-sm">
           如果 token 泄露(被人看到了),在 @BotFather 里 <code>/revoke</code> 然后重新生成一个,

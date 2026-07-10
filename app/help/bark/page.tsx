@@ -48,7 +48,7 @@ export default function BarkHelpPage() {
         <li>
           <strong>下载 Bark</strong>
           <p>
-            点击上方"跳转 App Store 下载"按钮,或直接在 App Store 搜索 <code>Bark</code> 下载。
+            点击上方&quot;跳转 App Store 下载&quot;按钮,或直接在 App Store 搜索 <code>Bark</code> 下载。
           </p>
         </li>
 
@@ -66,7 +66,7 @@ export default function BarkHelpPage() {
         <li>
           <strong>复制 App 里显示的完整 URL</strong>
           <p>
-            点 URL 旁边的"复制"按钮(通常是个剪贴板图标),或长按 URL 选"复制"。
+            点 URL 旁边的&quot;复制&quot;按钮(通常是个剪贴板图标),或长按 URL 选&quot;复制&quot;。
           </p>
         </li>
 
@@ -74,10 +74,10 @@ export default function BarkHelpPage() {
           <strong>回到本系统,设置通知渠道</strong>
           <p>
             登录本系统(填手机号即可)→ 进入 <strong>用户中心</strong> →
-            顶部红色横幅点"立即设置"→ 选择 <strong>Bark</strong> →
+            顶部红色横幅点&quot;立即设置&quot;→ 选择 <strong>Bark</strong> →
             把刚才复制的 URL 粘贴到输入框 → 点 <strong>测试推送</strong>。
           </p>
-          <p>Bark App 应立即收到一条"测试消息",说明配置成功。点"保存"完成。</p>
+          <p>Bark App 应立即收到一条&quot;测试消息&quot;,说明配置成功。点&quot;保存&quot;完成。</p>
         </li>
       </ol>
 
@@ -86,7 +86,7 @@ export default function BarkHelpPage() {
       <details>
         <summary>Bark URL 在哪里找?</summary>
         <p>
-          打开 Bark App,<strong>首页第一行</strong>就是您的 Bark URL。如果首页不是 URL,点底部"设置"标签。
+          打开 Bark App,<strong>首页第一行</strong>就是您的 Bark URL。如果首页不是 URL,点底部&quot;设置&quot;标签。
         </p>
         <p className="text-slate-500 text-sm">
           URL 示例:<br />
@@ -100,7 +100,7 @@ export default function BarkHelpPage() {
         <ul>
           <li><strong>必须打开 App 一次</strong>(苹果限制,新装的推送 App 不打开不工作)</li>
           <li>检查 iPhone 设置 → 通知 → Bark → 允许通知 ✅</li>
-          <li>检查 Bark App 内"测试推送"是否能正常发出</li>
+          <li>检查 Bark App 内&quot;测试推送&quot;是否能正常发出</li>
         </ul>
       </details>
 
@@ -108,8 +108,8 @@ export default function BarkHelpPage() {
         <summary>Android 收不到推送?</summary>
         <ul>
           <li>检查手机设置 → 应用 → Bark → 通知 → 允许通知 ✅</li>
-          <li>某些定制系统需要额外设置"自启动"和"后台运行"</li>
-          <li>检查 Bark App 内"测试推送"是否能正常发出</li>
+          <li>某些定制系统需要额外设置&quot;自启动&quot;和&quot;后台运行&quot;</li>
+          <li>检查 Bark App 内&quot;测试推送&quot;是否能正常发出</li>
         </ul>
       </details>
 
