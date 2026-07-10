@@ -94,9 +94,26 @@ export default function PortPage() {
       <div className="max-w-md mx-auto px-4 py-12 text-center">
         <PublicBrandHeader />
         <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-8 text-center">
-          <div className="text-4xl mb-2">404</div>
-          <h1 className="text-xl font-bold mb-2">未找到该 SIM 卡</h1>
-          <p className="text-slate-600 text-sm mb-4">链接可能已失效</p>
+          <div className="mx-auto w-14 h-14 rounded-full bg-slate-100 flex items-center justify-center mb-3">
+            <svg
+              width={28}
+              height={28}
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth={2}
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              aria-hidden="true"
+              className="text-slate-500"
+            >
+              <circle cx="12" cy="12" r="10" />
+              <line x1="12" y1="8" x2="12" y2="12" />
+              <line x1="12" y1="16" x2="12.01" y2="16" />
+            </svg>
+          </div>
+          <h1 className="text-xl font-bold mb-2 text-slate-900">未找到该 SIM 卡</h1>
+          <p className="text-slate-600 text-sm mb-4">链接可能已失效或号码已删除</p>
           <div className="flex flex-col sm:flex-row gap-2 justify-center text-sm">
             <Link href="/" className="text-indigo-600 hover:underline">
               返回首页
