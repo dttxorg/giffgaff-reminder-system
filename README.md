@@ -215,6 +215,18 @@ npm run dev
 2. 打开 App,首页会显示一个 Bark URL
 3. 在本系统登录页选 Bark,粘贴完整 URL
 
+### pushplus
+1. 微信扫码关注「pushplus 推送加」公众号(或访问 [pushplus.plus](https://www.pushplus.plus))
+2. 登录后复制 token(进 pushplus 控制台 → 一对一推送 → token)
+3. 在本系统登录页选 pushplus,粘贴 token
+4. **注意**:pushplus 实名认证需平台收费,新用户建议选 Sever酱 或 Telegram
+
+### Telegram Bot
+1. 在 Telegram 里找 [@BotFather](https://t.me/BotFather),发 `/newbot` 创建 bot,拿到 botToken
+2. 给你的 bot 发任意消息(激活对话),然后用 [@userinfobot](https://t.me/userinfobot) 或 `getUpdates` API 拿 chatId
+3. 在本系统登录页选 Telegram,粘贴 `botToken|chatId`(中间竖线分隔,无空格)
+4. **注意**:需要能访问 Telegram(国内可能需要代理)
+
 ## 常见问题
 
 - **时区**:全部用 UTC 存储和计算,文案展示按浏览器本地时区(管理员端额外显示上海时间)
