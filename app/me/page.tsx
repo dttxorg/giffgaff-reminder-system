@@ -352,7 +352,18 @@ export default async function MePage() {
         </summary>
         <p className="text-xs text-slate-500 mt-2 mb-3">
           折叠打开,看系统到日子会给您发什么。
-          {channelMissing && " 推送前需先设置通知渠道。"}
+          {channelMissing && (
+            <>
+              {" 推送前需先"}
+              <Link
+                href="/me/settings"
+                className="text-indigo-600 hover:underline mx-0.5"
+              >
+                设置通知渠道
+              </Link>
+              。
+            </>
+          )}
         </p>
         <PushPreview
           phoneNumber={sim.phoneNumber}

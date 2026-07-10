@@ -29,15 +29,16 @@ export default async function AdminDashboard() {
 
   // 算每个 sim 的 dayOffset(只取 status=active),O(N) 但小系统可接受
   // future 7 天会进窗口:now + 7 天时 dayOffset 首次达到 170 的 sim
+  // eslint-disable-next-line react-hooks/purity -- server component,Date.now() 安全
+  const nowMs = Date.now();
   const inWindowSimCount = await (async () => {
     const sims = await prisma.sim.findMany({
       where: { status: "active" },
       select: { activatedAt: true, lastPortedAt: true },
     });
-    const nowMs = Date.now();
     return sims.filter((s) => {
       const baseline = s.lastPortedAt ?? s.activatedAt;
-      const days = dayOffsetFromBaseline(baseline, nowMs);
+      const days = dayOffsetFromBaseline(baseline, new Date(nowMs));
       // 在 170-180 窗口内,或未来 7 天内将进入窗口
       return days >= 170 && days <= 180;
     }).length;
