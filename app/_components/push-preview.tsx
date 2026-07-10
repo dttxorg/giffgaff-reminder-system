@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/db";
 import { DEFAULT_TEMPLATE, portUrl, renderTemplate } from "@/lib/template";
 import { formatPhoneForDisplay } from "@/lib/phone";
+import { PushPreviewCopyButton } from "./push-preview-copy-button";
 
 interface PushPreviewProps {
   /** 完整手机号(用于预览 phone 变量) */
@@ -62,7 +63,7 @@ export async function PushPreview({
       {/* 推送预览头部 */}
       <div className="px-4 py-3 bg-slate-50 border-b border-slate-200 flex items-center justify-between">
         <span className="text-xs text-slate-500">推送样例预览</span>
-        <span className="text-xs text-slate-400">用样例数据渲染</span>
+        <PushPreviewCopyButton body={body} />
       </div>
       <div className="p-4 space-y-3">
         <div>
