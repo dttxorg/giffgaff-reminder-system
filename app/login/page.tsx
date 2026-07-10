@@ -108,7 +108,19 @@ export default function LoginPage() {
         )}
 
         <div className="mt-5 pt-5 border-t border-slate-100 text-center text-xs text-slate-500 flex items-center justify-center gap-1">
-          <span aria-hidden="true">🔑</span>
+          <svg
+            width={12}
+            height={12}
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth={2}
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            aria-hidden="true"
+          >
+            <path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0 3 3L22 7l-3-3m-3.5 3.5L19 4" />
+          </svg>
           <span>忘记密码请联系管理员重置</span>
         </div>
       </div>
@@ -139,12 +151,27 @@ function LoginForm({
         输入您的 giffgaff 号码和登录密码。首次登录后会被引导设置通知渠道。
       </p>
 
-      {error && (
-        <div className="mb-4 p-3 rounded-lg bg-rose-50 border border-rose-200 text-rose-700 text-sm flex items-start gap-2">
-          <span aria-hidden="true" className="shrink-0">⚠️</span>
-          <span>{error}</span>
-        </div>
-      )}
+        {error && (
+          <div className="mb-4 p-3 rounded-lg bg-rose-50 border border-rose-200 text-rose-700 text-sm flex items-start gap-2">
+            <svg
+              width={16}
+              height={16}
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth={2}
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              aria-hidden="true"
+              className="shrink-0 mt-0.5"
+            >
+              <path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0Z" />
+              <line x1="12" y1="9" x2="12" y2="13" />
+              <line x1="12" y1="17" x2="12.01" y2="17" />
+            </svg>
+            <span>{error}</span>
+          </div>
+        )}
 
       <form onSubmit={onSubmit} className="space-y-4">
         <div>
@@ -209,7 +236,24 @@ function RedeemPanel() {
       </ol>
 
       <div className="p-3 rounded-lg bg-amber-50 border border-amber-200 text-amber-900 text-sm mb-4">
-        <div className="font-medium mb-1">📦 卡密长这样</div>
+        <div className="font-medium mb-1 flex items-center gap-1.5">
+          <svg
+            width={14}
+            height={14}
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth={2}
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            aria-hidden="true"
+          >
+            <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z" />
+            <polyline points="3.27 6.96 12 12.01 20.73 6.96" />
+            <line x1="12" y1="22.08" x2="12" y2="12" />
+          </svg>
+          卡密长这样
+        </div>
         <code className="font-mono text-xs">XXXX-XXXX-XXXX-XXXX</code>
         <span className="text-amber-700 ml-1">(16 位字母数字)</span>
       </div>
