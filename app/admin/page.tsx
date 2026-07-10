@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { requireAdmin } from "@/lib/admin-guard";
 import { prisma } from "@/lib/db";
+import { AdminStat } from "./_components/admin-stat";
 
 export default async function AdminDashboard() {
   await requireAdmin();
@@ -86,32 +87,32 @@ export default async function AdminDashboard() {
 
       {/* 核心数据 — 6 个 stat */}
       <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-3 mb-6">
-        <Stat
+        <AdminStat
           label="号码总数"
           value={simCount}
           sub={`active ${activeSimCount} · paused ${pausedSimCount}`}
         />
-        <Stat
+        <AdminStat
           label="已绑定渠道"
           value={`${channelCount}/${simCount}`}
           sub={simCount > 0 ? `覆盖率 ${channelCoverage}%` : "—"}
           tone={channelCoverage >= 80 ? "indigo" : channelCoverage >= 50 ? "amber" : "rose"}
         />
-        <Stat label="用户数" value={userCount} />
-        <Stat
+        <AdminStat label="用户数" value={userCount} />
+        <AdminStat
           label="今日发送"
           value={todaySent}
           tone="indigo"
           sub={sendDeltaLabel}
           subTone={sendDeltaTone}
         />
-        <Stat
+        <AdminStat
           label="今日失败"
           value={todayFailed}
           tone={todayFailed > 0 ? "rose" : "slate"}
           sub={todayFailed > 0 ? `7 天累计 ${failedRecent}` : "全部成功"}
         />
-        <Stat label="卡密未用" value={undefined} sub="在 卡密管理 查看" />
+        <AdminStat label="卡密未用" value={undefined} sub="在 卡密管理 查看" />
       </div>
 
       {/* D1: 7 日发送趋势 sparkline + 卡片总数对比 */}
@@ -216,45 +217,7 @@ export default async function AdminDashboard() {
   );
 }
 
-function Stat({
-  label,
-  value,
-  sub,
-  tone,
-  subTone = "slate",
-}: {
-  label: string;
-  value: number | string | undefined;
-  sub?: string;
-  tone?: "indigo" | "amber" | "rose" | "slate";
-  subTone?: "indigo" | "amber" | "rose" | "slate";
-}) {
-  const toneClass =
-    tone === "indigo"
-      ? "text-indigo-600"
-      : tone === "amber"
-      ? "text-amber-600"
-      : tone === "rose"
-      ? "text-rose-600"
-      : "text-slate-900";
-  const subClass =
-    subTone === "indigo"
-      ? "text-indigo-600"
-      : subTone === "amber"
-      ? "text-amber-600"
-      : subTone === "rose"
-      ? "text-rose-600"
-      : "text-slate-500";
-  return (
-    <div className="bg-white rounded-xl border border-slate-200 p-4">
-      <div className="text-xs text-slate-500 mb-1">{label}</div>
-      <div className={`text-3xl font-bold ${toneClass}`}>
-        {value === undefined ? "—" : value}
-      </div>
-      {sub && <div className={`text-xs mt-1 ${subClass}`}>{sub}</div>}
-    </div>
-  );
-}
+
 
 function QuickLink({
   href,

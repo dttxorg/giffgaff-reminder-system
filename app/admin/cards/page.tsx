@@ -2,6 +2,7 @@ import Link from "next/link";
 import { requireAdmin } from "@/lib/admin-guard";
 import { prisma } from "@/lib/db";
 import { formatCardCode } from "@/lib/card-key";
+import { AdminStat } from "../_components/admin-stat";
 import type { Prisma } from "@/lib/generated/prisma/client";
 import { CardDeleteButton } from "./delete-button";
 import { CopyCodeButton } from "./_components/copy-code-button";
@@ -34,8 +35,12 @@ export default async function CardsPage({ searchParams }: PageProps) {
     take: 200,
   });
 
-  // 顶部统计
-  const unusedCount = await prisma.cardKey.count({ where: { used: false } });
+  // 顶部统计:total / unused / used
+  const [totalCount, unusedCount] = await Promise.all([
+    prisma.cardKey.count(),
+    prisma.cardKey.count({ where: { used: false } }),
+  ]);
+  const usedCount = totalCount - unusedCount;
 
   const exportUrl = (() => {
     const sp = new URLSearchParams();
@@ -45,13 +50,25 @@ export default async function CardsPage({ searchParams }: PageProps) {
 
   return (
     <div className="p-6 sm:p-8">
-      <div className="flex items-center justify-between mb-6 flex-wrap gap-3">
-        <div>
-          <h1 className="text-2xl font-bold">卡密管理</h1>
-          <div className="text-xs text-slate-500 mt-1">
-            未兑换卡密共 {unusedCount} 张
-          </div>
-        </div>
+      <div className="mb-4">
+        <h1 className="text-2xl font-bold">卡密管理</h1>
+      </div>
+      <div className="grid grid-cols-3 gap-3 mb-6">
+        <AdminStat label="卡密总数" value={totalCount} />
+        <AdminStat
+          label="未兑换"
+          value={unusedCount}
+          sub={totalCount > 0 ? `占比 ${Math.round((unusedCount / totalCount) * 100)}%` : "—"}
+          tone="amber"
+        />
+        <AdminStat
+          label="已兑换"
+          value={usedCount}
+          sub={totalCount > 0 ? `占比 ${Math.round((usedCount / totalCount) * 100)}%` : "—"}
+          tone="indigo"
+        />
+      </div>
+      <div className="flex items-center justify-end mb-6 flex-wrap gap-3">
         <div className="flex gap-2">
           <a
             href={exportUrl}
