@@ -318,18 +318,18 @@ export function MeSettingsClient({
             />
 
             <div className="mt-2 flex items-center gap-2 flex-wrap">
-              <button
-                type="button"
-                onClick={onTest}
-                disabled={testStatus === "sending" || cooldown > 0}
-                className="px-3 py-1.5 text-xs rounded-md border border-slate-300 text-slate-700 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-              >
-                {testStatus === "sending"
-                  ? "发送中..."
-                  : cooldown > 0
-                  ? `请稍候 (${cooldown}s)`
-                  : "测试推送"}
-              </button>
+              {cooldown > 0 ? (
+                <CooldownRing seconds={cooldown} total={30} />
+              ) : (
+                <button
+                  type="button"
+                  onClick={onTest}
+                  disabled={testStatus === "sending"}
+                  className="px-3 py-1.5 text-xs rounded-md border border-slate-300 text-slate-700 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                >
+                  {testStatus === "sending" ? "发送中..." : "测试推送"}
+                </button>
+              )}
               {testStatus === "success" && testMessage && (
                 <span className="text-xs text-emerald-700 flex items-center gap-1">
                   <span>✅</span>
@@ -782,4 +782,58 @@ function quickHash(s: string): string {
   }
   // 转为无符号 32-bit,再 base36 缩短
   return (h >>> 0).toString(36);
+}
+
+/**
+ * 冷却倒计时圆环(S4 修复)
+ * - 圆环从 100% 走到 0%,配合数字显示秒数
+ * - 用 stroke-dashoffset 动画,无 JS 定时
+ */
+function CooldownRing({ seconds, total }: { seconds: number; total: number }) {
+  const pct = Math.max(0, Math.min(1, seconds / total));
+  const radius = 10;
+  const circumference = 2 * Math.PI * radius;
+  const offset = circumference * (1 - pct);
+  return (
+    <span
+      className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs text-slate-500"
+      aria-live="polite"
+      role="status"
+    >
+      <svg
+        width={28}
+        height={28}
+        viewBox="0 0 28 28"
+        aria-hidden="true"
+        className="shrink-0 -rotate-90"
+      >
+        {/* 背景环 */}
+        <circle
+          cx="14"
+          cy="14"
+          r={radius}
+          stroke="currentColor"
+          strokeWidth="2"
+          fill="none"
+          className="opacity-20"
+        />
+        {/* 进度环 */}
+        <circle
+          cx="14"
+          cy="14"
+          r={radius}
+          stroke="currentColor"
+          strokeWidth="2"
+          fill="none"
+          strokeDasharray={circumference}
+          strokeDashoffset={offset}
+          strokeLinecap="round"
+          className="text-indigo-500 transition-all duration-1000 ease-linear"
+        />
+      </svg>
+      <span>
+        请稍候 <strong className="text-slate-700">{seconds}s</strong> 后重试
+      </span>
+    </span>
+  );
 }

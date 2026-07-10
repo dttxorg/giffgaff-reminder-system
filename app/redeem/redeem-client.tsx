@@ -5,6 +5,11 @@ import { useRouter } from "next/navigation";
 import { normalizePhone } from "@/lib/phone";
 import { todayLocalISODate } from "@/lib/date";
 import { formatCardCodeInput } from "@/lib/card-key";
+import {
+  passwordStrength,
+  STRENGTH_LABEL,
+  STRENGTH_COLOR,
+} from "@/lib/password-strength";
 import { PasswordInput } from "@/app/_components/password-input";
 import { Spinner } from "@/app/_components/skip-to-content";
 
@@ -290,9 +295,43 @@ function FormPhase({
             密码至少 8 位（当前 {password.length} 位）
           </p>
         ) : (
-          <p className="text-xs text-slate-500 mt-1.5">
-            请妥善保存,忘记后需联系管理员重置
-          </p>
+          <div className="mt-1.5 space-y-1">
+            <div className="flex items-center gap-2">
+              <div className="flex-1 h-1.5 rounded-full bg-slate-200 overflow-hidden">
+                <div
+                  role="progressbar"
+                  aria-label="密码强度"
+                  aria-valuenow={
+                    passwordStrength(password) === "weak"
+                      ? 33
+                      : passwordStrength(password) === "medium"
+                        ? 66
+                        : 100
+                  }
+                  aria-valuemin={0}
+                  aria-valuemax={100}
+                  className={`h-full transition-all ${
+                    STRENGTH_COLOR[passwordStrength(password)]
+                  }`}
+                  style={{
+                    width: `${
+                      passwordStrength(password) === "weak"
+                        ? 33
+                        : passwordStrength(password) === "medium"
+                          ? 66
+                          : 100
+                    }%`,
+                  }}
+                />
+              </div>
+              <span className="text-xs text-slate-600 w-4">
+                {STRENGTH_LABEL[passwordStrength(password)]}
+              </span>
+            </div>
+            <p className="text-xs text-slate-500">
+              请妥善保存,忘记后需联系管理员重置
+            </p>
+          </div>
         )}
         {passwordConfirm && !passwordsMatch && (
           <p className="text-xs text-rose-600 mt-1">两次密码不一致</p>
