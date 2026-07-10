@@ -26,9 +26,12 @@ export function CopyCodeButton({ code }: CopyCodeButtonProps) {
       document.body.appendChild(ta);
       ta.select();
       try {
-        document.execCommand("copy");
-        setCopied(true);
-        setTimeout(() => setCopied(false), 2000);
+        // execCommand 返回 boolean:true = 成功,false = 失败
+        const ok = document.execCommand("copy");
+        if (ok) {
+          setCopied(true);
+          setTimeout(() => setCopied(false), 2000);
+        }
       } catch {
         // 复制不了,用户只能手动选中
       }

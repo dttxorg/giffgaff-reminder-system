@@ -71,3 +71,54 @@ describe("<CopyCodeButton />", () => {
     ).toBeInTheDocument();
   });
 });
+
+describe("<CopyCodeButton /> 边缘", () => {
+  let mockWriteText: ReturnType<typeof vi.fn>;
+
+  beforeEach(() => {
+    mockWriteText = vi.fn().mockResolvedValue(undefined);
+    Object.defineProperty(window.navigator, "clipboard", {
+      configurable: true,
+      writable: true,
+      value: { writeText: mockWriteText },
+    });
+    Object.defineProperty(document, "execCommand", {
+      configurable: true,
+      writable: true,
+      value: vi.fn().mockReturnValue(true),
+    });
+  });
+
+  it("超长卡密也能正常复制", () => {
+    const long = "ABCD-1234-EFGH-5678-AAAA-BBBB-CCCC-DDDD-EEEE";
+    render(<CopyCodeButton code={long} />);
+    fireEvent.click(screen.getByRole("button"));
+    expect(mockWriteText).toHaveBeenCalledWith(long);
+  });
+
+  it("含特殊字符(横线、空格)也正常", () => {
+    const code = "AB-CD 12_34";
+    render(<CopyCodeButton code={code} />);
+    fireEvent.click(screen.getByRole("button"));
+    expect(mockWriteText).toHaveBeenCalledWith(code);
+  });
+
+  it("clipboard + execCommand 都失败 → 不显示已复制,按钮文字保持", async () => {
+    mockWriteText.mockRejectedValueOnce(new Error("denied"));
+    Object.defineProperty(document, "execCommand", {
+      configurable: true,
+      writable: true,
+      value: vi.fn().mockReturnValue(false), // execCommand 也失败
+    });
+    render(<CopyCodeButton code="WILL-FAIL" />);
+    fireEvent.click(screen.getByRole("button"));
+    await act(async () => {
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+    // 复制失败,按钮文字保持"复制"(不是"✓ 已复制")
+    const btn = screen.getByRole("button");
+    expect(btn.textContent).toBe("复制");
+    expect(btn.textContent).not.toContain("已复制");
+  });
+});
