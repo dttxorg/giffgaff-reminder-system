@@ -217,10 +217,11 @@ npm run dev
 
 ## 常见问题
 
-- **时区**:全部用 UTC 存储和计算,文案展示按浏览器本地时区
+- **时区**:全部用 UTC 存储和计算,文案展示按浏览器本地时区(管理员端额外显示上海时间)
 - **CSV 导入**:首行可带表头 `phone_number,activated_at`,UTF-8 编码
-- **删除 sim**:会级联删除 user 和 reminders_sent
-- **渠道 key 加密**:V1 明文存数据库,V2 加 AES 加密
+- **删除 sim**:会级联删除 user 和 reminders_sent(注意:channel key 不会删)
+- **保号链接**:公开 `/p/{token}` 用了 32 字符不可枚举 token(老 sim lazy-backfill),防止 `/p/1` `/p/2` 这种可枚举 URL 泄露手机号
+- **保号提醒触发**:在已激活(或上次保号) 170-180 天窗口期,cron 每小时扫一次,按 day→bucket 分布发(170-172: 1 次/天,180: 10 次/天)
 
 ## 开发工作流
 
