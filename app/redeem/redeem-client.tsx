@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { normalizePhone } from "@/lib/phone";
 import { todayLocalISODate } from "@/lib/date";
+import { formatCardCodeInput } from "@/lib/card-key";
 import { PasswordInput } from "@/app/_components/password-input";
 import { Spinner } from "@/app/_components/skip-to-content";
 
@@ -155,7 +156,7 @@ function InputPhase({
       <input
         type="text"
         value={value}
-        onChange={(e) => onChange(e.target.value)}
+        onChange={(e) => onChange(formatCardCodeInput(e.target.value))}
         placeholder="XXXX-XXXX-XXXX-XXXX"
         autoFocus
         autoComplete="off"

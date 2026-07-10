@@ -68,6 +68,28 @@ export function formatCardCode(raw: string): string {
 }
 
 /**
+ * 格式化用户输入:去非字符表字符 + 转大写 + 每 4 段加 - 分隔
+ * 专门给 input 的 onChange 用,所以不会因为 raw 长度不够就拒绝 — 边输入边格式化。
+ * "7k9p3r4m" → "7K9P-3R4M"
+ * "SCT2 XXX" → "SCT2-XXX"(后缀不足 4 字符也加分隔,粘贴多余字符自动截断)
+ * "  7k9p-3r4m-8h2x-n5yq  " → "7K9P-3R4M-8H2X-N5YQ"
+ */
+export function formatCardCodeInput(input: string): string {
+  const upper = input.toUpperCase();
+  // 只保留字符表里的字符(用户可能粘贴了横线/空格/换行)
+  const cleaned = upper.replace(new RegExp(`[^${ALPHABET}]`, "g"), "");
+  // 截断到 16 位(防御性:用户粘贴多份或多余字符)
+  const raw = cleaned.slice(0, CODE_LEN);
+  if (raw.length === 0) return "";
+  // 按 4 段拼回去,最后一段如果不足 4 字符也拼上
+  const segments: string[] = [];
+  for (let i = 0; i < raw.length; i += SEGMENT_LEN) {
+    segments.push(raw.slice(i, i + SEGMENT_LEN));
+  }
+  return segments.join("-");
+}
+
+/**
  * 校验输入是否能归一化成合法卡密
  */
 export function isValidCardInput(input: string): boolean {

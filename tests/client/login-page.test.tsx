@@ -134,4 +134,27 @@ describe("<LoginPage />", () => {
     await user.click(screen.getByRole("tab", { name: /我有卡密/ }));
     expect(screen.getByText(/忘记密码请联系管理员重置/)).toBeInTheDocument();
   });
+
+  it("提交中 → 按钮显示 Spinner(aria-label 登录中)+ '登录中...' 文本,按钮 disabled", async () => {
+    const user = userEvent.setup();
+    // 让 fetch 一直 pending,确保 loading 状态保持
+    mockFetch.mockImplementation(
+      () =>
+        new Promise(() => {
+          /* never resolve */
+        })
+    );
+    render(<LoginPage />);
+    await user.type(screen.getByPlaceholderText(/07724/), "07724215611");
+    await user.type(document.querySelector('input[type="password"]')!, "secret123");
+    await user.click(screen.getByRole("button", { name: "登录" }));
+
+    // loading 态:文本 + spinner
+    expect(screen.getByText("登录中...")).toBeInTheDocument();
+    // Spinner label 用 sr-only span 包,getByText 仍能拿到
+    expect(screen.getAllByText("登录中").length).toBeGreaterThanOrEqual(1);
+    // 按钮 disabled
+    const btn = screen.getByRole("button", { name: /登录中/ });
+    expect(btn).toBeDisabled();
+  });
 });

@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { Spinner } from "@/app/_components/skip-to-content";
+import { formatPhoneForDisplay } from "@/lib/phone";
 import { todayLocalISODate } from "@/lib/date";
 
 interface SimInfo {
@@ -129,14 +130,32 @@ export default function PortPage() {
     <div className="max-w-md mx-auto px-4 py-8 sm:py-12">
       <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 sm:p-8">
         <h1 className="text-2xl font-bold mb-1">Giffgaff 保号</h1>
-        <p className="text-slate-600 text-sm mb-6">
+        <p className="text-slate-600 text-sm mb-3">
           保号后系统按新日期重新计时 170 天
         </p>
+        <details className="mb-5 group">
+          <summary className="text-xs text-indigo-600 hover:text-indigo-700 cursor-pointer list-none inline-flex items-center gap-1">
+            <span aria-hidden="true" className="group-open:rotate-90 transition-transform inline-block">▸</span>
+            <span>保号是什么意思?</span>
+          </summary>
+          <div className="mt-2 p-3 rounded-lg bg-slate-50 border border-slate-200 text-xs text-slate-700 leading-relaxed space-y-1.5">
+            <p>
+              <strong>保号</strong> = 让 SIM 卡保持活跃,避免被运营商回收。
+            </p>
+            <p>
+              方式很简单:任意一种付费活动即可 ——
+              <strong>发一条短信</strong>(发给自己或朋友都行)、<strong>打个电话</strong>、或<strong>用流量上一次网</strong>。
+            </p>
+            <p>
+              giffgaff 政策:连续 <strong>180 天</strong>无任何活动会回收号码(连同余额、sim 卡本身)。
+            </p>
+          </div>
+        </details>
 
         <div className="rounded-lg bg-slate-50 p-4 mb-6">
           <div className="text-xs text-slate-500 mb-1">号码</div>
           <div className="text-lg font-mono font-semibold tracking-wider mb-2">
-            {sim.phoneNumber.replace(/^(\d{5})(\d+)/, "$1 $2")}
+            {formatPhoneForDisplay(sim.phoneNumber)}
           </div>
           <div className="text-xs text-slate-500 mb-1">激活日期</div>
           <div className="text-sm mb-2">{sim.activatedAt}</div>

@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { PasswordInput } from "@/app/_components/password-input";
+import { Spinner } from "@/app/_components/skip-to-content";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 
@@ -177,9 +178,16 @@ function LoginForm({
         <button
           type="submit"
           disabled={loading}
-          className="w-full py-2.5 rounded-lg bg-indigo-600 text-white font-medium hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+          className="w-full py-2.5 rounded-lg bg-indigo-600 text-white font-medium hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors inline-flex items-center justify-center gap-2"
         >
-          {loading ? "登录中..." : "登录"}
+          {loading ? (
+            <>
+              <Spinner size={16} label="登录中" className="text-white" />
+              <span>登录中...</span>
+            </>
+          ) : (
+            "登录"
+          )}
         </button>
       </form>
     </>

@@ -82,3 +82,45 @@ describe("isValidCardInput", () => {
     expect(isValidCardInput("0O1ILUV7K9P3R4M8H2X")).toBe(false);
   });
 });
+import { formatCardCodeInput } from "../lib/card-key";
+
+describe("formatCardCodeInput", () => {
+  it("空字符串", () => {
+    expect(formatCardCodeInput("")).toBe("");
+  });
+
+  it("小写自动转大写", () => {
+    expect(formatCardCodeInput("7k9p")).toBe("7K9P");
+  });
+
+  it("按 4 字符插入 -", () => {
+    expect(formatCardCodeInput("7K9P3R4M")).toBe("7K9P-3R4M");
+    expect(formatCardCodeInput("7K9P3R4M8H2X")).toBe("7K9P-3R4M-8H2X");
+    expect(formatCardCodeInput("7K9P3R4M8H2XN5YQ")).toBe("7K9P-3R4M-8H2X-N5YQ");
+  });
+
+  it("自动去掉粘贴的多余字符(空格/横线/换行)", () => {
+    expect(formatCardCodeInput("7K9P 3R4M 8H2X N5YQ")).toBe("7K9P-3R4M-8H2X-N5YQ");
+    expect(formatCardCodeInput("7K9P-3R4M-8H2X-N5YQ")).toBe("7K9P-3R4M-8H2X-N5YQ");
+    expect(formatCardCodeInput("7K9P\n3R4M\n8H2X\nN5YQ")).toBe("7K9P-3R4M-8H2X-N5YQ");
+  });
+
+  it("去掉字符表外的字符(0/1/O/I/L/U/V 等)", () => {
+    expect(formatCardCodeInput("7K9P-0O1I-LUV-XXX")).toBe("7K9P-XXX");
+  });
+
+  it("粘贴超过 16 字符自动截断", () => {
+    // 假设用户粘贴了两份码
+    expect(formatCardCodeInput("7K9P3R4M8H2XN5YQ7K9P3R4M8H2XN5YQ")).toBe("7K9P-3R4M-8H2X-N5YQ");
+  });
+
+  it("不完整输入(< 16 字符)也加分隔", () => {
+    expect(formatCardCodeInput("7K9P")).toBe("7K9P");
+    expect(formatCardCodeInput("7K9P3R4M")).toBe("7K9P-3R4M");
+    expect(formatCardCodeInput("7")).toBe("7");
+  });
+
+  it("前后空格自动去掉", () => {
+    expect(formatCardCodeInput("  7K9P3R4M8H2XN5YQ  ")).toBe("7K9P-3R4M-8H2X-N5YQ");
+  });
+});
