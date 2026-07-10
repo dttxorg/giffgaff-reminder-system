@@ -215,7 +215,22 @@ function FormPhase({
     >
       <div className="p-4 rounded-lg bg-emerald-50 border border-emerald-200">
         <div className="text-sm font-medium text-emerald-900 mb-1">
-          ✓ 卡密有效
+          <span className="inline-flex items-center gap-1.5">
+            <svg
+              width={16}
+              height={16}
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth={2.5}
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              aria-hidden="true"
+            >
+              <polyline points="20 6 9 17 4 12" />
+            </svg>
+            卡密有效
+          </span>
         </div>
         <div className="text-xs text-emerald-700">
           请填写您的 SIM 卡信息并设置登录密码完成绑定。
