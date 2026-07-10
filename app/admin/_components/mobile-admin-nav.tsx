@@ -3,20 +3,21 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
+import { NavIcon } from "./nav-icon";
 
 interface NavItem {
   href: string;
   label: string;
-  icon: string;
+  icon: "dashboard" | "phone" | "ticket" | "users" | "log" | "settings";
 }
 
 const NAV: NavItem[] = [
-  { href: "/admin", label: "仪表盘", icon: "📊" },
-  { href: "/admin/sims", label: "号码管理", icon: "📱" },
-  { href: "/admin/cards", label: "卡密管理", icon: "🎫" },
-  { href: "/admin/users", label: "用户", icon: "👥" },
-  { href: "/admin/reminders", label: "提醒日志", icon: "📜" },
-  { href: "/admin/settings", label: "文案设置", icon: "⚙️" },
+  { href: "/admin", label: "仪表盘", icon: "dashboard" },
+  { href: "/admin/sims", label: "号码管理", icon: "phone" },
+  { href: "/admin/cards", label: "卡密管理", icon: "ticket" },
+  { href: "/admin/users", label: "用户", icon: "users" },
+  { href: "/admin/reminders", label: "提醒日志", icon: "log" },
+  { href: "/admin/settings", label: "文案设置", icon: "settings" },
 ];
 
 function isActive(itemHref: string, pathname: string): boolean {
@@ -159,7 +160,7 @@ export function MobileAdminNav() {
                         : "text-slate-300 hover:bg-slate-800 hover:text-white"
                     }`}
                   >
-                    <span aria-hidden="true">{item.icon}</span>
+                    <NavIcon name={item.icon} />
                     <span>{item.label}</span>
                   </Link>
                 );
