@@ -209,6 +209,12 @@ export default async function MePage() {
           </div>
           <span className="text-xs text-slate-400">显示最近 5 条</span>
         </div>
+        {/* 满了 5 条说明还有更多,提示用户历史量级 */}
+        {recentReminders.length === 5 && lifetimeCount > 5 && (
+          <p className="text-xs text-slate-500 -mt-2 mb-3">
+            还有 <strong className="text-slate-700">{lifetimeCount - 5}</strong> 条历史提醒未显示
+          </p>
+        )}
         {recentReminders.length === 0 ? (
           <div className="text-sm text-slate-500 py-4">
             {inWindow
