@@ -40,6 +40,55 @@ export function MeSettingsClient({
     };
   }, []);
 
+  // S10: 测试推送反馈持久化
+  // 用 localStorage 存最近一次"渠道 + key 组合"的测试结果,刷新页面后还在。
+  // 这样用户测完不用立刻保存,刷新几次都能继续看到 ✓ 已验证。
+  //
+  // 注意:
+  // - 用 channel + key 的 sha1 hash 作为后缀,不同 key 的反馈不串
+  // - server-side render 时 localStorage 不存在,需要 typeof window 守卫
+  // - 切渠道时,旧 key 的反馈虽然还在 storage,但下次访问不会再读,无影响
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    try {
+      const hash = quickHash(channelKey);
+      const raw = window.localStorage.getItem(`gg-test-${channel}-${hash}`);
+      if (!raw) return;
+      const parsed = JSON.parse(raw) as {
+        verified: boolean;
+        status: TestStatus;
+        message: string | null;
+      };
+      if (parsed.verified) setVerified(true);
+      if (parsed.status && parsed.status !== "idle") {
+        setTestStatus(parsed.status);
+        setTestMessage(parsed.message);
+      }
+    } catch {
+      // localStorage 被禁 / 损坏,静默忽略
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // 保存测试结果到 localStorage(verified / status / message 任一变化)
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    try {
+      const hash = quickHash(channelKey);
+      const key = `gg-test-${channel}-${hash}`;
+      window.localStorage.setItem(
+        key,
+        JSON.stringify({
+          verified,
+          status: testStatus,
+          message: testMessage,
+        })
+      );
+    } catch {
+      // ignore quota / privacy mode
+    }
+  }, [verified, testStatus, testMessage, channel, channelKey]);
+
   const startCooldown = (seconds: number) => {
     setCooldown(seconds);
     if (cooldownTimer.current) clearInterval(cooldownTimer.current);
@@ -718,4 +767,19 @@ function ChannelOption({
       <div className="text-xs text-slate-500 mt-0.5">{desc}</div>
     </button>
   );
+}
+
+/**
+ * 短哈希,用于 localStorage key 区分不同 channelKey。
+ * 不需要密码学强度,只需避免不同 key 撞 storage 键。
+ *
+ * 注意:仅用于本地 key 命名,不用于安全场景。
+ */
+function quickHash(s: string): string {
+  let h = 0;
+  for (let i = 0; i < s.length; i++) {
+    h = ((h << 5) - h + s.charCodeAt(i)) | 0;
+  }
+  // 转为无符号 32-bit,再 base36 缩短
+  return (h >>> 0).toString(36);
 }

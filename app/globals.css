@@ -39,3 +39,21 @@ input[type="number"] {
     scroll-behavior: auto !important;
   }
 }
+
+/* === 可访问性: :focus-visible 键盘焦点环 ===
+ * 全局给所有交互元素一个清晰的键盘焦点环,鼠标点击不会出现
+ * (focus-visible 仅在键盘聚焦时匹配),不会破坏美观。
+ *
+ * Tailwind 的 outline 重置只对带 focus:outline-none 的元素生效,
+ * 这里用了 outline 而非 ring,因为 outline 跟随 border-radius,视觉更整洁。
+ *
+ * 元素如果用了 focus-visible:ring-* utility,会更高优先级,Tailwind class
+ * 优于元素选择器 specificity (utility-class 写法):注意!
+ * 实际上 outline vs ring 是不同属性,这里只设 outline,
+ * 已经用 ring-* 的元素不会被影响。
+ */
+*:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
