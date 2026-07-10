@@ -4,6 +4,7 @@ import { prisma } from "@/lib/db";
 import { dayOffsetFromBaseline, isInReminderWindow } from "@/lib/bucket";
 import { CsvImportButton } from "./csv-import-button";
 import { EmptyState } from "@/app/_components/empty-state";
+import { SimsBulkTable } from "./_components/sims-bulk-table";
 import type { Prisma } from "@/lib/generated/prisma/client";
 
 interface PageProps {
@@ -36,6 +37,27 @@ export default async function SimsPage({ searchParams }: PageProps) {
         select: { sentAt: true, status: true },
       },
     },
+  });
+
+  // 把 server 数据序列化给 client 组件(传给 <SimsBulkTable>)
+  const rows = sims.map((sim) => {
+    const baseline = sim.lastPortedAt ?? sim.activatedAt;
+    const dayOffset = dayOffsetFromBaseline(baseline);
+    const last = sim.reminders[0];
+    return {
+      id: sim.id,
+      phoneNumber: sim.phoneNumber,
+      activatedAt: sim.activatedAt.toISOString().slice(0, 10),
+      lastPortedAt: sim.lastPortedAt?.toISOString().slice(0, 10) ?? null,
+      status: sim.status,
+      dayOffset,
+      inWindow: isInReminderWindow(dayOffset),
+      channel: sim.user?.channel ?? "",
+      lastSentAt: last
+        ? last.sentAt.toISOString().replace("T", " ").slice(0, 19)
+        : null,
+      lastSentStatus: last?.status ?? null,
+    };
   });
 
   return (
@@ -78,112 +100,19 @@ export default async function SimsPage({ searchParams }: PageProps) {
       </form>
 
       <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead className="bg-slate-50 text-slate-600">
-              <tr>
-                <th className="text-left px-3 py-2">ID</th>
-                <th className="text-left px-3 py-2">手机号</th>
-                <th className="text-left px-3 py-2">激活日期</th>
-                <th className="text-left px-3 py-2">上次保号</th>
-                <th className="text-left px-3 py-2">天数</th>
-                <th className="text-left px-3 py-2">状态</th>
-                <th className="text-left px-3 py-2">绑定</th>
-                <th className="text-left px-3 py-2">上次发送</th>
-                <th className="text-left px-3 py-2">操作</th>
-              </tr>
-            </thead>
-            <tbody>
-              {sims.length === 0 ? (
-                <tr>
-                  <td colSpan={9}>
-                    <EmptyState
-                      title="暂无号码"
-                      hint="录入第一个号码让系统开始提醒"
-                      actions={[
-                        { href: "/admin/sims/new", label: "+ 新增号码", primary: true },
-                      ]}
-                    />
-                  </td>
-                </tr>
-              ) : (
-                sims.map((sim) => {
-                  const baseline = sim.lastPortedAt ?? sim.activatedAt;
-                  const dayOffset = dayOffsetFromBaseline(baseline);
-                  const inWindow = isInReminderWindow(dayOffset);
-                  return (
-                    <tr key={sim.id} className="border-t border-slate-100">
-                      <td className="px-3 py-2 font-mono text-xs text-slate-500">{sim.id}</td>
-                      <td className="px-3 py-2 font-mono">{sim.phoneNumber}</td>
-                      <td className="px-3 py-2">{sim.activatedAt.toISOString().slice(0, 10)}</td>
-                      <td className="px-3 py-2 text-slate-500">
-                        {sim.lastPortedAt?.toISOString().slice(0, 10) || "—"}
-                      </td>
-                      <td className="px-3 py-2">
-                        <span
-                          className={
-                            inWindow ? "text-amber-700 font-semibold" : "text-slate-700"
-                          }
-                        >
-                          {dayOffset}d
-                        </span>
-                      </td>
-                      <td className="px-3 py-2">
-                        <span
-                          className={`px-2 py-0.5 rounded text-xs ${
-                            sim.status === "active"
-                              ? "bg-emerald-100 text-emerald-800"
-                              : "bg-slate-100 text-slate-600"
-                          }`}
-                        >
-                          {sim.status}
-                        </span>
-                      </td>
-                      <td className="px-3 py-2 text-xs">
-                        {sim.user ? (
-                          <span className="text-slate-700">{sim.user.channel}</span>
-                        ) : (
-                          <span className="text-slate-400">未绑定</span>
-                        )}
-                      </td>
-                      <td className="px-3 py-2 text-xs">
-                        {sim.reminders.length > 0 ? (
-                          <div className="flex items-center gap-1.5">
-                            <span
-                              className={`shrink-0 w-1.5 h-1.5 rounded-full ${
-                                sim.reminders[0].status === "success"
-                                  ? "bg-emerald-500"
-                                  : "bg-rose-500"
-                              }`}
-                              aria-hidden="true"
-                            />
-                            <span className="text-slate-600 font-mono whitespace-nowrap">
-                              {sim.reminders[0].sentAt
-                                .toISOString()
-                                .replace("T", " ")
-                                .slice(0, 16)}{" "}
-                              UTC
-                            </span>
-                          </div>
-                        ) : (
-                          <span className="text-slate-400">未发过</span>
-                        )}
-                      </td>
-                      <td className="px-3 py-2">
-                        <Link
-                          href={`/admin/sims/${sim.id}`}
-                          className="text-indigo-600 hover:underline text-sm"
-                        >
-                          编辑
-                        </Link>
-                      </td>
-                    </tr>
-                  );
-                })
-              )}
-            </tbody>
-          </table>
-        </div>
+        {rows.length === 0 ? (
+          <EmptyState
+            title="暂无号码"
+            hint="录入第一个号码让系统开始提醒"
+            actions={[
+              { href: "/admin/sims/new", label: "+ 新增号码", primary: true },
+            ]}
+          />
+        ) : (
+          <div className="overflow-x-auto">
+            <SimsBulkTable sims={rows} />
+          </div>
+        )}
         {sims.length === 200 && (
           <div className="px-4 py-2 text-xs text-slate-500 border-t border-slate-100 bg-slate-50">
             仅显示最近 200 条,请用搜索缩小范围

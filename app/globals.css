@@ -21,3 +21,21 @@ input[type="number"]::-webkit-outer-spin-button {
 input[type="number"] {
   -moz-appearance: textfield;
 }
+
+/* === 可访问性: prefers-reduced-motion ===
+ * 用户在系统设置里选了"减少动效"时,所有 transition/animation 立即降级为即时切换。
+ * 这对前庭功能障碍、晕动症、注意力缺陷的用户尤其重要。
+ *
+ * 实现: 把时长压到 0.01ms(而非删除),保留最终态,比如 Spinner 不会一直转,
+ * 但保持位置和其他视觉属性不变。
+ */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

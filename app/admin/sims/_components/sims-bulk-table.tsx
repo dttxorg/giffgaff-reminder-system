@@ -1,0 +1,269 @@
+"use client";
+
+import Link from "next/link";
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+
+interface SimRow {
+  id: number;
+  phoneNumber: string;
+  activatedAt: string;
+  lastPortedAt: string | null;
+  status: "active" | "paused";
+  dayOffset: number;
+  inWindow: boolean;
+  channel: string;
+  lastSentAt: string | null;
+  lastSentStatus: "success" | "failed" | null;
+}
+
+interface SimsBulkTableProps {
+  sims: SimRow[];
+}
+
+/**
+ * sims 列表 + 多选 + 批量操作
+ *
+ * 设计选择:
+ * - 选择状态只在前端维护(不需要 URL 同步;选择是临时操作意图)
+ * - "全选" 当 checkbox checked 时全选所有当前页 sim
+ * - 批量操作按钮:激活 / 暂停 / 删除
+ * - 删除前用浏览器 confirm 做最后一道防御(不可绕过,虽然已经有选中二次确认)
+ */
+export function SimsBulkTable({ sims }: SimsBulkTableProps) {
+  const router = useRouter();
+  const [selected, setSelected] = useState<Set<number>>(new Set());
+  const [loading, setLoading] = useState(false);
+  const [message, setMessage] = useState<
+    { kind: "success" | "error"; text: string } | null
+  >(null);
+
+  const allOnPage = sims.length > 0 && sims.every((s) => selected.has(s.id));
+  const someOnPage = sims.some((s) => selected.has(s.id));
+  const totalSelected = selected.size;
+
+  const toggleAll = () => {
+    if (allOnPage) {
+      const next = new Set(selected);
+      sims.forEach((s) => next.delete(s.id));
+      setSelected(next);
+    } else {
+      const next = new Set(selected);
+      sims.forEach((s) => next.add(s.id));
+      setSelected(next);
+    }
+  };
+
+  const toggleOne = (id: number) => {
+    const next = new Set(selected);
+    if (next.has(id)) next.delete(id);
+    else next.add(id);
+    setSelected(next);
+  };
+
+  const submit = async (action: "delete" | "pause" | "activate") => {
+    if (selected.size === 0) return;
+    if (
+      action === "delete" &&
+      !confirm(
+        `确认删除 ${selected.size} 个号码?\n\n会级联删除绑定 user 和 reminders_sent,不可恢复。`
+      )
+    ) {
+      return;
+    }
+    setLoading(true);
+    setMessage(null);
+    try {
+      const resp = await fetch("/api/admin/sims/batch", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ids: Array.from(selected), action }),
+      });
+      const data = await resp.json();
+      if (!data.ok) {
+        setMessage({ kind: "error", text: data.error || "操作失败" });
+        return;
+      }
+      setMessage({
+        kind: "success",
+        text: `已${actionLabel(action)} ${data.affected} 个号码`,
+      });
+      setSelected(new Set());
+      router.refresh();
+    } catch (e) {
+      setMessage({
+        kind: "error",
+        text: e instanceof Error ? e.message : "网络错误",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <>
+      {/* 批量操作工具栏 — 仅在有选中时显示 */}
+      {totalSelected > 0 && (
+        <div className="flex flex-wrap items-center gap-2 mb-3 p-3 rounded-lg bg-indigo-50 border border-indigo-200">
+          <span className="text-sm text-indigo-900 font-medium">
+            已选 <strong>{totalSelected}</strong> 个
+          </span>
+          <button
+            type="button"
+            onClick={() => submit("activate")}
+            disabled={loading}
+            className="px-3 py-1.5 text-xs rounded-md border border-emerald-300 text-emerald-800 bg-white hover:bg-emerald-50 disabled:opacity-50 transition-colors"
+          >
+            激活
+          </button>
+          <button
+            type="button"
+            onClick={() => submit("pause")}
+            disabled={loading}
+            className="px-3 py-1.5 text-xs rounded-md border border-amber-300 text-amber-800 bg-white hover:bg-amber-50 disabled:opacity-50 transition-colors"
+          >
+            暂停
+          </button>
+          <button
+            type="button"
+            onClick={() => submit("delete")}
+            disabled={loading}
+            className="px-3 py-1.5 text-xs rounded-md border border-rose-300 text-rose-800 bg-white hover:bg-rose-50 disabled:opacity-50 transition-colors"
+          >
+            删除
+          </button>
+          <button
+            type="button"
+            onClick={() => setSelected(new Set())}
+            disabled={loading}
+            className="px-3 py-1.5 text-xs rounded-md text-slate-600 hover:text-slate-900 disabled:opacity-50"
+          >
+            清除选择
+          </button>
+        </div>
+      )}
+      {message && (
+        <div
+          className={`mb-3 p-3 rounded-lg text-sm ${
+            message.kind === "success"
+              ? "bg-emerald-50 border border-emerald-200 text-emerald-700"
+              : "bg-rose-50 border border-rose-200 text-rose-700"
+          }`}
+        >
+          {message.text}
+        </div>
+      )}
+
+      <table className="w-full text-sm">
+        <thead className="bg-slate-50 text-slate-600">
+          <tr>
+            <th className="px-3 py-2 w-8">
+              <input
+                type="checkbox"
+                checked={allOnPage}
+                ref={(el) => {
+                  if (el) el.indeterminate = !allOnPage && someOnPage;
+                }}
+                onChange={toggleAll}
+                aria-label="全选当前页"
+                className="w-4 h-4 cursor-pointer accent-indigo-600"
+              />
+            </th>
+            <th className="text-left px-3 py-2">ID</th>
+            <th className="text-left px-3 py-2">手机号</th>
+            <th className="text-left px-3 py-2">激活日期</th>
+            <th className="text-left px-3 py-2">上次保号</th>
+            <th className="text-left px-3 py-2">天数</th>
+            <th className="text-left px-3 py-2">状态</th>
+            <th className="text-left px-3 py-2">绑定</th>
+            <th className="text-left px-3 py-2">上次发送</th>
+            <th className="text-left px-3 py-2">操作</th>
+          </tr>
+        </thead>
+        <tbody>
+          {sims.map((sim) => {
+            const checked = selected.has(sim.id);
+            return (
+              <tr
+                key={sim.id}
+                className={`border-t border-slate-100 ${
+                  checked ? "bg-indigo-50/40" : ""
+                }`}
+              >
+                <td className="px-3 py-2 text-center">
+                  <input
+                    type="checkbox"
+                    checked={checked}
+                    onChange={() => toggleOne(sim.id)}
+                    aria-label={`选择 sim ${sim.id}`}
+                    className="w-4 h-4 cursor-pointer accent-indigo-600"
+                  />
+                </td>
+                <td className="px-3 py-2 font-mono text-xs text-slate-500">{sim.id}</td>
+                <td className="px-3 py-2 font-mono">{sim.phoneNumber}</td>
+                <td className="px-3 py-2">{sim.activatedAt}</td>
+                <td className="px-3 py-2 text-slate-500">{sim.lastPortedAt || "—"}</td>
+                <td className="px-3 py-2">
+                  <span
+                    className={
+                      sim.inWindow
+                        ? "text-amber-700 font-semibold"
+                        : "text-slate-700"
+                    }
+                  >
+                    {sim.dayOffset}d
+                  </span>
+                </td>
+                <td className="px-3 py-2">
+                  <span
+                    className={`px-2 py-0.5 rounded text-xs ${
+                      sim.status === "active"
+                        ? "bg-emerald-100 text-emerald-800"
+                        : "bg-slate-100 text-slate-600"
+                    }`}
+                  >
+                    {sim.status}
+                  </span>
+                </td>
+                <td className="px-3 py-2 text-xs">
+                  <span className="text-slate-700">{sim.channel}</span>
+                </td>
+                <td className="px-3 py-2 text-xs">
+                  {sim.lastSentAt ? (
+                    <div className="flex items-center gap-1.5">
+                      <span
+                        className={`shrink-0 w-1.5 h-1.5 rounded-full ${
+                          sim.lastSentStatus === "success"
+                            ? "bg-emerald-500"
+                            : "bg-rose-500"
+                        }`}
+                        aria-hidden="true"
+                      />
+                      <span className="text-slate-600 font-mono whitespace-nowrap">
+                        {sim.lastSentAt.replace("T", " ").slice(0, 16)} UTC
+                      </span>
+                    </div>
+                  ) : (
+                    <span className="text-slate-400">未发过</span>
+                  )}
+                </td>
+                <td className="px-3 py-2">
+                  <Link
+                    href={`/admin/sims/${sim.id}`}
+                    className="text-indigo-600 hover:underline text-sm"
+                  >
+                    编辑
+                  </Link>
+                </td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+    </>
+  );
+}
+
+function actionLabel(action: "delete" | "pause" | "activate"): string {
+  return action === "delete" ? "删除" : action === "pause" ? "暂停" : "激活";
+}
