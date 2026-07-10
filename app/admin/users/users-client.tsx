@@ -1,8 +1,8 @@
 "use client";
-import { formatRelativeTime } from "@/lib/date";
-
 import { useState, useEffect } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { formatRelativeTime } from "@/lib/date";
 import { generateSecurePassword } from "@/lib/password-gen";
 import { EmptyState } from "@/app/_components/empty-state";
 
@@ -134,7 +134,13 @@ export function UsersClient({ users }: UsersClientProps) {
                       <div className="text-slate-700">{formatRelativeTime(u.createdAt)}</div>
                       <div className="text-[10px] text-slate-400 font-mono">{u.createdAt} UTC</div>
                     </td>
-                    <td className="px-3 py-2">
+                    <td className="px-3 py-2 whitespace-nowrap">
+                      <Link
+                        href={`/admin/users/${u.id}`}
+                        className="text-indigo-600 hover:underline text-xs mr-3"
+                      >
+                        查看
+                      </Link>
                       <button
                         onClick={() => openReset(u.id)}
                         className="text-indigo-600 hover:underline text-xs"
