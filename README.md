@@ -224,7 +224,7 @@ npm run dev
 
 ## 测试
 
-业务逻辑 + UI 组件覆盖,Vitest,共 320+ 个测试:
+业务逻辑 + UI 组件覆盖,Vitest,共 324+ 个测试:
 
 ```bash
 npm test              # 跑全部
@@ -251,7 +251,7 @@ npx vitest run tests/channels.test.ts  # 单文件
   - 用户中心:DayOffsetProgress 组件 / ChannelKeyReveal
   - 管理后台:MobileAdminNav / admin-login 顶部 context bar
   - 通用组件:PasswordInput / CopyCodeButton / ResendButton / NavIcon / SkipToContent / Spinner / ExternalLink / EmptyState
-  - 业务组件:DeleteUserButton / channel banner / SimsBulkTable / SettingsForm
+  - 业务组件:DeleteUserButton / channel banner / SimsBulkTable / SettingsForm / CopyPhoneButton
   - 路由级:port-page P6 redirect / /help 索引页
 
 ## License
