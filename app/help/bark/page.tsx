@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { ExternalLink } from "@/app/_components/external-link";
+import { HelpPagination } from "../_components";
 
 const BARK_APP_STORE_URL = "https://apps.apple.com/cn/app/bark-%E7%BB%99%E4%BD%A0%E7%9A%84%E6%89%8B%E6%9C%BA%E5%8F%91%E6%8E%A8%E9%80%81/id1403753865";
 const BARK_GITHUB_URL = "https://github.com/finb/bark";
@@ -168,6 +169,7 @@ export default function BarkHelpPage() {
           查看 Telegram 教程
         </Link>
       </div>
+          <HelpPagination current="bark" />
     </article>
   );
 }

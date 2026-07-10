@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { ExternalLink } from "@/app/_components/external-link";
+import { HelpPagination } from "../_components";
 
 const PUSHPLUS_HOME = "https://www.pushplus.plus/";
 const PUSHPLUS_LOGIN = "https://www.pushplus.plus/login.html";
@@ -294,6 +295,7 @@ export default function PushPlusHelpPage() {
           查看 Telegram 教程
         </Link>
       </div>
+          <HelpPagination current="pushplus" />
     </article>
   );
 }

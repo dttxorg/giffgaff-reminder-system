@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { ExternalLink } from "@/app/_components/external-link";
+import { HelpPagination } from "../_components";
 
 const BOTFATHER_URL = "https://t.me/BotFather";
 const USERINFOBOT_URL = "https://t.me/userinfobot";
@@ -262,6 +263,7 @@ export default function TelegramHelpPage() {
           查看 pushplus 教程
         </Link>
       </div>
+          <HelpPagination current="telegram" />
     </article>
   );
 }

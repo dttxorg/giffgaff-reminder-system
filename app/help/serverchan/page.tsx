@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { ExternalLink } from "@/app/_components/external-link";
+import { HelpPagination } from "../_components";
 
 const SEVERCHAN_HOME = "https://sct.ftqq.com";
 const SEVERCHAN_LOGIN = "https://sct.ftqq.com/login";
@@ -226,6 +227,7 @@ export default function ServerChanHelpPage() {
           查看 Telegram 教程
         </Link>
       </div>
+          <HelpPagination current="serverchan" />
     </article>
   );
 }
