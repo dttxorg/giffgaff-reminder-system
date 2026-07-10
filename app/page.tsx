@@ -116,7 +116,22 @@ export default async function HomePage() {
           href="/redeem"
           className="inline-flex items-center justify-center px-6 py-3 rounded-lg bg-white border-2 border-indigo-600 text-indigo-700 font-medium hover:bg-indigo-50 transition-colors shadow-sm"
         >
-          🎫 有卡密？立即兑换
+          <svg
+            width={18}
+            height={18}
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth={2}
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            aria-hidden="true"
+            className="mr-1.5"
+          >
+            <path d="M3 9V7a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v2a2 2 0 0 0 0 4v2a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-2a2 2 0 0 0 0-4Z" />
+            <path d="M13 5v14" strokeDasharray="2 2" />
+          </svg>
+          有卡密?立即兑换
         </Link>
       </div>
       <p className="text-center text-xs text-slate-500 -mt-9 mb-12">
