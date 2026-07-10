@@ -9,6 +9,7 @@ import {
   shanghaiParts,
 } from "@/lib/bucket";
 import { formatPhoneForDisplay } from "@/lib/phone";
+import { formatRelativeTime } from "@/lib/date";
 import {
   DayOffsetProgress,
   ReminderWindowAlert,
@@ -85,10 +86,10 @@ export default async function MePage() {
           </Link>
         </div>
         <div className="text-base mb-4">
-          {sim.activatedAt.toISOString().slice(0, 10)}
+          <span>{formatRelativeTime(sim.activatedAt)} 激活</span>
           {sim.lastPortedAt && (
             <span className="ml-2 text-xs text-slate-500">
-              (上次保号 {sim.lastPortedAt.toISOString().slice(0, 10)})
+              (上次保号 {formatRelativeTime(sim.lastPortedAt)})
             </span>
           )}
         </div>
@@ -173,7 +174,10 @@ export default async function MePage() {
                     第 {r.dayOffset} 天 · 第 {r.bucket + 1} 桶
                   </div>
                   <div className="text-xs text-slate-400 font-mono">
-                    {r.sentAt.toISOString().replace("T", " ").slice(0, 19)} UTC
+                    <span className="text-slate-700">{formatRelativeTime(r.sentAt)}</span>
+                    <div className="text-[10px] text-slate-400 font-mono">
+                      {r.sentAt.toISOString().replace("T", " ").slice(0, 19)} UTC
+                    </div>
                   </div>
                 </div>
                 <span
