@@ -42,6 +42,10 @@ export default function NewSimPage() {
 
   const generatePassword = () => {
     // 使用 crypto.getRandomValues(CSPRNG),而非 Math.random,避免被预测
+    // N10:如果已经手输过密码,二次确认避免误点覆盖(尤其长密码)
+    if (initialPassword && !window.confirm("已输入的密码会被新的随机密码覆盖,继续?")) {
+      return;
+    }
     setInitialPassword(generateSecurePassword());
   };
 

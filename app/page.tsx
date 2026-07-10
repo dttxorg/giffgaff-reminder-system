@@ -1,4 +1,21 @@
 import Link from "next/link";
+import { prisma } from "@/lib/db";
+
+/**
+ * 公开 stat:首页底部 social proof 用
+ * 缓存 60s(数据允许滞后,避免每次访问都打 DB)
+ */
+async function getPublicStats() {
+  const [simCount, sentCount] = await Promise.all([
+    prisma.sim.count(),
+    prisma.reminderSent.count({ where: { status: "success" } }),
+  ]);
+  return { simCount, sentCount };
+}
+
+export const revalidate = 60;
+// H6 用了 DB count,build 时没有 DB → 强制 dynamic 渲染
+export const dynamic = "force-dynamic";
 
 /** 首页 feature card 用的 SVG 图标 — H1 修复,从 emoji 改为一致品牌 */
 function HomeIcon({ name }: { name: "calendar" | "alert" | "bell" }) {
@@ -38,16 +55,28 @@ function HomeIcon({ name }: { name: "calendar" | "alert" | "bell" }) {
   );
 }
 
-export default function HomePage() {
+export default async function HomePage() {
+  const { simCount, sentCount } = await getPublicStats();
   return (
     <div className="max-w-3xl mx-auto px-4 sm:px-6 py-10 sm:py-16">
       <div className="text-center mb-12">
         <h1 className="text-3xl sm:text-4xl font-bold tracking-tight text-slate-900 mb-3">
           Giffgaff SIM 卡保号提醒
         </h1>
-        <p className="text-slate-600 text-lg">
+        <p className="text-slate-600 text-lg mb-4">
           再也不用记着哪天该保号了 — 到日子自动推送给您
         </p>
+        {/* H6:social proof — 公开 stat,无敏感信息 */}
+        {simCount > 0 && (
+          <p className="text-xs text-slate-500">
+            已有 <strong className="text-slate-700">{simCount}</strong> 个号码正在被守护
+            {sentCount > 0 && (
+              <>
+                {" "}· 已送达 <strong className="text-slate-700">{sentCount}</strong> 条保号提醒
+              </>
+            )}
+          </p>
+        )}
       </div>
 
       <div className="grid sm:grid-cols-3 gap-4 mb-12">
@@ -119,8 +148,8 @@ export default function HomePage() {
           a="推送里会带一个链接,点进去就是保号时间更新页。选您最近一次保号的日期提交（不早于激活日期,不晚于今天）,系统就从那天重新计时 170 天。老用户（卡已用很久）可以补录很久以前的保号日期。"
         />
         <Faq
-          q="卡密是什么 / 怎么用？"
-          a="如果您是从销售方获得的一串 16 位卡密(形如 XXXX-XXXX-XXXX-XXXX),可以访问兑换页输入卡密 + 您的 Giffgaff SIM 卡号 + 激活日期完成绑定。卡密一次性使用,兑换后失效。"
+          q="卡密是什么 / 怎么用?"
+          a="16 位字母数字的销售凭证。在兑换页填卡密 + 您的 Giffgaff SIM 卡号 + 激活日期即可绑定。一次性使用,详细步骤见登录页。"
         />
       </section>
     </div>
