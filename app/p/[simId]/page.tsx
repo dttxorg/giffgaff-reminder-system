@@ -249,7 +249,22 @@ function SuccessPage() {
     <div className="max-w-md mx-auto px-4 py-12">
       <PublicBrandHeader />
       <div className="bg-white rounded-xl shadow-sm border border-emerald-200 p-8 text-center">
-        <div className="text-4xl mb-3" aria-hidden="true">✅</div>
+        <div className="mx-auto w-14 h-14 rounded-full bg-emerald-100 flex items-center justify-center mb-3">
+          <svg
+            width={32}
+            height={32}
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth={2.5}
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            aria-hidden="true"
+            className="text-emerald-600"
+          >
+            <polyline points="20 6 9 17 4 12" />
+          </svg>
+        </div>
         <h1 className="text-xl font-bold mb-2 text-emerald-900">已记录</h1>
         <p className="text-slate-600">
           新的保号日期已记录,下次提醒将在 170 天后
