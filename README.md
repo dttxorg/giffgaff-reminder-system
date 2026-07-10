@@ -224,7 +224,7 @@ npm run dev
 
 ## 测试
 
-业务逻辑 + UI 组件覆盖,Vitest:
+业务逻辑 + UI 组件覆盖,Vitest,共 320+ 个测试:
 
 ```bash
 npm test              # 跑全部
@@ -240,14 +240,19 @@ npx vitest run tests/channels.test.ts  # 单文件
   - `channels.test.ts`:4 渠道推送实现(Sever酱 / Bark / pushplus / Telegram)
   - `date.test.ts`:本地日期 / UTC+上海双显示
   - `password-gen.test.ts` / `password-strength.test.ts`:安全密码生成 + 强度评分
+  - `password.test.ts`:scrypt 密码哈希 + checkCronAuth + generateId / VerificationCode
   - `phone.test.ts`:手机号归一化 + 后 6 位匹配
   - `port-token.test.ts`:32 字符 url-safe token + looksLikeToken
   - `redeem.test.ts`:parseDate / isValidPhone 纯函数
   - `template.test.ts`:renderTemplate + portUrl
+  - `day-offset-progress.test.ts`:progressFor 6 段映射函数
 - `tests/client/*.test.tsx` — 客户端组件(jsdom 环境)
-  - 覆盖 LoginPage / AdminLoginPage / HomePage / MobileAdminNav 等所有 user-facing 组件
-  - PasswordInput / CopyCodeButton / ResendButton / NavIcon / SkipToContent / Spinner 等
-  - DeleteUserButton / ChannelKeyReveal / AdminStat 等
+  - 用户页面:LoginPage / AdminLoginPage / HomePage
+  - 用户中心:DayOffsetProgress 组件 / ChannelKeyReveal
+  - 管理后台:MobileAdminNav / admin-login 顶部 context bar
+  - 通用组件:PasswordInput / CopyCodeButton / ResendButton / NavIcon / SkipToContent / Spinner / ExternalLink / EmptyState
+  - 业务组件:DeleteUserButton / channel banner / SimsBulkTable / SettingsForm
+  - 路由级:port-page P6 redirect / /help 索引页
 
 ## License
 
