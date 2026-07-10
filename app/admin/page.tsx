@@ -2,6 +2,7 @@ import Link from "next/link";
 import { requireAdmin } from "@/lib/admin-guard";
 import { prisma } from "@/lib/db";
 import { formatRelativeTime, formatUtcShanghaiDual } from "@/lib/date";
+import { dayOffsetFromBaseline } from "@/lib/bucket";
 import { AdminStat } from "./_components/admin-stat";
 
 export default async function AdminDashboard() {
@@ -25,6 +26,22 @@ export default async function AdminDashboard() {
       });
     })
   );
+
+  // 算每个 sim 的 dayOffset(只取 status=active),O(N) 但小系统可接受
+  // future 7 天会进窗口:now + 7 天时 dayOffset 首次达到 170 的 sim
+  const inWindowSimCount = await (async () => {
+    const sims = await prisma.sim.findMany({
+      where: { status: "active" },
+      select: { activatedAt: true, lastPortedAt: true },
+    });
+    const nowMs = Date.now();
+    return sims.filter((s) => {
+      const baseline = s.lastPortedAt ?? s.activatedAt;
+      const days = dayOffsetFromBaseline(baseline, nowMs);
+      // 在 170-180 窗口内,或未来 7 天内将进入窗口
+      return days >= 170 && days <= 180;
+    }).length;
+  })();
 
   const [
     simCount,
@@ -116,6 +133,12 @@ export default async function AdminDashboard() {
           value={todayFailed}
           tone={todayFailed > 0 ? "rose" : "slate"}
           sub={todayFailed > 0 ? `7 天累计 ${failedRecent}` : "全部成功"}
+        />
+        <AdminStat
+          label="提醒窗口内"
+          value={inWindowSimCount}
+          tone={inWindowSimCount > 0 ? "amber" : "slate"}
+          sub={simCount > 0 ? `占 ${Math.round((inWindowSimCount / simCount) * 100)}%` : "—"}
         />
         <AdminStat label="卡密未用" value={undefined} sub="在 卡密管理 查看" />
       </div>
