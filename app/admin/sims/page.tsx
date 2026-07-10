@@ -72,6 +72,12 @@ export default async function SimsPage({ searchParams }: PageProps) {
             + 新增
           </Link>
           <CsvImportButton />
+          <a
+            href={`/api/admin/sims/export${buildExportQS(q, status)}`}
+            className="inline-flex items-center px-4 py-2 rounded-lg bg-white border border-slate-200 text-slate-700 text-sm font-medium hover:bg-slate-50 hover:border-slate-300 transition-colors"
+          >
+            ⬇ 导出 CSV
+          </a>
         </div>
       </div>
 
@@ -121,4 +127,15 @@ export default async function SimsPage({ searchParams }: PageProps) {
       </div>
     </div>
   );
+}
+
+/**
+ * 复用当前页面的筛选条件构造 export query string
+ */
+function buildExportQS(q: string | undefined, status: string | undefined): string {
+  const sp = new URLSearchParams();
+  if (q) sp.set("q", q);
+  if (status) sp.set("status", status);
+  const s = sp.toString();
+  return s ? "?" + s : "";
 }
