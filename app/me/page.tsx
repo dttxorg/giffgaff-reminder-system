@@ -74,6 +74,7 @@ export default async function MePage() {
       {channelMissing && (
         <Link
           href="/me/settings"
+          title="设置通知渠道(才能接收保号提醒)"
           className="block mb-4 p-4 rounded-lg bg-rose-50 border-2 border-rose-300 hover:bg-rose-100 transition-colors"
         >
           <div className="flex items-start gap-3">
