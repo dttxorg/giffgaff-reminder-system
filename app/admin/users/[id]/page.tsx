@@ -97,7 +97,22 @@ export default async function UserDetailPage({ params }: PageProps) {
               <dt className="text-slate-500">密码</dt>
               <dd>
                 {user.passwordHash ? (
-                  <span className="text-emerald-700 text-xs">✓ 已设置</span>
+                  <span className="text-emerald-700 text-xs inline-flex items-center gap-0.5">
+                    <svg
+                      width={10}
+                      height={10}
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth={3}
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      aria-hidden="true"
+                    >
+                      <polyline points="20 6 9 17 4 12" />
+                    </svg>
+                    已设置
+                  </span>
                 ) : (
                   <span className="text-rose-700 text-xs">未设置</span>
                 )}

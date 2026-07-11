@@ -42,8 +42,21 @@ export function NewCardClient() {
     return (
       <div className="space-y-4">
         <div className="p-4 rounded-lg bg-emerald-50 border border-emerald-200">
-          <div className="font-medium text-emerald-900 mb-1">
-            ✓ 已生成 {created.length} 张卡密
+          <div className="font-medium text-emerald-900 mb-1 inline-flex items-center gap-1">
+            <svg
+              width={16}
+              height={16}
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth={2.5}
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              aria-hidden="true"
+            >
+              <polyline points="20 6 9 17 4 12" />
+            </svg>
+            已生成 {created.length} 张卡密
           </div>
           <div className="text-sm text-emerald-700">
             请妥善保存,关闭页面后无法再次查看完整卡密
@@ -72,9 +85,21 @@ export function NewCardClient() {
               复制全部
             </button>
             {copied && (
-              <span className="text-xs text-emerald-700 flex items-center gap-1">
-                <span>✓</span>
-                <span>已复制</span>
+              <span className="text-xs text-emerald-700 inline-flex items-center gap-0.5">
+                <svg
+                  width={10}
+                  height={10}
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth={3}
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  aria-hidden="true"
+                >
+                  <polyline points="20 6 9 17 4 12" />
+                </svg>
+                已复制
               </span>
             )}
           </div>

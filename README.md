@@ -40,7 +40,7 @@
 │   ├── login/               # 用户登录(tab 切换"我有账号 / 我有卡密")
 │   ├── me/                  # 用户中心(进度条 + 推送样例)
 │   │   ├── settings/        # 用户设置(改渠道 / 改密码 / 改激活日期)
-│   │   └── _components/     # DayOffsetProgress / ChannelKeyReveal
+│   │   ├── _components/     # DayOffsetProgress / ChannelKeyReveal / CopyPhoneButton / CopyPortLinkButton
 │   ├── redeem/              # 卡密兑换(自动登录 + 引导设置渠道)
 │   ├── p/[simId]/           # 保号页(公开,token 不可枚举)
 │   ├── help/                # 渠道开通教程(4 channel + 索引)

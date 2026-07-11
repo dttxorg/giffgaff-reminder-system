@@ -47,7 +47,23 @@ export function RedeemStepIndicator({ step }: RedeemStepIndicatorProps) {
                   done ? "已完成" : current ? "当前" : "未开始"
                 }
               >
-                {done ? "✓" : s.n}
+                {done ? (
+                  <svg
+                    width={14}
+                    height={14}
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth={3}
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    aria-hidden="true"
+                  >
+                    <polyline points="20 6 9 17 4 12" />
+                  </svg>
+                ) : (
+                  s.n
+                )}
               </div>
               <span
                 className={`text-xs mt-1.5 ${

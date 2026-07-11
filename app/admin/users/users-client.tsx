@@ -124,7 +124,22 @@ export function UsersClient({ users }: UsersClientProps) {
                     <td className="px-3 py-2 hidden md:table-cell">{u.channel}</td>
                     <td className="px-3 py-2">
                       {u.hasPassword ? (
-                        <span className="text-emerald-700 text-xs">✓ 已设</span>
+                        <span className="text-emerald-700 text-xs inline-flex items-center gap-0.5">
+                          <svg
+                            width={10}
+                            height={10}
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth={3}
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            aria-hidden="true"
+                          >
+                            <polyline points="20 6 9 17 4 12" />
+                          </svg>
+                          已设
+                        </span>
                       ) : (
                         <span className="text-rose-700 text-xs">未设</span>
                       )}
@@ -176,8 +191,21 @@ export function UsersClient({ users }: UsersClientProps) {
             {generatedPassword ? (
               <div className="space-y-4">
                 <div className="p-4 rounded-lg bg-emerald-50 border border-emerald-200">
-                  <div className="text-sm font-medium text-emerald-900 mb-2">
-                    ✓ 密码已重置
+                  <div className="text-sm font-medium text-emerald-900 mb-2 inline-flex items-center gap-1">
+                    <svg
+                      width={14}
+                      height={14}
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth={2.5}
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      aria-hidden="true"
+                    >
+                      <polyline points="20 6 9 17 4 12" />
+                    </svg>
+                    密码已重置
                   </div>
                   <div className="text-xs text-emerald-700 mb-2">
                     新密码（请复制后告知客户，关闭后不再显示）:
