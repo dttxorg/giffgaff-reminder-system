@@ -270,10 +270,12 @@ npm run dev
 ### 提交前自检
 
 ```bash
-npx tsc --noEmit     # 类型
-npx eslint .        # lint(自动 fix: --fix)
-npx vitest run      # 327+ 测试
+npx tsc --noEmit         # 类型
+npx eslint .            # lint(自动 fix: --fix)
+npx vitest run          # 335+ 测试
 npx next build --webpack  # 完整构建
+git diff --stat         # 确认改动范围
+git status             # 确认没漏掉新文件
 ```
 
 ### 代码风格
