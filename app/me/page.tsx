@@ -329,7 +329,10 @@ export default async function MePage() {
 
       {/* M3 推送样例预览:让用户看到自己会收到什么内容 */}
       <details className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 mt-4 group">
-        <summary className="cursor-pointer list-none flex items-center justify-between">
+        <summary
+          title="点击展开/折叠查看推送样例"
+          className="cursor-pointer list-none flex items-center justify-between"
+        >
           <span className="flex items-center gap-1.5 text-sm font-medium text-slate-700">
             <svg
               width={16}
