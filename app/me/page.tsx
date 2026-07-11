@@ -127,7 +127,7 @@ export default async function MePage() {
           <span>{formatRelativeTime(sim.activatedAt)} 激活</span>
           {sim.lastPortedAt && (
             <span className="ml-2 text-xs text-slate-500">
-              (上次保号 {formatRelativeTime(sim.lastPortedAt)})
+              (上次保号 <span title={new Date(sim.lastPortedAt).toLocaleString("zh-CN")}>{formatRelativeTime(sim.lastPortedAt)}</span>)
             </span>
           )}
         </div>
