@@ -215,6 +215,7 @@ export default async function MePage() {
           <div className="text-sm text-slate-500">推送渠道</div>
           <Link
             href="/me/settings"
+            title={channelMissing ? "设置通知渠道(才能接收保号提醒)" : "修改通知渠道或 key"}
             className="text-xs text-indigo-600 hover:underline"
           >
             {channelMissing ? "去设置" : "修改"}
