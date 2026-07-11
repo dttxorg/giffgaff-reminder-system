@@ -109,7 +109,24 @@ export default async function MePage() {
 
       <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 mb-4">
         <div className="flex items-center justify-between mb-1">
-          <div className="text-sm text-slate-500">我的号码</div>
+          <div className="text-sm text-slate-500 inline-flex items-center gap-1.5">
+            <svg
+              width={14}
+              height={14}
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth={2}
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              aria-hidden="true"
+              className="text-slate-400"
+            >
+              <rect x="5" y="2" width="14" height="20" rx="2" ry="2" />
+              <line x1="12" y1="18" x2="12.01" y2="18" />
+            </svg>
+            我的号码
+          </div>
           <CopyPhoneButton phone={sim.phoneNumber} />
         </div>
         <div className="text-2xl font-mono font-semibold mb-3 tracking-wider">
