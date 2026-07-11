@@ -136,6 +136,7 @@ export default async function MePage() {
           <div className="text-sm text-slate-500">激活日期</div>
           <Link
             href="/me/settings#sim-info"
+            title="修改激活日期或上次保号日期"
             className="text-xs text-indigo-600 hover:underline"
           >
             修改
