@@ -177,7 +177,16 @@ export default async function MePage() {
         {!inWindow && (
           <div className="mt-4 p-3 rounded-lg bg-slate-100 border border-slate-200 text-slate-700 text-sm">
             {dayOffset > 180 ? (
-              <>已超过 180 天,系统不再自动提醒。请尽快保号并提交新日期。</>
+              <>
+                已超过 180 天,系统不再自动提醒。请尽快保号并提交新日期。
+                <Link
+                  href={`/p/${sim.portToken ?? sim.id}`}
+                  title="打开保号页面提交新日期"
+                  className="ml-2 inline-flex items-center text-indigo-600 hover:underline font-medium"
+                >
+                  立即去保号 →
+                </Link>
+              </>
             ) : (
               <>
                 距提醒开始还有{" "}
