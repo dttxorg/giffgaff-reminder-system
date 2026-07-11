@@ -142,10 +142,10 @@ export default async function MePage() {
           </Link>
         </div>
         <div className="text-base mb-4">
-          <span title={new Date(sim.activatedAt).toLocaleString("zh-CN")}>{formatRelativeTime(sim.activatedAt)} 激活</span>
+          <span className="cursor-help" title={new Date(sim.activatedAt).toLocaleString("zh-CN")}>{formatRelativeTime(sim.activatedAt)} 激活</span>
           {sim.lastPortedAt && (
             <span className="ml-2 text-xs text-slate-500">
-              (上次保号 <span title={new Date(sim.lastPortedAt).toLocaleString("zh-CN")}>{formatRelativeTime(sim.lastPortedAt)}</span>)
+              (上次保号 <span className="cursor-help" title={new Date(sim.lastPortedAt).toLocaleString("zh-CN")}>{formatRelativeTime(sim.lastPortedAt)}</span>)
             </span>
           )}
         </div>
