@@ -293,7 +293,10 @@ export default async function MePage() {
         </div>
         {/* 满了 5 条说明还有更多,提示用户历史量级 */}
         {recentReminders.length === 5 && lifetimeCount > 5 && (
-          <p className="text-xs text-slate-500 -mt-2 mb-3">
+          <p
+            className="text-xs text-slate-500 -mt-2 mb-3"
+            title="完整记录只在管理员后台可见;普通用户只展示最近 5 条"
+          >
             还有 <strong className="text-slate-700">{lifetimeCount - 5}</strong> 条历史提醒未显示
           </p>
         )}
