@@ -120,7 +120,25 @@ export default function HelpIndexPage() {
       </div>
 
       <div className="not-prose my-6 p-4 rounded-lg bg-slate-50 border border-slate-200">
-        <div className="font-semibold text-slate-900 mb-2">💡 选哪个?</div>
+        <div className="font-semibold text-slate-900 mb-2 inline-flex items-center gap-1.5">
+          <svg
+            width={16}
+            height={16}
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth={2}
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            aria-hidden="true"
+            className="text-amber-500"
+          >
+            <path d="M9 18h6" />
+            <path d="M10 22h4" />
+            <path d="M15.09 14c.18-.98.65-1.74 1.41-2.5A4.65 4.65 0 0 0 18 8 6 6 0 0 0 6 8c0 1 .23 2.23 1.5 3.5A4.61 4.61 0 0 1 8.91 14" />
+          </svg>
+          选哪个?
+        </div>
         <ul className="text-sm text-slate-700 space-y-1.5 list-disc list-inside">
           <li>
             <strong>iPhone 用户</strong>:推荐 <Link href="/help/bark" className="text-indigo-600 hover:underline">Bark</Link>,
