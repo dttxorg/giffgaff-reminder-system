@@ -306,7 +306,7 @@ export default async function MePage() {
                     第 {r.dayOffset} 天 · 第 {r.bucket + 1} 桶
                   </div>
                   <div className="text-xs text-slate-400 font-mono">
-                    <span className="text-slate-700">{formatRelativeTime(r.sentAt)}</span>
+                    <span className="text-slate-700" title={new Date(r.sentAt).toLocaleString("zh-CN")}>{formatRelativeTime(r.sentAt)}</span>
                     <div className="text-[10px] text-slate-400 font-mono">
                       {r.sentAt.toISOString().replace("T", " ").slice(0, 19)} UTC
                     </div>
