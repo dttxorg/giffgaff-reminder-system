@@ -354,7 +354,10 @@ export default async function MePage() {
           </span>
           <span aria-hidden="true" className="text-slate-400 group-open:rotate-180 transition-transform">▾</span>
         </summary>
-        <p className="text-xs text-slate-500 mt-2 mb-3">
+        <p
+          className="text-xs text-slate-500 mt-2 mb-3"
+          title="在折叠的 <details> 里展开后,会显示一个用样例数据模拟的真实推送样例(显示在 <PushPreview> 组件里)"
+        >
           折叠打开,看系统到日子会给您发什么。
           {channelMissing && (
             <>
