@@ -24,14 +24,10 @@ describe("<EmptyState />", () => {
         ]}
       />
     );
-    // 标题
     expect(screen.getByText("没有用户")).toBeInTheDocument();
-    // 两个链接
     const addLink = screen.getByRole("link", { name: "+ 新增用户" });
     expect(addLink).toHaveAttribute("href", "/users/new");
-    // primary 链接用 indigo 背景
     expect(addLink.className).toContain("bg-indigo-600");
-    // 次要链接
     const importLink = screen.getByRole("link", { name: "导入" });
     expect(importLink).toHaveAttribute("href", "/users/import");
     expect(importLink.className).not.toContain("bg-indigo-600");
@@ -42,9 +38,39 @@ describe("<EmptyState />", () => {
     expect(screen.queryByRole("link")).not.toBeInTheDocument();
   });
 
-  it("默认图标 ○ 存在(aria-hidden)", () => {
+  it("默认渲染 SVG inbox icon (aria-hidden)", () => {
     const { container } = render(<EmptyState title="x" />);
-    // 第一个 div 内的 text node 是 ○
-    expect(container.textContent).toContain("○");
+    // 默认 icon 是 SVG,带 aria-hidden
+    const svg = container.querySelector("svg[aria-hidden='true']");
+    expect(svg).toBeInTheDocument();
+    // 默认 tone 是 slate,class 含 text-slate-300
+    expect(svg?.parentElement?.className).toContain("text-slate-300");
+  });
+
+  it("传 icon prop 时覆盖默认 icon", () => {
+    const { container } = render(
+      <EmptyState
+        title="custom"
+        icon={<span data-testid="custom-icon">📦</span>}
+      />
+    );
+    expect(screen.getByTestId("custom-icon")).toBeInTheDocument();
+    // 原来的 SVG 默认 icon 应该不再渲染
+    expect(container.querySelector("svg[aria-hidden='true']")).not.toBeInTheDocument();
+  });
+
+  it("3 种 tone 渲染对应 icon 颜色", () => {
+    const { container, rerender } = render(<EmptyState title="t" tone="default" />);
+    expect(container.querySelector("svg")?.parentElement?.className).toContain(
+      "text-slate-300"
+    );
+    rerender(<EmptyState title="t" tone="success" />);
+    expect(container.querySelector("svg")?.parentElement?.className).toContain(
+      "text-emerald-300"
+    );
+    rerender(<EmptyState title="t" tone="warning" />);
+    expect(container.querySelector("svg")?.parentElement?.className).toContain(
+      "text-amber-300"
+    );
   });
 });
