@@ -1,12 +1,5 @@
 import { describe, it, expect } from "vitest";
-
-// 测试时间间隔格式化逻辑(用本地模拟函数)
-function formatTimeGap(since: Date, now: Date = new Date()): string {
-  const days = Math.floor((now.getTime() - since.getTime()) / 86400000);
-  if (days <= 0) return "今天";
-  if (days === 1) return "昨天";
-  return `${days} 天前`;
-}
+import { formatTimeGap } from "../lib/date";
 
 describe("formatTimeGap", () => {
   const now = new Date("2026-07-12T00:00:00Z");

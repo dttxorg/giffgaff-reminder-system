@@ -9,7 +9,7 @@ import {
   shanghaiParts,
 } from "@/lib/bucket";
 import { formatPhoneForDisplay } from "@/lib/phone";
-import { formatRelativeTime } from "@/lib/date";
+import { formatRelativeTime, formatTimeGap } from "@/lib/date";
 import {
   DayOffsetProgress,
   ReminderWindowAlert,
@@ -184,14 +184,7 @@ export default async function MePage() {
                   <line x1="3" y1="10" x2="21" y2="10" />
                 </svg>
                 {formatRelativeTime(sim.lastPortedAt)}
-                <span className="text-slate-400 ml-1">
-                  ({(() => {
-                    const days = Math.floor((Date.now() - new Date(sim.lastPortedAt).getTime()) / 86400000);
-                    if (days <= 0) return "今天";
-                    if (days === 1) return "昨天";
-                    return `上次保号后 ${days} 天`;
-                  })()})
-                </span>
+                <span className="text-slate-400 ml-1">(上次保号后 {formatTimeGap(new Date(sim.lastPortedAt))})</span>
               </span>)
             </span>
           )}

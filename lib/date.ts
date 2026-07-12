@@ -85,3 +85,17 @@ export function formatUtcShanghaiDual(input: Date | string): string {
   const sh = formatShanghaiDateTime(d).slice(11); // 只取 HH:MM
   return `${utc} UTC · ${sh} (UTC+8)`;
 }
+
+/**
+ * 距离某日 N 天(用于 "上次保号后 5 天" 这种简略中文)
+ * - 0 天 → "今天"
+ * - 1 天 → "昨天"
+ * - N 天 → "N 天前"
+ * - 未来时间(数据异常)→ 仍然 "今天"
+ */
+export function formatTimeGap(since: Date, now: Date = new Date()): string {
+  const days = Math.floor((now.getTime() - since.getTime()) / 86400000);
+  if (days <= 0) return "今天";
+  if (days === 1) return "昨天";
+  return `${days} 天前`;
+}
