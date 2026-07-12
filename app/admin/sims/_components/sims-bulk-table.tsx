@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useState } from "react";
 import { formatRelativeTime } from "@/lib/date";
 import { useRouter } from "next/navigation";
+import { ConfirmModal } from "@/app/_components/confirm-modal";
 
 interface SimRow {
   id: number;
@@ -38,6 +39,17 @@ export function SimsBulkTable({ sims }: SimsBulkTableProps) {
   const [message, setMessage] = useState<
     { kind: "success" | "error"; text: string } | null
   >(null);
+  // 危险操作前弹 ConfirmModal:delete 用 danger 红色、test-push 用 primary 蓝色
+  const [confirm, setConfirm] = useState<
+    | {
+        action: "delete" | "test-push";
+        title: string;
+        description: React.ReactNode;
+        confirmLabel: string;
+        tone: "danger" | "primary";
+      }
+    | null
+  >(null);
 
   const allOnPage = sims.length > 0 && sims.every((s) => selected.has(s.id));
   const someOnPage = sims.some((s) => selected.has(s.id));
@@ -62,18 +74,8 @@ export function SimsBulkTable({ sims }: SimsBulkTableProps) {
     setSelected(next);
   };
 
-  const submit = async (action: "delete" | "pause" | "activate" | "test-push") => {
-    if (selected.size === 0) return;
-    if (
-      (action === "delete" || action === "test-push") &&
-      !confirm(
-        action === "delete"
-          ? `确认删除 ${selected.size} 个号码?\n\n会级联删除绑定 user 和 reminders_sent,不可恢复。`
-          : `确认向 ${selected.size} 个用户发送一次测试推送?\n\n用户的 Sever酱/Bark 等渠道都会收到一条消息(会消耗他们的日配额)。`
-      )
-    ) {
-      return;
-    }
+  const runAction = async (action: "delete" | "pause" | "activate" | "test-push") => {
+    setConfirm(null);
     setLoading(true);
     setMessage(null);
     const url = action === "test-push" ? "/api/admin/sims/test-push" : "/api/admin/sims/batch";
@@ -96,7 +98,7 @@ export function SimsBulkTable({ sims }: SimsBulkTableProps) {
         const ok = data.summary?.success ?? 0;
         const fail = data.summary?.failed ?? 0;
         setMessage({
-          kind: fail === 0 ? "success" : "success",
+          kind: "success",
           text: `测试推送 ${total} 个:成功 ${ok},失败 ${fail}`,
         });
       } else {
@@ -115,6 +117,44 @@ export function SimsBulkTable({ sims }: SimsBulkTableProps) {
     } finally {
       setLoading(false);
     }
+  };
+
+  const submit = async (action: "delete" | "pause" | "activate" | "test-push") => {
+    if (selected.size === 0) return;
+    // 危险/副作用操作弹 ConfirmModal 二次确认(替代原生 confirm())
+    if (action === "delete") {
+      setConfirm({
+        action,
+        title: `确认删除 ${selected.size} 个号码?`,
+        confirmLabel: `删除 ${selected.size} 个`,
+        tone: "danger",
+        description: (
+          <ul className="list-disc list-inside text-slate-600">
+            <li>会级联删除绑定 user 和 reminders_sent</li>
+            <li>不可恢复,删除前请确认已通知相关客户</li>
+          </ul>
+        ),
+      });
+      return;
+    }
+    if (action === "test-push") {
+      setConfirm({
+        action,
+        title: `向 ${selected.size} 个用户发送测试推送?`,
+        confirmLabel: `发送 ${selected.size} 条`,
+        tone: "primary",
+        description: (
+          <ul className="list-disc list-inside text-slate-600">
+            <li>用户的 Sever酱/Bark/Telegram 等渠道都会收到一条消息</li>
+            <li>会消耗对应渠道的当日推送配额(对 Sever酱 免费 5 条/天)</li>
+            <li>用于排查渠道是否配置正确</li>
+          </ul>
+        ),
+      });
+      return;
+    }
+    // pause/activate 直接执行(无破坏性)
+    runAction(action);
   };
 
   return (
@@ -290,6 +330,17 @@ export function SimsBulkTable({ sims }: SimsBulkTableProps) {
           })}
         </tbody>
       </table>
+
+      <ConfirmModal
+        open={confirm !== null}
+        title={confirm?.title ?? ""}
+        confirmLabel={confirm?.confirmLabel}
+        tone={confirm?.tone ?? "primary"}
+        loading={loading}
+        onConfirm={() => confirm && runAction(confirm.action)}
+        onClose={() => !loading && setConfirm(null)}
+        description={confirm?.description}
+      />
     </>
   );
 }

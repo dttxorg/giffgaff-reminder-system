@@ -4,6 +4,7 @@ import { use, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Spinner } from "@/app/_components/skip-to-content";
+import { ConfirmModal } from "@/app/_components/confirm-modal";
 import { formatRelativeTime } from "@/lib/date";
 import { dayOffsetFromBaseline, isInReminderWindow } from "@/lib/bucket";
 
@@ -76,20 +77,21 @@ export default function EditSimPage({ params }: { params: Promise<{ id: string }
     }
   };
 
+  const [deleteOpen, setDeleteOpen] = useState(false);
+
   const onDelete = async () => {
-    if (!confirm("确认删除该号码?所有相关 user / reminder 也会被级联删除。")) return;
     setLoading(true);
     try {
       const resp = await fetch(`/api/admin/sims/${id}`, { method: "DELETE" });
       const data = await resp.json();
       if (!data.ok) {
         setError(data.error || "删除失败");
+        setLoading(false);
         return;
       }
       router.push("/admin/sims");
     } catch (err) {
       setError(err instanceof Error ? err.message : "网络错误");
-    } finally {
       setLoading(false);
     }
   };
@@ -224,7 +226,7 @@ export default function EditSimPage({ params }: { params: Promise<{ id: string }
           </button>
           <button
             type="button"
-            onClick={onDelete}
+            onClick={() => setDeleteOpen(true)}
             disabled={loading}
             className="px-4 py-2 rounded-lg bg-rose-50 text-rose-700 text-sm font-medium hover:bg-rose-100 disabled:opacity-50"
           >
@@ -232,6 +234,30 @@ export default function EditSimPage({ params }: { params: Promise<{ id: string }
           </button>
         </div>
       </form>
+
+      <ConfirmModal
+        open={deleteOpen}
+        title="确认删除该号码？"
+        tone="danger"
+        confirmLabel="删除"
+        loading={loading}
+        onConfirm={onDelete}
+        onClose={() => !loading && setDeleteOpen(false)}
+        description={
+          <>
+            <p>这是一个不可逆操作,删除后:</p>
+            <ul className="list-disc list-inside text-slate-600">
+              <li>该号码及所有相关 user / reminder 会被级联删除</li>
+              <li>绑定的用户账号失效,登录会话被清空</li>
+              {sim?.user && (
+                <li>
+                  当前绑定 user #{sim.user.id} ({sim.user.channel}) 也会被删除
+                </li>
+              )}
+            </ul>
+          </>
+        }
+      />
 
       {/* 最近推送记录: admin 排错最常用信息(为什么最近没收到/失败了) */}
       <div className="mt-6 bg-white rounded-xl border border-slate-200 p-6">

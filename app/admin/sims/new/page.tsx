@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { generateSecurePassword } from "@/lib/password-gen";
+import { ConfirmModal } from "@/app/_components/confirm-modal";
 
 export default function NewSimPage() {
   const router = useRouter();
@@ -12,6 +13,7 @@ export default function NewSimPage() {
   const [initialPassword, setInitialPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [overwriteOpen, setOverwriteOpen] = useState(false);
 
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -42,11 +44,17 @@ export default function NewSimPage() {
 
   const generatePassword = () => {
     // 使用 crypto.getRandomValues(CSPRNG),而非 Math.random,避免被预测
-    // N10:如果已经手输过密码,二次确认避免误点覆盖(尤其长密码)
-    if (initialPassword && !window.confirm("已输入的密码会被新的随机密码覆盖,继续?")) {
+    // N10:如果已经手输过密码,弹 modal 二次确认避免误点覆盖(尤其长密码)
+    if (initialPassword) {
+      setOverwriteOpen(true);
       return;
     }
     setInitialPassword(generateSecurePassword());
+  };
+
+  const confirmOverwrite = () => {
+    setInitialPassword(generateSecurePassword());
+    setOverwriteOpen(false);
   };
 
   return (
@@ -148,6 +156,19 @@ export default function NewSimPage() {
           </button>
         </div>
       </form>
+
+      <ConfirmModal
+        open={overwriteOpen}
+        title="覆盖已输入的密码？"
+        confirmLabel="覆盖"
+        onConfirm={confirmOverwrite}
+        onClose={() => setOverwriteOpen(false)}
+        description={
+          <p>
+            已输入的密码会被新的随机密码覆盖。建议先复制当前密码再继续。
+          </p>
+        }
+      />
     </div>
   );
 }

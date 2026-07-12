@@ -2,6 +2,7 @@
 
 import { useMemo, useRef, useState } from "react";
 import { renderTemplate } from "@/lib/template";
+import { ConfirmModal } from "@/app/_components/confirm-modal";
 
 const DEFAULT = `【Giffgaff 保号提醒】您的号码 {{phone}} 已激活 {{days}} 天，该保号啦！
 点击更新保号时间：{{port_url}}`;
@@ -21,6 +22,8 @@ export default function SettingsForm({ initial }: { initial: string }) {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   // T5:检测"未保存"状态 — template 跟 initial 不同,且没在保存
   const dirty = template !== initial;
+  // T4 替换 confirm() → ConfirmModal:仅在有未保存修改时才弹
+  const [restoreOpen, setRestoreOpen] = useState(false);
 
   // 实时预览(纯前端,不发请求)
   const previewBody = useMemo(
@@ -70,13 +73,16 @@ export default function SettingsForm({ initial }: { initial: string }) {
   };
 
   const onRestoreDefault = () => {
-    if (
-      template !== DEFAULT &&
-      !confirm("确认恢复默认模板?当前编辑的内容会被覆盖。")
-    ) {
+    if (template === DEFAULT) {
+      // 已是默认值,无需确认
       return;
     }
+    setRestoreOpen(true);
+  };
+
+  const confirmRestore = () => {
     setTemplate(DEFAULT);
+    setRestoreOpen(false);
   };
 
   // T3:点击变量按钮 → 在 textarea 光标位置插入
@@ -219,6 +225,23 @@ export default function SettingsForm({ initial }: { initial: string }) {
           恢复默认
         </button>
       </div>
+
+      <ConfirmModal
+        open={restoreOpen}
+        title="确认恢复默认模板？"
+        confirmLabel="恢复默认"
+        tone="primary"
+        onConfirm={confirmRestore}
+        onClose={() => setRestoreOpen(false)}
+        description={
+          <>
+            <p>当前编辑的内容会被覆盖为系统默认模板。</p>
+            <p className="text-xs text-slate-500">
+              已保存到数据库的内容不会被改动(需点「保存」才会写入)。
+            </p>
+          </>
+        }
+      />
     </div>
   );
 }
