@@ -185,7 +185,12 @@ export default async function MePage() {
                 </svg>
                 {formatRelativeTime(sim.lastPortedAt)}
                 <span className="text-slate-400 ml-1">
-                  (上次保号后 {Math.max(0, Math.floor((Date.now() - new Date(sim.lastPortedAt).getTime()) / 86400000))} 天)
+                  ({(() => {
+                    const days = Math.floor((Date.now() - new Date(sim.lastPortedAt).getTime()) / 86400000);
+                    if (days <= 0) return "今天";
+                    if (days === 1) return "昨天";
+                    return `上次保号后 ${days} 天`;
+                  })()})
                 </span>
               </span>)
             </span>
