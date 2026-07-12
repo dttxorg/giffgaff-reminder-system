@@ -35,7 +35,6 @@ export function Breadcrumb() {
     acc += "/" + seg;
     // 最后一段如果像 id (数字/长串),用 "详情" 占位,避免显示 raw id
     const isLast = acc === pathname;
-    const isIdLike = /^\d+$/.test(seg) || /^[a-z0-9]{12,}$/i.test(seg);
     let label = LABELS[acc];
     if (!label) {
       // 父路径能找到 label 则继续用父 label,最后一段显示 "详情"

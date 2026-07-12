@@ -1,5 +1,6 @@
 import { describe, it, expect, vi } from "vitest";
-import { render, waitFor } from "@testing-library/react";
+import { render } from "@testing-library/react";
+import type { ReactElement } from "react";
 
 // HomePage 用 prisma 做 social proof count,mock 掉
 vi.mock("@/lib/db", () => ({
@@ -16,7 +17,7 @@ import HomePage from "../../app/page";
  * 在测试里要 await 一下再 render。
  */
 async function renderHome() {
-  const Comp = (await HomePage()) as any;
+  const Comp = (await HomePage()) as ReactElement;
   return render(Comp);
 }
 
