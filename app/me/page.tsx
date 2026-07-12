@@ -184,6 +184,9 @@ export default async function MePage() {
                   <line x1="3" y1="10" x2="21" y2="10" />
                 </svg>
                 {formatRelativeTime(sim.lastPortedAt)}
+                <span className="text-slate-400 ml-1">
+                  (距激活 {Math.max(0, dayOffset - Math.floor((Date.now() - new Date(sim.lastPortedAt).getTime()) / 86400000))} 天)
+                </span>
               </span>)
             </span>
           )}
