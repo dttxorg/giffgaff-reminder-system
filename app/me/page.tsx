@@ -227,7 +227,24 @@ export default async function MePage() {
               </>
             ) : (
               <>
-                距提醒开始还有{" "}
+                <span className="inline-flex items-center gap-1">
+                  <svg
+                    width={12}
+                    height={12}
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth={2}
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    aria-hidden="true"
+                    className="text-slate-400"
+                  >
+                    <circle cx="12" cy="12" r="10" />
+                    <polyline points="12 6 12 12 16 14" />
+                  </svg>
+                  距提醒开始还有{" "}
+                </span>
                 <strong className="text-slate-900">
                   {170 - dayOffset} 天
                 </strong>
