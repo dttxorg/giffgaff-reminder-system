@@ -50,36 +50,39 @@ export function TodayChannelStats({ stats }: { stats: ChannelStat[] }) {
           const hasFailed = s.failed > 0;
           const noActivity = s.total === 0;
           return (
-            <li
-              key={s.channel}
-              className="flex items-center justify-between text-sm gap-3 py-1"
-            >
-              <span className="text-slate-700 font-medium min-w-[80px]">
-                {label}
-              </span>
-              {noActivity ? (
-                <span className="text-slate-300 text-xs">— 今日无活动</span>
-              ) : (
-                <>
-                  <span
-                    className={
-                      hasFailed
-                        ? "text-rose-700 font-medium"
-                        : "text-slate-700"
-                    }
-                  >
-                    {s.success > 0 && <>{s.success} 成功</>}
-                    {s.failed > 0 && (
-                      <span className={s.success > 0 ? "text-rose-600 ml-1" : "text-rose-700 font-medium"}>
-                        {s.success > 0 ? "· " : ""}{s.failed} 失败
-                      </span>
-                    )}
-                  </span>
-                  <span className="text-slate-400 text-xs">
-                    合计 {s.total}
-                  </span>
-                </>
-              )}
+            <li key={s.channel}>
+              {/* Round 145: 整行点击 → 跳 /admin/reminders?channel=X 排查 */}
+              <Link
+                href={`/admin/reminders?channel=${s.channel}`}
+                className="flex items-center justify-between text-sm gap-3 py-1 -mx-1 px-1 rounded hover:bg-slate-50 transition-colors"
+              >
+                <span className="text-slate-700 font-medium min-w-[80px]">
+                  {label}
+                </span>
+                {noActivity ? (
+                  <span className="text-slate-300 text-xs">— 今日无活动</span>
+                ) : (
+                  <>
+                    <span
+                      className={
+                        hasFailed
+                          ? "text-rose-700 font-medium"
+                          : "text-slate-700"
+                      }
+                    >
+                      {s.success > 0 && <>{s.success} 成功</>}
+                      {s.failed > 0 && (
+                        <span className={s.success > 0 ? "text-rose-600 ml-1" : "text-rose-700 font-medium"}>
+                          {s.success > 0 ? "· " : ""}{s.failed} 失败
+                        </span>
+                      )}
+                    </span>
+                    <span className="text-slate-400 text-xs">
+                      合计 {s.total}
+                    </span>
+                  </>
+                )}
+              </Link>
             </li>
           );
         })}
