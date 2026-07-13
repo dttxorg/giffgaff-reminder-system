@@ -9,7 +9,9 @@ import {
   isInReminderWindow,
   shanghaiParts,
 } from "@/lib/bucket";
+import { getTodayHourlySends } from "@/lib/admin-reminder-stats";
 import { MilestoneBanner } from "./_components/milestone-banner";
+import { TodayHourlyChart } from "./_components/today-hourly-chart";
 import { formatPhoneForDisplay } from "@/lib/phone";
 import { formatRelativeTime, formatTimeGap } from "@/lib/date";
 import {
@@ -79,13 +81,15 @@ export default async function MePage() {
   // Round 144: 今日推送数(更近期的信号,比本月更具体)
   // todayStartUTC = 上海时区今天 0 点(用 sp 算)
   const todayStartUTC = new Date(Date.UTC(sp.year, sp.month - 1, sp.day));
-  const [todayCount, todayFailedCount] = await Promise.all([
+  const [todayCount, todayFailedCount, todayHourlySends] = await Promise.all([
     prisma.reminderSent.count({
       where: { simId: sim.id, sentAt: { gte: todayStartUTC } },
     }),
     prisma.reminderSent.count({
       where: { simId: sim.id, sentAt: { gte: todayStartUTC }, status: "failed" },
     }),
+    // Round 153: 今日按小时分布(给 mini chart 用)
+    getTodayHourlySends(sim.id),
   ]);
 
   const phoneTail4 = sim.phoneNumber.slice(-4);
@@ -380,6 +384,10 @@ export default async function MePage() {
                 </span>
               )}
             </div>
+            {/* Round 153: 今日按小时分布 (24 个 mini bar) */}
+            {todayCount > 0 && (
+              <TodayHourlyChart hours={todayHourlySends} currentHour={sp.hour} />
+            )}
             {lifetimeCount > 0 && (
               <p className="text-xs text-slate-500 mt-1">
                 送达率

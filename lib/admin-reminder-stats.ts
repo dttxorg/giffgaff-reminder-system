@@ -211,3 +211,44 @@ export async function getSimStatusBreakdown(): Promise<SimStatusBreakdown> {
     unbound: total - bound,
   };
 }
+
+/**
+ * Round 153: 取今日按小时(0-23)的推送数
+ *
+ * 业务用例: /me "今日已推" widget 加按小时分布 mini chart,
+ * 让用户看到'今天系统什么时候推过'(e.g. 早上 9 点、下午 2 点、晚上 7 点)。
+ */
+export interface HourlySend {
+  /** 0-23 时 */
+  hour: number;
+  /** 该小时内的推送数 */
+  count: number;
+}
+
+export async function getTodayHourlySends(
+  simId: number
+): Promise<HourlySend[]> {
+  // 取今日所有 reminder,JS 里 group by hour (用上海时区)
+  const todayStartUTC = new Date();
+  todayStartUTC.setUTCHours(0, 0, 0, 0);
+
+  const reminders = await prisma.reminderSent.findMany({
+    where: { simId, sentAt: { gte: todayStartUTC } },
+    select: { sentAt: true },
+  });
+
+  // 初始化 24 个 hour
+  const hourly: HourlySend[] = Array.from({ length: 24 }, (_, hour) => ({
+    hour,
+    count: 0,
+  }));
+
+  for (const r of reminders) {
+    // 用上海时区 hour (sentAt 是 UTC, 手动 +8 算上海)
+    // 简化: 用 getUTCHours + 8 mod 24
+    const shanghaiHour = (r.sentAt.getUTCHours() + 8) % 24;
+    hourly[shanghaiHour].count++;
+  }
+
+  return hourly;
+}
