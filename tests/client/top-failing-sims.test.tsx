@@ -45,3 +45,24 @@ describe("<TopFailingSims />", () => {
     expect(screen.getByText(/7 日失败 top 3/)).toBeInTheDocument();
   });
 });
+
+describe("<TopFailingSims /> 失败次数点击跳转 (round 148)", () => {
+  it("失败次数变 Link,跳 /admin/reminders?simId=X&status=failed", () => {
+    render(<TopFailingSims sims={baseSims} />);
+    // '5 次失败' (simId=1) 应跳 simId=1
+    const link = screen.getByRole("link", { name: "5 次失败" });
+    expect(link).toHaveAttribute(
+      "href",
+      "/admin/reminders?simId=1&status=failed"
+    );
+  });
+
+  it("其他 sim 同样跳自己的 simId", () => {
+    render(<TopFailingSims sims={baseSims} />);
+    const link = screen.getByRole("link", { name: "3 次失败" });
+    expect(link).toHaveAttribute(
+      "href",
+      "/admin/reminders?simId=2&status=failed"
+    );
+  });
+});
