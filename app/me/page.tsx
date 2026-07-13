@@ -10,10 +10,11 @@ import {
   isInReminderWindow,
   shanghaiParts,
 } from "@/lib/bucket";
-import { getTodayHourlySends } from "@/lib/admin-reminder-stats";
+import { getLast7DaysSendsForSim, getTodayHourlySends } from "@/lib/admin-reminder-stats";
 import { MilestoneBanner } from "./_components/milestone-banner";
 import { NextMilestoneHint } from "./_components/next-milestone-hint";
 import { TodayHourlyChart } from "./_components/today-hourly-chart";
+import { MonthDailyChart } from "./_components/month-daily-chart";
 import { formatPhoneForDisplay } from "@/lib/phone";
 import { formatRelativeTime, formatTimeGap } from "@/lib/date";
 import {
@@ -85,7 +86,7 @@ export default async function MePage() {
   // Round 144: 今日推送数(更近期的信号,比本月更具体)
   // todayStartUTC = 上海时区今天 0 点(用 sp 算)
   const todayStartUTC = new Date(Date.UTC(sp.year, sp.month - 1, sp.day));
-  const [todayCount, todayFailedCount, todayHourlySends] = await Promise.all([
+  const [todayCount, todayFailedCount, todayHourlySends, last7DaysForSim] = await Promise.all([
     prisma.reminderSent.count({
       where: { simId: sim.id, sentAt: { gte: todayStartUTC } },
     }),
@@ -94,6 +95,8 @@ export default async function MePage() {
     }),
     // Round 153: 今日按小时分布(给 mini chart 用)
     getTodayHourlySends(sim.id),
+    // Round 158: 近 7 日每日推送(给本月视图 mini bar 用)
+    getLast7DaysSendsForSim(sim.id),
   ]);
 
   const phoneTail4 = sim.phoneNumber.slice(-4);
@@ -398,6 +401,10 @@ export default async function MePage() {
             {/* Round 153: 今日按小时分布 (24 个 mini bar) */}
             {todayCount > 0 && (
               <TodayHourlyChart hours={todayHourlySends} currentHour={sp.hour} />
+            )}
+            {/* Round 158: 近 7 日每日 mini bar (本月视图) */}
+            {thisMonthCount > 0 && (
+              <MonthDailyChart days={last7DaysForSim} />
             )}
             {lifetimeCount > 0 && (
               <p className="text-xs text-slate-500 mt-1">

@@ -330,3 +330,35 @@ export async function getLast7DaysNewSims(): Promise<{
 
   return { total, daily };
 }
+
+/**
+ * Round 158: 取最近 7 天每日推送数(per sim)
+ *
+ * 业务用例: /me "本月已推 N 条" widget 加近 7 日每日 mini bar,
+ * 让用户看到"这个月内,具体哪几天推过"。
+ *
+ * 跟 getLast7DaysSends (无 simId 过滤) 的区别:这里只取本 sim 的数据。
+ */
+export async function getLast7DaysSendsForSim(
+  simId: number
+): Promise<DailySend[]> {
+  const todayStartUTC = new Date();
+  todayStartUTC.setUTCHours(0, 0, 0, 0);
+
+  const days = await Promise.all(
+    Array.from({ length: 7 }, async (_, i) => {
+      const offset = 6 - i;
+      const dayStart = new Date(todayStartUTC.getTime() - offset * 24 * 60 * 60 * 1000);
+      const dayEnd = new Date(dayStart.getTime() + 24 * 60 * 60 * 1000);
+      const count = await prisma.reminderSent.count({
+        where: { simId, sentAt: { gte: dayStart, lt: dayEnd } },
+      });
+      return {
+        offset,
+        date: new Date(dayStart.getTime() + 12 * 60 * 60 * 1000),
+        count,
+      };
+    })
+  );
+  return days;
+}
