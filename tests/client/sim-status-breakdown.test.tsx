@@ -88,7 +88,7 @@ describe("<SimStatusBreakdown /> 近 7 日新增 (round 157)", () => {
         newSimsLast7Days={newSimsLast7Days}
       />
     );
-    expect(screen.getByText("近 7 日新增")).toBeInTheDocument();
+    expect(screen.getByText("近 7 日新增 sim")).toBeInTheDocument();
     // 5 个,数字在 strong 标签里
     expect(screen.getByText("5")).toBeInTheDocument();
   });
@@ -138,5 +138,82 @@ describe("<SimStatusBreakdown /> 近 7 日新增 (round 157)", () => {
   it("不传 newSimsLast7Days → 不渲染近 7 日区块 (向后兼容)", () => {
     render(<SimStatusBreakdown stats={baseStats} />);
     expect(screen.queryByText("近 7 日新增")).toBeNull();
+  });
+});
+
+describe("<SimStatusBreakdown /> 近 7 日新增 user (round 171)", () => {
+  const newUsersLast7Days = {
+    total: 3,
+    daily: [
+      { date: new Date(Date.UTC(2026, 6, 7)), count: 0 },
+      { date: new Date(Date.UTC(2026, 6, 8)), count: 1 },
+      { date: new Date(Date.UTC(2026, 6, 9)), count: 0 },
+      { date: new Date(Date.UTC(2026, 6, 10)), count: 0 },
+      { date: new Date(Date.UTC(2026, 6, 11)), count: 0 },
+      { date: new Date(Date.UTC(2026, 6, 12)), count: 1 },
+      { date: new Date(Date.UTC(2026, 6, 13)), count: 1 },
+    ],
+  };
+
+  it("渲染 '近 7 日新增用户 N 个'", () => {
+    render(
+      <SimStatusBreakdown
+        stats={baseStats}
+        newUsersLast7Days={newUsersLast7Days}
+      />
+    );
+    expect(screen.getByText("近 7 日新增用户")).toBeInTheDocument();
+    // 3 个用户
+    expect(screen.getByText("3")).toBeInTheDocument();
+  });
+
+  it("7 天无新绑定时显示 '7 天无新绑定'", () => {
+    const emptyNew = { total: 0, daily: newUsersLast7Days.daily.map((d) => ({ ...d, count: 0 })) };
+    render(
+      <SimStatusBreakdown stats={baseStats} newUsersLast7Days={emptyNew} />
+    );
+    expect(screen.getByText("7 天无新绑定")).toBeInTheDocument();
+  });
+
+  it("渲染 7 个 user 柱 (indigo 色系)", () => {
+    render(
+      <SimStatusBreakdown
+        stats={baseStats}
+        newUsersLast7Days={newUsersLast7Days}
+      />
+    );
+    // 找 07-13 新增 1 的柱 (今天的)
+    const todayBar = screen.getByLabelText("07-13 新增 1");
+    expect(todayBar).toBeInTheDocument();
+    // aria-label 是 '近 7 日新增 user 趋势'
+    const userList = screen.getByLabelText("近 7 日新增 user 趋势");
+    expect(userList).toBeInTheDocument();
+  });
+
+  it("今天的 user 柱 (offset=6) 用 indigo-600 深色", () => {
+    render(
+      <SimStatusBreakdown
+        stats={baseStats}
+        newUsersLast7Days={newUsersLast7Days}
+      />
+    );
+    const todayBar = screen.getByLabelText("07-13 新增 1");
+    expect(todayBar.getAttribute("style")).toContain("rgb(99, 102, 241)"); // indigo-600
+  });
+
+  it("其他天用 indigo-300 浅色 (跟 sim 用 emerald 区分)", () => {
+    render(
+      <SimStatusBreakdown
+        stats={baseStats}
+        newUsersLast7Days={newUsersLast7Days}
+      />
+    );
+    const otherBar = screen.getByLabelText("07-08 新增 1");
+    expect(otherBar.getAttribute("style")).toContain("rgb(199, 210, 254)"); // indigo-300
+  });
+
+  it("不传 newUsersLast7Days → 不渲染近 7 日新增用户区块", () => {
+    render(<SimStatusBreakdown stats={baseStats} />);
+    expect(screen.queryByText("近 7 日新增用户")).toBeNull();
   });
 });
