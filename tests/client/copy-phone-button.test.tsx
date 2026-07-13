@@ -60,3 +60,18 @@ describe("<CopyPhoneButton />", () => {
     expect(screen.getByText("已复制")).toBeInTheDocument();
   });
 });
+
+describe("<CopyPhoneButton /> 移动端 a11y (round 142)", () => {
+  it("按钮 className 包含 min-h-[44px](移动端触摸目标 ≥44px)", () => {
+    render(<CopyPhoneButton phone="07724215611" />);
+    const btn = screen.getByRole("button", { name: /复制完整手机号/ });
+    expect(btn.className).toContain("min-h-[44px]");
+  });
+
+  it("按钮 min-h 类名在 '已复制' 状态也保留", () => {
+    render(<CopyPhoneButton phone="07724215611" />);
+    fireEvent.click(screen.getByRole("button"));
+    const btn = screen.getByRole("button");
+    expect(btn.className).toContain("min-h-[44px]");
+  });
+});
