@@ -135,7 +135,7 @@ describe("<LoginPage />", () => {
     expect(screen.getByText(/忘记密码请联系管理员重置/)).toBeInTheDocument();
   });
 
-  it("提交中 → 按钮显示 Spinner(aria-label 登录中)+ '登录中...' 文本,按钮 disabled", async () => {
+  it("提交中 → LoadingButton 显示 '登录中' 文本 + Spinner(aria-busy=true) + disabled", async () => {
     const user = userEvent.setup();
     // 让 fetch 一直 pending,确保 loading 状态保持
     mockFetch.mockImplementation(
@@ -149,18 +149,18 @@ describe("<LoginPage />", () => {
     await user.type(document.querySelector('input[type="password"]')!, "secret123");
     await user.click(screen.getByRole("button", { name: "登录" }));
 
-    // loading 态:文本 + spinner
-    expect(screen.getByText("登录中...")).toBeInTheDocument();
-    // Spinner label 用 sr-only span 包,getByText 仍能拿到
-    expect(screen.getAllByText("登录中").length).toBeGreaterThanOrEqual(1);
-    // 按钮 disabled
-    const btn = screen.getByRole("button", { name: /登录中/ });
-    expect(btn).toBeDisabled();
+    // loading 态:LoadingButton 显示 loadingLabel "登录中"
+    // 用 getAllByText 找包含 '登录中' 的元素(Spinner sr-only label + 文本)
+    const allBtns = screen.getAllByRole("button");
+    const submitBtn = allBtns.find((b) => b.getAttribute("type") === "submit")!;
+    expect(submitBtn).toBeDisabled();
+    expect(submitBtn).toHaveAttribute("aria-busy", "true");
+    expect(submitBtn).toHaveTextContent("登录中");
   });
 });
 
 describe("<LoginPage /> disabled 视觉(L4)", () => {
-  it("提交中(disabled=true)→ 按钮文字色 text-slate-300 (跟未禁用区分)", async () => {
+  it("提交中(disabled=true)→ LoadingButton 变浅色(disabled:bg-indigo-300)+ aria-busy=true", async () => {
     const user = userEvent.setup();
     mockFetch.mockImplementation(
       () => new Promise(() => {})
@@ -170,9 +170,11 @@ describe("<LoginPage /> disabled 视觉(L4)", () => {
     await user.type(document.querySelector('input[type="password"]')!, "secret123");
     await user.click(screen.getByRole("button", { name: "登录" }));
 
-    const btn = screen.getByRole("button", { name: /登录中/ });
-    // 加载时按钮被禁用,文字色应跟未禁用不同(text-slate-300)
-    expect(btn.className).toContain("disabled:text-slate-300");
-    expect(btn).toBeDisabled();
+    const allBtns = screen.getAllByRole("button");
+    const submitBtn = allBtns.find((b) => b.getAttribute("type") === "submit")!;
+    // 加载时按钮被禁用,LoadingButton 用 disabled:bg-indigo-300 视觉变浅
+    expect(submitBtn.className).toContain("disabled:bg-indigo-300");
+    expect(submitBtn).toBeDisabled();
+    expect(submitBtn).toHaveAttribute("aria-busy", "true");
   });
 });
