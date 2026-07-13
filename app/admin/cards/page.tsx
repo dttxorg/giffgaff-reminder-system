@@ -8,6 +8,7 @@ import { CardDeleteButton } from "./delete-button";
 import { CopyCodeButton } from "./_components/copy-code-button";
 import { EmptyState } from "@/app/_components/empty-state";
 import { Pagination } from "../_components/pagination";
+import { AutoSubmitForm } from "../_components/auto-submit-form";
 
 interface PageProps {
   searchParams: Promise<{ used?: string; q?: string; page?: string }>;
@@ -93,7 +94,7 @@ export default async function CardsPage({ searchParams }: PageProps) {
         </div>
       </div>
 
-      <form className="mb-4 flex gap-2 flex-wrap">
+      <AutoSubmitForm className="mb-4 flex gap-2 flex-wrap">
         <input
           name="q"
           defaultValue={q}
@@ -115,7 +116,7 @@ export default async function CardsPage({ searchParams }: PageProps) {
         >
           搜索
         </button>
-      </form>
+      </AutoSubmitForm>
 
       <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
         <div className="overflow-x-auto">

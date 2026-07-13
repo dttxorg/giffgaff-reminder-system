@@ -5,6 +5,7 @@ import { prisma } from "@/lib/db";
 import { UsersClient } from "./users-client";
 import { AdminStat } from "../_components/admin-stat";
 import { Pagination } from "../_components/pagination";
+import { AutoSubmitForm } from "../_components/auto-submit-form";
 import type { Prisma } from "@/lib/generated/prisma/client";
 
 interface PageProps {
@@ -87,7 +88,7 @@ export default async function UsersPage({ searchParams }: PageProps) {
       </div>
 
       {/* U5: 筛选 — 服务管理员快速定位 "没设密码" 或 "用 Bark 的所有用户" */}
-      <form className="mb-4 flex gap-2 flex-wrap">
+      <AutoSubmitForm className="mb-4 flex gap-2 flex-wrap">
         <select
           name="channel"
           defaultValue={channel || ""}
@@ -122,7 +123,7 @@ export default async function UsersPage({ searchParams }: PageProps) {
             清除
           </Link>
         )}
-      </form>
+      </AutoSubmitForm>
 
       <UsersClient users={rows} />
 

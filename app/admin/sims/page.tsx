@@ -6,6 +6,7 @@ import { CsvImportButton } from "./csv-import-button";
 import { EmptyState } from "@/app/_components/empty-state";
 import { AdminStat } from "../_components/admin-stat";
 import { Pagination } from "../_components/pagination";
+import { AutoSubmitForm } from "../_components/auto-submit-form";
 import { SimsBulkTable } from "./_components/sims-bulk-table";
 import type { Prisma } from "@/lib/generated/prisma/client";
 
@@ -118,7 +119,7 @@ export default async function SimsPage({ searchParams }: PageProps) {
         </div>
       </div>
 
-      <form className="mb-4 flex gap-2 flex-wrap">
+      <AutoSubmitForm className="mb-4 flex gap-2 flex-wrap">
         <input
           name="q"
           defaultValue={q}
@@ -149,7 +150,7 @@ export default async function SimsPage({ searchParams }: PageProps) {
         >
           搜索
         </button>
-      </form>
+      </AutoSubmitForm>
 
       <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
         {rows.length === 0 ? (

@@ -8,6 +8,7 @@ import { buildReminderWhere } from "@/lib/admin-reminder-filter";
 import { AdminStat } from "../_components/admin-stat";
 import { Pagination } from "../_components/pagination";
 import { ResendButton } from "./_components/resend-button";
+import { AutoSubmitForm } from "../_components/auto-submit-form";
 
 interface PageProps {
   searchParams: Promise<{
@@ -253,7 +254,7 @@ function SearchForm({
 }) {
   const hasFilter = !!(simId || q || status || channel || bound || from || to);
   return (
-    <form className="mb-4 flex gap-2 flex-wrap items-center">
+    <AutoSubmitForm className="mb-4 flex gap-2 flex-wrap items-center">
       <input
         name="simId"
         defaultValue={simId}
@@ -328,6 +329,6 @@ function SearchForm({
           清除
         </Link>
       )}
-    </form>
+    </AutoSubmitForm>
   );
 }
