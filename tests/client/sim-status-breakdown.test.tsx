@@ -364,3 +364,50 @@ describe("<SimStatusBreakdown /> 近 7 日新增 sim 柱 (round 187)", () => {
     expect(container.querySelectorAll("a[title*='点击查看当日 sim']").length).toBe(7);
   });
 });
+
+describe("<SimStatusBreakdown /> 近 7 日新增 user 柱 (round 188)", () => {
+  const newUsersLast7Days = {
+    total: 3,
+    daily: [
+      { date: new Date(Date.UTC(2026, 6, 7)), count: 0 },
+      { date: new Date(Date.UTC(2026, 6, 8)), count: 1 },
+      { date: new Date(Date.UTC(2026, 6, 9)), count: 0 },
+      { date: new Date(Date.UTC(2026, 6, 10)), count: 0 },
+      { date: new Date(Date.UTC(2026, 6, 11)), count: 0 },
+      { date: new Date(Date.UTC(2026, 6, 12)), count: 1 },
+      { date: new Date(Date.UTC(2026, 6, 13)), count: 1 },
+    ],
+  };
+
+  it("每根 user 柱是 Link,跳 /admin/users?from=&to= 当天", () => {
+    const { container } = render(
+      <SimStatusBreakdown
+        stats={baseStats}
+        newUsersLast7Days={newUsersLast7Days}
+      />
+    );
+    const userLinks = container.querySelectorAll('a[href^="/admin/users?from="]');
+    expect(userLinks.length).toBe(7);
+  });
+
+  it("今天的 user 柱 (offset=6) 跳今天日期", () => {
+    const { container } = render(
+      <SimStatusBreakdown
+        stats={baseStats}
+        newUsersLast7Days={newUsersLast7Days}
+      />
+    );
+    const todayLink = container.querySelector('a[aria-label="07-13 新增 1"]');
+    expect(todayLink?.getAttribute("href")).toBe("/admin/users?from=2026-07-13&to=2026-07-13");
+  });
+
+  it("hover 提示 '(点击查看当日 user)'", () => {
+    const { container } = render(
+      <SimStatusBreakdown
+        stats={baseStats}
+        newUsersLast7Days={newUsersLast7Days}
+      />
+    );
+    expect(container.querySelectorAll("a[title*='点击查看当日 user']").length).toBe(7);
+  });
+});
