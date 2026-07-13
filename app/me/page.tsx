@@ -15,6 +15,7 @@ import { MilestoneBanner } from "./_components/milestone-banner";
 import { NextMilestoneHint } from "./_components/next-milestone-hint";
 import { TodayHourlyChart } from "./_components/today-hourly-chart";
 import { MonthDailyChart } from "./_components/month-daily-chart";
+import { DaysUntilWindowCountdown } from "./_components/days-until-window-countdown";
 import { formatPhoneForDisplay } from "@/lib/phone";
 import { formatRelativeTime, formatTimeGap } from "@/lib/date";
 import {
@@ -298,6 +299,11 @@ export default async function MePage() {
                 <strong className="text-slate-900">
                   {170 - dayOffset} 天
                 </strong>
+                {/* Round 159: 实时倒计时 (每小时更新) */}
+                <DaysUntilWindowCountdown
+                  targetDayOffset={170}
+                  currentDayOffset={dayOffset}
+                />
                 ,提醒窗口 170-180 天。
               </>
             )}
