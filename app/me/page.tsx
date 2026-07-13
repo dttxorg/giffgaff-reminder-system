@@ -6,11 +6,12 @@ import {
   bucketForDay,
   dayOffsetFromBaseline,
   getMilestone,
-  getNextMilestone,
+  getAnniversaryProgress, getNextMilestone,
   isInReminderWindow,
   shanghaiParts,
 } from "@/lib/bucket";
 import { getLast7DaysSendsForSim, getTodayHourlySends } from "@/lib/admin-reminder-stats";
+import { AnniversaryProgress } from "./_components/anniversary-progress";
 import { MilestoneBanner } from "./_components/milestone-banner";
 import { NextMilestoneHint } from "./_components/next-milestone-hint";
 import { TodayHourlyChart } from "./_components/today-hourly-chart";
@@ -39,6 +40,8 @@ export default async function MePage() {
   const milestone = getMilestone(dayOffset);
   // Round 155: 下一个里程碑激励 hint(只在未命中里程碑时显示)
   const nextMilestone = milestone ? null : getNextMilestone(dayOffset);
+  // Round 168: 周年进度(只在 years >= 1 时有意义,留给组件条件渲染)
+  const anniversary = getAnniversaryProgress(dayOffset);
 
   // M3: 最近 5 条 + lifetime 总数(并行)
   // 总数让用户知道系统"一直在跑",透明度提升
@@ -251,6 +254,10 @@ export default async function MePage() {
               milestone={nextMilestone.milestone}
               daysLeft={nextMilestone.daysLeft}
             />
+          )}
+          {/* Round 168: 周年进度 (years >= 1 才显示) */}
+          {anniversary.years >= 1 && (
+            <AnniversaryProgress progress={anniversary} />
           )}
         </div>
         <DayOffsetProgress dayOffset={dayOffset} />

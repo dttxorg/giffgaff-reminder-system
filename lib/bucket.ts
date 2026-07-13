@@ -192,6 +192,38 @@ export function getMilestone(dayOffset: number): Milestone | null {
   return MILESTONES.find((m) => m.days === dayOffset) ?? null;
 }
 
+
+
+/**
+ * Round 168: 算"激活至今"周年里程碑进度
+ *
+ * 业务用例: /me 顶部 widget 显示"激活 X 年 Y 天,距 1 周年还差 N 天"
+ * 让用户知道长期使用的里程碑(1/2/3... 周年)
+ */
+export interface AnniversaryProgress {
+  /** 完整周年数 (0/1/2/...) */
+  years: number;
+  /** 距下一个周年还差多少天 */
+  daysToNextAnniversary: number;
+  /** 当前激活总天数(用于显示 X 年 Y 天) */
+  totalDays: number;
+  /** 距下个周年还差多少天 (跟 daysToNextAnniversary 相同,语义化命名) */
+  daysLeft: number;
+}
+
+export function getAnniversaryProgress(
+  dayOffset: number
+): AnniversaryProgress {
+  const years = Math.floor(dayOffset / 365);
+  const daysToNextAnniversary = 365 - (dayOffset % 365);
+  return {
+    years,
+    daysToNextAnniversary,
+    totalDays: dayOffset,
+    daysLeft: daysToNextAnniversary,
+  };
+}
+
 /**
  * Round 155: 返回下一个还没到达的里程碑 + 距它还有多少天。
  *
