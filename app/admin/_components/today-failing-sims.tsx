@@ -3,11 +3,26 @@
 // - 每行: 手机号 + 失败次数 (rose 配色)
 // - 0 失败时显示 "✓ 今日无失败" 成功提示
 // - 点击手机号跳 /admin/sims/[id],点击数字跳 /admin/reminders?simId=X&status=failed
+// - Round 183: 加 sortBy prop (默认 "failedCount" 倒序, "simId" 按 simId 升序)
 
 import Link from "next/link";
 import type { TodayFailingSim } from "@/lib/admin-reminder-stats";
 
-export function TodayFailingSims({ sims }: { sims: TodayFailingSim[] }) {
+export function TodayFailingSims({
+  sims,
+  sortBy = "failedCount",
+}: {
+  sims: TodayFailingSim[];
+  /** Round 183: 排序方式, "failedCount" 按失败次数倒序, "simId" 按 simId 升序 */
+  sortBy?: "failedCount" | "simId";
+}) {
+  // Round 183: 排序 (跟其他 sim 列表卡一致)
+  const sortedSims = [...sims].sort((a, b) => {
+    if (sortBy === "simId") {
+      return a.simId - b.simId;
+    }
+    return b.failedCount - a.failedCount;
+  });
   return (
     <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 mt-4">
       <div className="flex items-baseline justify-between mb-3">
@@ -37,7 +52,7 @@ export function TodayFailingSims({ sims }: { sims: TodayFailingSim[] }) {
           查看所有失败 →
         </Link>
       </div>
-      {sims.length === 0 ? (
+      {sortedSims.length === 0 ? (
         <p className="text-sm text-emerald-700 py-2 inline-flex items-center gap-1">
           <svg
             width={14}
@@ -56,7 +71,7 @@ export function TodayFailingSims({ sims }: { sims: TodayFailingSim[] }) {
         </p>
       ) : (
         <ul className="space-y-1.5">
-          {sims.map((s) => (
+          {sortedSims.map((s) => (
             <li
               key={s.simId}
               className="flex items-center justify-between text-sm gap-3 py-1"
