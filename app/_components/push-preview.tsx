@@ -105,6 +105,24 @@ export async function PushPreview({
             {Array.from(unknown).map((v) => `{{${v}}}`).join(", ")}。这些会原样输出,不会替换。
           </div>
         )}
+        {/* Round 178: 变量说明 legend (帮助用户理解每个变量的含义) */}
+        <div className="text-xs text-slate-500 border-t border-slate-100 pt-3">
+          <div className="font-medium text-slate-600 mb-1.5">变量说明</div>
+          <ul className="space-y-1">
+            <li>
+              <code className="bg-slate-100 px-1 rounded text-rose-700 font-mono">{"{{phone}}"}</code>
+              <span className="ml-1.5">完整手机号(如 07724 215611)</span>
+            </li>
+            <li>
+              <code className="bg-slate-100 px-1 rounded text-rose-700 font-mono">{"{{days}}"}</code>
+              <span className="ml-1.5">当前 day offset(距激活日的天数)</span>
+            </li>
+            <li>
+              <code className="bg-slate-100 px-1 rounded text-rose-700 font-mono">{"{{port_url}}"}</code>
+              <span className="ml-1.5">保号页 URL(/p/{"<token>"})</span>
+            </li>
+          </ul>
+        </div>
       </div>
     </div>
   );
