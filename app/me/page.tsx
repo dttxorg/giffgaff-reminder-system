@@ -60,8 +60,17 @@ export default async function MePage() {
   // 计算当前小时的 bucket(用于显示"今天第几次推送")
   // Round 137: 把当前时间传给 ReminderWindowAlert,用于算"距下次推送多久"
   const now = new Date();
-  const hourOfDay = shanghaiParts(now).hour;
+  const sp = shanghaiParts(now);
+  const hourOfDay = sp.hour;
   const bucketInfo = bucketForDay(dayOffset, hourOfDay);
+
+  // Round 138: 本月推送数(更近期的信号,比 lifetimeCount 更相关)
+  const thisMonthCount = await prisma.reminderSent.count({
+    where: {
+      simId: sim.id,
+      sentAt: { gte: new Date(Date.UTC(sp.year, sp.month - 1, 1)) },
+    },
+  });
 
   const phoneTail4 = sim.phoneNumber.slice(-4);
   const channelMissing = !user.channelKey;
@@ -328,12 +337,18 @@ export default async function MePage() {
 
       {/* M3: 最近发送给我的提醒 — 透明度,让用户知道系统到底推过啥 */}
       <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 mt-4">
-        <div className="flex items-baseline justify-between mb-3">
+        <div className="flex items-baseline justify-between mb-3 flex-wrap gap-2">
           <div>
             <div className="text-sm text-slate-500">最近推送给我</div>
             <div className="text-2xl font-bold text-slate-900 mt-0.5">
               {lifetimeCount}
               <span className="text-sm font-normal text-slate-500 ml-1.5">条累计</span>
+              {/* Round 138: 本月推送(更近期信号,比 lifetime 更相关) */}
+              {thisMonthCount > 0 && (
+                <span className="text-sm font-normal text-slate-500 ml-2" title={`本月 (${sp.year}-${String(sp.month).padStart(2, "0")}) 已推 ${thisMonthCount} 条`}>
+                  · 本月 <strong className="text-slate-700">{thisMonthCount}</strong> 条
+                </span>
+              )}
             </div>
             {lifetimeCount > 0 && (
               <p className="text-xs text-slate-500 mt-1">
