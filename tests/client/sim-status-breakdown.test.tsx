@@ -411,3 +411,37 @@ describe("<SimStatusBreakdown /> 近 7 日新增 user 柱 (round 188)", () => {
     expect(container.querySelectorAll("a[title*='点击查看当日 user']").length).toBe(7);
   });
 });
+
+describe("<SimStatusBreakdown /> 近 7 日绑定率 sparkline 加点击跳转 (round 192)", () => {
+  const bindRateLast7Days = [
+    { date: new Date(Date.UTC(2026, 6, 7)), boundCount: 20, totalSimCount: 50, bindRate: 40 },
+    { date: new Date(Date.UTC(2026, 6, 13)), boundCount: 30, totalSimCount: 52, bindRate: 58 },
+  ];
+
+  it("绑定率 sparkline 整块变 Link,跳 /admin/sims?bound=no", () => {
+    const { container } = render(
+      <SimStatusBreakdown
+        stats={baseStats}
+        bindRateLast7Days={bindRateLast7Days}
+      />
+    );
+    const bindLink = container.querySelector('a[href="/admin/sims?bound=no"]');
+    expect(bindLink).not.toBeNull();
+  });
+
+  it("hover 绑定率 sparkline 变 slate-50 背景色 (transition-colors)", () => {
+    const { container } = render(
+      <SimStatusBreakdown
+        stats={baseStats}
+        bindRateLast7Days={bindRateLast7Days}
+      />
+    );
+    const bindLink = container.querySelector('a[href="/admin/sims?bound=no"]');
+    expect(bindLink!.className).toContain("hover:bg-slate-50");
+  });
+
+  it("不传 bindRateLast7Days → 不渲染绑定率变化区块", () => {
+    render(<SimStatusBreakdown stats={baseStats} />);
+    expect(screen.queryByText(/近 7 日绑定率/)).toBeNull();
+  });
+});
