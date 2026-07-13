@@ -257,6 +257,15 @@ export default async function MePage() {
           >
             推送历史 →
           </Link>
+          {/* Round 181: 成功推送次数 (lifetimeCount = total, successCount = delivered) */}
+          <span className="ml-2 text-xs text-slate-500" title={`系统累计推送 ${lifetimeCount} 次 (成功 ${successCount} 次, 失败 ${failedCount} 次)`}>
+            <Link
+              href="/me/pushes?status=success"
+              className="text-emerald-700 hover:underline"
+            >
+              {successCount} 次成功
+            </Link>
+          </span>
           {/* Round 155: 下一个里程碑激励 hint */}
           {nextMilestone && (
             <NextMilestoneHint
