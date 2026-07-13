@@ -193,7 +193,11 @@ export default async function MePage() {
           </Link>
         </div>
         <div className="text-base mb-4">
-          <span className="cursor-help inline-flex items-center gap-1" title={new Date(sim.activatedAt).toLocaleString("zh-CN")}>
+          <span
+            className="cursor-help inline-flex items-center gap-1"
+            /* Round 190: 显示完整激活时间 (年月日 时分秒) */
+            title={`激活于 ${new Date(sim.activatedAt).toLocaleString("zh-CN", { year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", second: "2-digit" })}`}
+          >
             <svg
               width={12}
               height={12}
@@ -206,12 +210,9 @@ export default async function MePage() {
               aria-hidden="true"
               className="text-slate-400"
             >
-              <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
-              <line x1="16" y1="2" x2="16" y2="6" />
-              <line x1="8" y1="2" x2="8" y2="6" />
-              <line x1="3" y1="10" x2="21" y2="10" />
+              <path d="M20 6L9 17l-5-5" />
             </svg>
-            {formatRelativeTime(sim.activatedAt)} 激活
+            激活日期 {new Date(sim.activatedAt).toLocaleDateString("zh-CN")}
           </span>
           {sim.lastPortedAt && (
             <span className="ml-2 text-xs text-slate-500">
