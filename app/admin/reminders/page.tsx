@@ -4,8 +4,9 @@ import { prisma } from "@/lib/db";
 import { normalizePhone } from "@/lib/phone";
 import { formatRelativeTime, formatUtcShanghaiDual } from "@/lib/date";
 import { shanghaiParts } from "@/lib/bucket";
-import { buildReminderWhere } from "@/lib/admin-reminder-filter";
+import { buildReminderWhere, hasAnyReminderFilter } from "@/lib/admin-reminder-filter";
 import { AdminStat } from "../_components/admin-stat";
+import { EmptyState } from "@/app/_components/empty-state";
 import { Pagination } from "../_components/pagination";
 import { ResendButton } from "./_components/resend-button";
 import { AutoSubmitForm } from "../_components/auto-submit-form";
@@ -108,6 +109,9 @@ export default async function RemindersPage({ searchParams }: PageProps) {
     exportQS.toString() ? "?" + exportQS.toString() : ""
   }`;
 
+  // Round 130: 是否有任何筛选条件(用于 empty state 区分"真没数据" vs "筛选无果")
+  const hasAnyFilter = hasAnyReminderFilter({ simId, q, status, channel, bound, from, to });
+
   return (
     <div className="p-6 sm:p-8">
       <div className="flex items-center justify-between mb-4 flex-wrap gap-3">
@@ -140,9 +144,21 @@ export default async function RemindersPage({ searchParams }: PageProps) {
         to={to}
       />
 
-      {reminders.length === 0 && q ? (
-        <div className="bg-white rounded-xl border border-slate-200 p-8 text-center text-slate-500 text-sm">
-          没有找到匹配 &quot;{q}&quot; 的号码
+      {reminders.length === 0 && hasAnyFilter ? (
+        <div className="bg-white rounded-xl border border-slate-200">
+          <EmptyState
+            tone="default"
+            title={`没有匹配筛选条件的提醒日志`}
+            hint={
+              q
+                ? `手机号 "${q}" 在当前筛选下没匹配。试试清除部分筛选,或直接查看全部。`
+                : `当前筛选组合下没有提醒日志。试试清除部分筛选,或直接查看全部。`
+            }
+            actions={[
+              { href: "/admin/reminders", label: "清除全部筛选", primary: true },
+              { href: "/api/admin/reminders/export" + (q ? `?q=${encodeURIComponent(q)}` : ""), label: "导出筛选结果 CSV" },
+            ]}
+          />
         </div>
       ) : (
         <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">

@@ -105,3 +105,21 @@ export function buildReminderWhere(params: ReminderFilterParams): ReminderWhere 
 
   return where;
 }
+
+
+/**
+ * 判断搜索参数中是否有任意非空字段(用于 empty state 区分"真没数据" vs "筛选无果")。
+ *
+ * 注意: 不包含 `page`(分页不算"筛选"),只关心实质过滤维度。
+ */
+export function hasAnyReminderFilter(params: {
+  simId?: string;
+  q?: string;
+  status?: string;
+  channel?: string;
+  bound?: string;
+  from?: string;
+  to?: string;
+}): boolean {
+  return !!(params.simId || params.q || params.status || params.channel || params.bound || params.from || params.to);
+}
