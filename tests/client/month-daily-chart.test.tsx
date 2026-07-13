@@ -25,7 +25,7 @@ describe("<MonthDailyChart />", () => {
 
   it("hover tooltip 显示完整日期 + 数量", () => {
     render(<MonthDailyChart days={sampleDays} />);
-    expect(screen.getByTitle("07-12 推送 2 条")).toBeInTheDocument();
+    expect(screen.getByTitle(/07-12 推送 2 条/)).toBeInTheDocument();
   });
 
   it("今天 (offset=0) 用 indigo-600 深色", () => {
@@ -50,5 +50,26 @@ describe("<MonthDailyChart />", () => {
     // 找 count=0 的柱
     const zeroBar = screen.getByLabelText("07-13 推送 0 条");
     expect(zeroBar).toBeInTheDocument();
+  });
+});
+
+describe("<MonthDailyChart /> 点击跳转 (round 177)", () => {
+  it("每根柱是 Link,跳 /me/pushes?from=&to= 当天", () => {
+    render(<MonthDailyChart days={sampleDays} />);
+    // 找 offset=2 (i=5, 7+5=12, 2026-07-12) 的柱 (count=2)
+    const link = screen.getByRole("link", { name: "07-12 推送 2 条" });
+    expect(link.getAttribute("href")).toBe("/me/pushes?from=2026-07-12&to=2026-07-12");
+  });
+
+  it("今天的柱 (offset=0) href 是今天日期", () => {
+    render(<MonthDailyChart days={sampleDays} />);
+    // 找 07-13 (今天, i=6, count=0)
+    const link = screen.getByRole("link", { name: "07-13 推送 0 条" });
+    expect(link.getAttribute("href")).toBe("/me/pushes?from=2026-07-13&to=2026-07-13");
+  });
+
+  it("hover 提示 '(点击查看当日推送)'", () => {
+    render(<MonthDailyChart days={sampleDays} />);
+    expect(screen.getAllByTitle(/点击查看当日推送/).length).toBe(7);
   });
 });
