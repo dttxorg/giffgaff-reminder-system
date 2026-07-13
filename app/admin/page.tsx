@@ -5,12 +5,13 @@ import { formatRelativeTime, formatUtcShanghaiDual } from "@/lib/date";
 import { dayOffsetFromBaseline } from "@/lib/bucket";
 import { Last7DaysDetail } from "./_components/last-7-days-detail";
 import { Last30DaysSends } from "./_components/last-30-days-sends";
+import { Last90DaysSends } from "./_components/last-90-days-sends";
 import { AdminStat } from "./_components/admin-stat";
 import { TodayChannelStats } from "./_components/today-channel-stats";
 import { SimStatusBreakdown } from "./_components/sim-status-breakdown";
 import { InWindowSims } from "./_components/in-window-sims";
 import { TopFailingSims } from "./_components/top-failing-sims";
-import { getInWindowSims, getLast30DaysSends, getSimStatusBreakdown, getTodayChannelStats, getTopFailingSims } from "@/lib/admin-reminder-stats";
+import { getInWindowSims, getLast30DaysSends, getLast90DaysSends, getSimStatusBreakdown, getTodayChannelStats, getTopFailingSims } from "@/lib/admin-reminder-stats";
 
 export default async function AdminDashboard() {
   await requireAdmin();
@@ -109,6 +110,9 @@ export default async function AdminDashboard() {
 
   // Round 149: 近 30 日每日发送数(给 30 日 mini bar 用)
   const last30DaysSends = await getLast30DaysSends();
+
+  // Round 156: 近 90 日每日发送数(给 90 日更紧凑 mini bar 用)
+  const last90DaysSends = await getLast90DaysSends();
 
   // Round 151: 提醒窗口内 sim 列表(给"提醒窗口内 sim 列表"卡用)
   const inWindowSims = await getInWindowSims(10);
@@ -218,6 +222,17 @@ export default async function AdminDashboard() {
             </div>
           </div>
           <Last30DaysSends days={last30DaysSends} />
+
+          {/* Round 156: 近 90 日更紧凑 mini bar(超长期趋势) */}
+          <div className="flex items-baseline justify-between mb-1 mt-3">
+            <div className="text-xs text-slate-500">
+              近 90 日每日发送
+              <span className="ml-2 text-slate-400">
+                90 天累计 {last90DaysSends.reduce((a: number, b) => a + b.count, 0)} 条
+              </span>
+            </div>
+          </div>
+          <Last90DaysSends days={last90DaysSends} />
         </div>
       </div>
 

@@ -252,3 +252,31 @@ export async function getTodayHourlySends(
 
   return hourly;
 }
+
+/**
+ * Round 156: 取最近 90 天每日推送数
+ *
+ * 跟 getLast30DaysSends 思路相同,只是窗口拉长到 90 天。
+ * 给 admin 仪表盘 mini bar 用,展示更长期趋势。
+ */
+export async function getLast90DaysSends(): Promise<DailySend[]> {
+  const todayStartUTC = new Date();
+  todayStartUTC.setUTCHours(0, 0, 0, 0);
+
+  const days = await Promise.all(
+    Array.from({ length: 90 }, async (_, i) => {
+      const offset = 89 - i;
+      const dayStart = new Date(todayStartUTC.getTime() - offset * 24 * 60 * 60 * 1000);
+      const dayEnd = new Date(dayStart.getTime() + 24 * 60 * 60 * 1000);
+      const count = await prisma.reminderSent.count({
+        where: { sentAt: { gte: dayStart, lt: dayEnd } },
+      });
+      return {
+        offset,
+        date: new Date(dayStart.getTime() + 12 * 60 * 60 * 1000),
+        count,
+      };
+    })
+  );
+  return days;
+}
