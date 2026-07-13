@@ -1,4 +1,5 @@
 // Round 152: /admin 仪表盘"sim 状态"分布
+import Link from "next/link";
 // - 4 维度: 总数 / 活跃 / 暂停 / 已绑 / 未绑
 // - 进度条可视化
 // - 数字 hover 显示百分比
@@ -49,8 +50,11 @@ export function SimStatusBreakdown({
         <span className="text-xs text-slate-500">共 {total} 个</span>
       </div>
 
-      {/* 活跃/暂停 状态条 */}
-      <div className="mb-3">
+      {/* Round 179: 活跃/暂停 进度条加点击跳转 /admin/sims?status=active/paused */}
+      <Link
+        href="/admin/sims?status=active"
+        className="block mb-3 -mx-1 px-1 rounded hover:bg-slate-50 transition-colors"
+      >
         <div className="flex items-baseline justify-between text-xs text-slate-600 mb-1">
           <span>活跃 / 暂停</span>
           <span>
@@ -74,10 +78,13 @@ export function SimStatusBreakdown({
             title={`活跃 ${active} / ${total} (${activePct}%)`}
           />
         </div>
-      </div>
+      </Link>
 
-      {/* 绑定率 状态条 */}
-      <div>
+      {/* Round 179: 已绑/未绑 进度条加点击跳转 /admin/sims?bound=yes/no */}
+      <Link
+        href="/admin/sims?bound=no"
+        className="block -mx-1 px-1 rounded hover:bg-slate-50 transition-colors"
+      >
         <div className="flex items-baseline justify-between text-xs text-slate-600 mb-1">
           <span>已绑 / 未绑</span>
           <span>
@@ -101,7 +108,7 @@ export function SimStatusBreakdown({
             title={`已绑 ${bound} / ${total} (${boundPct}%)`}
           />
         </div>
-      </div>
+      </Link>
 
       {/* Round 172: 绑定率近 7 日变化 (mini sparkline) */}
       {bindRateLast7Days && bindRateLast7Days.length > 0 && (() => {
