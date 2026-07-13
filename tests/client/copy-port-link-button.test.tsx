@@ -54,3 +54,30 @@ describe("<CopyPortLinkButton />", () => {
     expect(screen.getByText("已复制")).toBeInTheDocument();
   });
 });
+
+
+describe("<CopyPortLinkButton /> 移动端 a11y (round 154)", () => {
+  it("按钮 className 包含 min-h-[44px] (移动端触摸目标 ≥44px)", () => {
+    render(<CopyPortLinkButton portUrl="https://example.com/p/abc" />);
+    const btn = screen.getByRole("button", { name: /复制保号链接/ });
+    expect(btn.className).toContain("min-h-[44px]");
+  });
+
+  it("'已复制' 状态也保留 min-h-[44px]", async () => {
+    const mockWriteText = vi.fn().mockResolvedValue(undefined);
+    Object.defineProperty(window.navigator, "clipboard", {
+      configurable: true,
+      writable: true,
+      value: { writeText: mockWriteText },
+    });
+
+    render(<CopyPortLinkButton portUrl="https://example.com/p/abc" />);
+    fireEvent.click(screen.getByRole("button"));
+    await act(async () => {
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+    const btn = screen.getByRole("button");
+    expect(btn.className).toContain("min-h-[44px]");
+  });
+});
