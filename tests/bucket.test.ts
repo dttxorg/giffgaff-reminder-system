@@ -2,7 +2,7 @@ import { describe, it, expect } from "vitest";
 import {
   bucketForDay,
   dayOffsetFromBaseline,
-  getMilestone,
+  getAnniversaryProgress, getMilestone,
   getNextMilestone,
   isInReminderWindow,
   nextBucketAt,
@@ -315,5 +315,44 @@ describe("getNextMilestone", () => {
     const r = getNextMilestone(-1);
     expect(r?.milestone.days).toBe(0);
     expect(r?.daysLeft).toBe(1);
+  });
+});
+
+describe("getAnniversaryProgress", () => {
+  it("0 天 → years=0, daysLeft=365 (距 1 周年)", () => {
+    const r = getAnniversaryProgress(0);
+    expect(r.years).toBe(0);
+    expect(r.daysLeft).toBe(365);
+    expect(r.totalDays).toBe(0);
+  });
+
+  it("100 天 → years=0, daysLeft=265", () => {
+    const r = getAnniversaryProgress(100);
+    expect(r.years).toBe(0);
+    expect(r.daysLeft).toBe(265);
+  });
+
+  it("365 天 → years=1, daysLeft=365 (距 2 周年)", () => {
+    const r = getAnniversaryProgress(365);
+    expect(r.years).toBe(1);
+    expect(r.daysLeft).toBe(365);
+  });
+
+  it("500 天 → years=1, daysLeft=230 (距 2 周年还有 230 天)", () => {
+    const r = getAnniversaryProgress(500);
+    expect(r.years).toBe(1);
+    expect(r.daysLeft).toBe(230);
+  });
+
+  it("730 天 → years=2, daysLeft=365", () => {
+    const r = getAnniversaryProgress(730);
+    expect(r.years).toBe(2);
+    expect(r.daysLeft).toBe(365);
+  });
+
+  it("730 + 200 = 930 天 → years=2, daysLeft=165", () => {
+    const r = getAnniversaryProgress(930);
+    expect(r.years).toBe(2);
+    expect(r.daysLeft).toBe(165);
   });
 });
