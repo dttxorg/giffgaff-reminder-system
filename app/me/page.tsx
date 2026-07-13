@@ -261,6 +261,15 @@ export default async function MePage() {
           >
             推送历史 →
           </Link>
+          {/* Round 185: 距 1 周年还差 N 天 (新用户激励,仅 years=0) */}
+          {anniversary.years === 0 && anniversary.daysLeft > 0 && anniversary.daysLeft < 365 && (
+            <span
+              className="ml-2 text-xs text-amber-700"
+              title={`还有 ${anniversary.daysLeft} 天到 1 周年里程碑`}
+            >
+              · 距 1 周年 <strong className="font-semibold">{anniversary.daysLeft}</strong> 天
+            </span>
+          )}
           {/* Round 181: 成功推送次数 (lifetimeCount = total, successCount = delivered) */}
           <span className="ml-2 text-xs text-slate-500" title={`系统累计推送 ${lifetimeCount} 次 (成功 ${successCount} 次, 失败 ${failedCount} 次)`}>
             <Link
