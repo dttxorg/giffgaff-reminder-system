@@ -101,3 +101,41 @@ export async function getTopFailingSims(
     }))
     .filter((s) => s.phoneNumber !== "(已删除)"); // 防御性过滤
 }
+
+/**
+ * Round 149: 取最近 30 天每日推送数(从今天倒数 30 天)
+ *
+ * 算法: 复用 getTopFailingSims 的 groupBy 思路,但按 day 分组。
+ * 简化: 用 raw query 太重,改成连续 30 次 count() 并行(已经验证 7 天可行)。
+ */
+export interface DailySend {
+  /** 距今天的天数(0 = 今天, 29 = 29 天前) */
+  offset: number;
+  /** 当天 0 点 UTC 的 Date 对象(用 +12h 防时区抖动) */
+  date: Date;
+  /** 当天发送数 */
+  count: number;
+}
+
+export async function getLast30DaysSends(): Promise<DailySend[]> {
+  const todayStartUTC = new Date();
+  todayStartUTC.setUTCHours(0, 0, 0, 0);
+
+  const days = await Promise.all(
+    Array.from({ length: 30 }, async (_, i) => {
+      const offset = 29 - i;
+      const dayStart = new Date(todayStartUTC.getTime() - offset * 24 * 60 * 60 * 1000);
+      const dayEnd = new Date(dayStart.getTime() + 24 * 60 * 60 * 1000);
+      const count = await prisma.reminderSent.count({
+        where: { sentAt: { gte: dayStart, lt: dayEnd } },
+      });
+      return {
+        offset,
+        // +12h 防止边缘时区把日期推到前一天/后一天
+        date: new Date(dayStart.getTime() + 12 * 60 * 60 * 1000),
+        count,
+      };
+    })
+  );
+  return days;
+}

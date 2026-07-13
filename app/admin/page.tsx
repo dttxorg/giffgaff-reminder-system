@@ -4,10 +4,11 @@ import { prisma } from "@/lib/db";
 import { formatRelativeTime, formatUtcShanghaiDual } from "@/lib/date";
 import { dayOffsetFromBaseline } from "@/lib/bucket";
 import { Last7DaysDetail } from "./_components/last-7-days-detail";
+import { Last30DaysSends } from "./_components/last-30-days-sends";
 import { AdminStat } from "./_components/admin-stat";
 import { TodayChannelStats } from "./_components/today-channel-stats";
 import { TopFailingSims } from "./_components/top-failing-sims";
-import { getTodayChannelStats, getTopFailingSims } from "@/lib/admin-reminder-stats";
+import { getLast30DaysSends, getTodayChannelStats, getTopFailingSims } from "@/lib/admin-reminder-stats";
 
 export default async function AdminDashboard() {
   await requireAdmin();
@@ -104,6 +105,9 @@ export default async function AdminDashboard() {
   // Round 141: 7 日失败 top 3 sim(给"top failing"卡片用)
   const topFailingSims = await getTopFailingSims(7, 3);
 
+  // Round 149: 近 30 日每日发送数(给 30 日 mini bar 用)
+  const last30DaysSends = await getLast30DaysSends();
+
   const channelCoverage = simCount > 0 ? Math.round((channelCount / simCount) * 100) : 0;
 
   // D1: 计算 vs 昨日 delta
@@ -188,6 +192,19 @@ export default async function AdminDashboard() {
         <Sparkline values={last7DaysSends} />
         {/* Round 146: 近 7 日详细列表(sparkline 下面) */}
         <Last7DaysDetail days={last7DaysData} />
+
+        {/* Round 149: 近 30 日 mini bar(更长期趋势) */}
+        <div className="mt-4 pt-3 border-t border-slate-100">
+          <div className="flex items-baseline justify-between mb-2">
+            <div className="text-xs text-slate-500">
+              近 30 日每日发送
+              <span className="ml-2 text-slate-400">
+                30 天累计 {last30DaysSends.reduce((a: number, b) => a + b.count, 0)} 条
+              </span>
+            </div>
+          </div>
+          <Last30DaysSends days={last30DaysSends} />
+        </div>
       </div>
 
       {/* 快捷入口 */}
