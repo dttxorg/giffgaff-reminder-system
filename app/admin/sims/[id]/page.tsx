@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Spinner } from "@/app/_components/skip-to-content";
 import { ConfirmModal } from "@/app/_components/confirm-modal";
+import { TestPushButton } from "../_components/test-push-button";
 import { formatRelativeTime } from "@/lib/date";
 import { dayOffsetFromBaseline, isInReminderWindow } from "@/lib/bucket";
 
@@ -261,14 +262,22 @@ export default function EditSimPage({ params }: { params: Promise<{ id: string }
 
       {/* 最近推送记录: admin 排错最常用信息(为什么最近没收到/失败了) */}
       <div className="mt-6 bg-white rounded-xl border border-slate-200 p-6">
-        <div className="flex items-center justify-between mb-3">
+        <div className="flex items-center justify-between mb-3 gap-2 flex-wrap">
           <h2 className="text-sm font-semibold text-slate-900">最近 5 条推送</h2>
-          <Link
-            href={`/admin/reminders?simId=${sim?.id ?? id}`}
-            className="text-xs text-indigo-600 hover:underline"
-          >
-            查看全部 →
-          </Link>
+          <div className="flex items-center gap-3">
+            {sim && (
+              <TestPushButton
+                simId={sim.id}
+                isBound={sim.user !== null}
+              />
+            )}
+            <Link
+              href={`/admin/reminders?simId=${sim?.id ?? id}`}
+              className="text-xs text-indigo-600 hover:underline"
+            >
+              查看全部 →
+            </Link>
+          </div>
         </div>
         {!sim?.recentReminders || sim.recentReminders.length === 0 ? (
           <p className="text-sm text-slate-500 py-4 text-center">
