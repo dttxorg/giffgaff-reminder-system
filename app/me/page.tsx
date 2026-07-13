@@ -76,6 +76,18 @@ export default async function MePage() {
     },
   });
 
+  // Round 144: 今日推送数(更近期的信号,比本月更具体)
+  // todayStartUTC = 上海时区今天 0 点(用 sp 算)
+  const todayStartUTC = new Date(Date.UTC(sp.year, sp.month - 1, sp.day));
+  const [todayCount, todayFailedCount] = await Promise.all([
+    prisma.reminderSent.count({
+      where: { simId: sim.id, sentAt: { gte: todayStartUTC } },
+    }),
+    prisma.reminderSent.count({
+      where: { simId: sim.id, sentAt: { gte: todayStartUTC }, status: "failed" },
+    }),
+  ]);
+
   const phoneTail4 = sim.phoneNumber.slice(-4);
   const channelMissing = !user.channelKey;
 
@@ -350,8 +362,19 @@ export default async function MePage() {
             <div className="text-2xl font-bold text-slate-900 mt-0.5">
               {lifetimeCount}
               <span className="text-sm font-normal text-slate-500 ml-1.5">条累计</span>
-              {/* Round 138: 本月推送(更近期信号,比 lifetime 更相关) */}
-              {thisMonthCount > 0 && (
+              {/* Round 144: 今日推送(最近期信号) + Round 138: 本月 */}
+              {todayCount > 0 && (
+                <span
+                  className="text-sm font-normal text-slate-500 ml-2"
+                  title={`今日 (${sp.year}-${String(sp.month).padStart(2, "0")}-${String(sp.day).padStart(2, "0")}) 已推 ${todayCount} 条${todayFailedCount > 0 ? `, 失败 ${todayFailedCount} 条` : ""}`}
+                >
+                  · 今日 <strong className={todayFailedCount > 0 ? "text-amber-700" : "text-slate-700"}>{todayCount}</strong> 条
+                  {todayFailedCount > 0 && (
+                    <span className="text-rose-600 ml-0.5">(失败 {todayFailedCount})</span>
+                  )}
+                </span>
+              )}
+              {todayCount === 0 && thisMonthCount > 0 && (
                 <span className="text-sm font-normal text-slate-500 ml-2" title={`本月 (${sp.year}-${String(sp.month).padStart(2, "0")}) 已推 ${thisMonthCount} 条`}>
                   · 本月 <strong className="text-slate-700">{thisMonthCount}</strong> 条
                 </span>
