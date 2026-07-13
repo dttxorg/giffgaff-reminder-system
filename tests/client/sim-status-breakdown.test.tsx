@@ -445,3 +445,38 @@ describe("<SimStatusBreakdown /> 近 7 日绑定率 sparkline 加点击跳转 (r
     expect(screen.queryByText(/近 7 日绑定率/)).toBeNull();
   });
 });
+
+describe("<SimStatusBreakdown /> 近 7 日用户绑定率 sparkline (round 193)", () => {
+  const userBindRateLast7Days = [
+    { date: new Date(Date.UTC(2026, 6, 7)), boundCount: 15, unboundSimCount: 25, totalSimCount: 40, bindRate: 38 },
+    { date: new Date(Date.UTC(2026, 6, 13)), boundCount: 25, unboundSimCount: 18, totalSimCount: 43, bindRate: 58 },
+  ];
+
+  it("渲染 '近 7 日用户绑定率' 标题", () => {
+    render(
+      <SimStatusBreakdown
+        stats={baseStats}
+        userBindRateLast7Days={userBindRateLast7Days}
+      />
+    );
+    expect(screen.getByText(/近 7 日用户绑定率/)).toBeInTheDocument();
+  });
+
+  it("整块变 Link,跳 /admin/sims?bound=no", () => {
+    const { container } = render(
+      <SimStatusBreakdown
+        stats={baseStats}
+        userBindRateLast7Days={userBindRateLast7Days}
+      />
+    );
+    // 总共应该有 2 个 /admin/sims?bound=no 链接 (已绑/未绑 进度条 round 179 + 用户绑定率 round 193)
+    // 活跃/暂停 进度条 round 179 是 /admin/sims?status=active (不算)
+    const links = container.querySelectorAll('a[href="/admin/sims?bound=no"]');
+    expect(links.length).toBe(2);
+  });
+
+  it("不传 userBindRateLast7Days → 不渲染用户绑定率区块", () => {
+    render(<SimStatusBreakdown stats={baseStats} />);
+    expect(screen.queryByText(/近 7 日用户绑定率/)).toBeNull();
+  });
+});
