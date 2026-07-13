@@ -10,9 +10,10 @@ import { AdminStat } from "./_components/admin-stat";
 import { TodayChannelStats } from "./_components/today-channel-stats";
 import { SimStatusBreakdown } from "./_components/sim-status-breakdown";
 import { InWindowSims } from "./_components/in-window-sims";
+import { TodayFailingSims } from "./_components/today-failing-sims";
 import { TopActiveSims } from "./_components/top-active-sims";
 import { TopFailingSims } from "./_components/top-failing-sims";
-import { getInWindowSims, getLast30DaysSends, getLast7DaysNewSims, getLast90DaysSends, getSimStatusBreakdown, getTodayChannelStats, getTopActiveSims, getTopFailingSims } from "@/lib/admin-reminder-stats";
+import { getInWindowSims, getLast30DaysSends, getLast7DaysNewSims, getLast90DaysSends, getSimStatusBreakdown, getTodayChannelStats, getTodayFailingSims, getTopActiveSims, getTopFailingSims } from "@/lib/admin-reminder-stats";
 
 export default async function AdminDashboard() {
   await requireAdmin();
@@ -115,6 +116,9 @@ export default async function AdminDashboard() {
   // Round 163: 90 日推送 top 5 sim(更长期活跃 sim 排行)
   const topActiveSims90d = await getTopActiveSims(90, 5);
 
+  // Round 164: 今日失败 sim 列表(给"今日失败 sim"卡用)
+  const todayFailingSims = await getTodayFailingSims(todayStartUTC);
+
   // Round 149: 近 30 日每日发送数(给 30 日 mini bar 用)
   const last30DaysSends = await getLast30DaysSends();
 
@@ -200,6 +204,7 @@ export default async function AdminDashboard() {
         {/* Round 160: 7 日推送 top 5 sim(跟 top failing 并排) */}
         <TopActiveSims sims={topActiveSims} days={7} />
         <TopActiveSims sims={topActiveSims90d} days={90} />
+        <TodayFailingSims sims={todayFailingSims} />
         <div className="md:col-span-2">
           <InWindowSims sims={inWindowSims} />
         </div>

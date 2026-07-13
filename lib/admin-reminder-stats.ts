@@ -403,3 +403,43 @@ export async function getTopActiveSims(
     }))
     .filter((s) => s.phoneNumber !== "(已删除)");
 }
+
+/**
+ * Round 164: 今日失败的 sim 列表(按 simId group)
+ *
+ * 业务用例: /admin 仪表盘"今日失败 sim"卡,
+ * admin 能看到'今天有失败推送的具体 sim 列表'(不只是总数)。
+ */
+export interface TodayFailingSim {
+  simId: number;
+  phoneNumber: string;
+  failedCount: number;
+}
+
+export async function getTodayFailingSims(
+  todayStartUTC: Date
+): Promise<TodayFailingSim[]> {
+  const grouped = await prisma.reminderSent.groupBy({
+    by: ["simId"],
+    where: { status: "failed", sentAt: { gte: todayStartUTC } },
+    _count: { _all: true },
+    orderBy: { _count: { simId: "desc" } },
+    take: 5,
+  });
+  if (grouped.length === 0) return [];
+
+  const simIds = grouped.map((g) => g.simId);
+  const sims = await prisma.sim.findMany({
+    where: { id: { in: simIds } },
+    select: { id: true, phoneNumber: true },
+  });
+  const phoneMap = new Map(sims.map((s) => [s.id, s.phoneNumber]));
+
+  return grouped
+    .map((g) => ({
+      simId: g.simId,
+      phoneNumber: phoneMap.get(g.simId) ?? "(已删除)",
+      failedCount: g._count._all,
+    }))
+    .filter((s) => s.phoneNumber !== "(已删除)");
+}
