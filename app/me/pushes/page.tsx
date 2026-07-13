@@ -10,7 +10,7 @@ import { formatRelativeTime, formatUtcShanghaiDual } from "@/lib/date";
 import { groupRemindersByDay } from "@/lib/push-grouping";
 
 interface PageProps {
-  searchParams: Promise<{ status?: string }>;
+  searchParams: Promise<{ status?: string; from?: string; to?: string }>;
 }
 
 
@@ -19,13 +19,27 @@ export default async function MePushesPage({ searchParams }: PageProps) {
   const user = await getCurrentUser();
   if (!user) redirect("/login");
 
-  const { status } = await searchParams;
+  const { status, from, to } = await searchParams;
 
   const validStatus: "success" | "failed" | undefined =
     status === "success" || status === "failed" ? status : undefined;
+
+  // Round 176: from/to 日期范围过滤 (yyyy-MM-dd 格式)
+  // from 包含 00:00:00 UTC, to +1 天 排除 (跟 /admin/reminders 一致)
+  const sentAtRange: { gte?: Date; lt?: Date } = {};
+  if (from && /^\d{4}-\d{2}-\d{2}$/.test(from)) {
+    sentAtRange.gte = new Date(from + "T00:00:00Z");
+  }
+  if (to && /^\d{4}-\d{2}-\d{2}$/.test(to)) {
+    const lt = new Date(to + "T00:00:00Z");
+    lt.setUTCDate(lt.getUTCDate() + 1);
+    sentAtRange.lt = lt;
+  }
+
   const where = {
     simId: user.sim.id,
     ...(validStatus ? { status: validStatus } : {}),
+    ...(sentAtRange.gte || sentAtRange.lt ? { sentAt: sentAtRange } : {}),
   };
 
   const reminders = await prisma.reminderSent.findMany({
@@ -62,6 +76,15 @@ export default async function MePushesPage({ searchParams }: PageProps) {
         {status && (
           <span className="ml-2 text-slate-400">
             (过滤: {status})
+            {" · "}
+            <Link href="/me/pushes" className="text-indigo-600 hover:underline">
+              清除
+            </Link>
+          </span>
+        )}
+        {(from || to) && (
+          <span className="ml-2 text-slate-400">
+            (日期: {from || "..."} → {to || "..."})
             {" · "}
             <Link href="/me/pushes" className="text-indigo-600 hover:underline">
               清除

@@ -4,6 +4,7 @@
 // - hover tooltip 显示 "HH 时 - N 条"
 // - 当前小时用 indigo-600 深色,其他 indigo-400 浅色
 
+import Link from "next/link";
 import type { HourlySend } from "@/lib/admin-reminder-stats";
 
 const BAR_MAX_HEIGHT = 24; // px
@@ -24,14 +25,19 @@ export function TodayHourlyChart({
         {hours.map((h) => {
           const heightPct = h.count > 0 ? (h.count / max) * 100 : 0;
           const isCurrent = h.hour === currentHour;
+          // Round 176: 点击柱 → /me/pushes?from=&to= 今天 (用当前日期)
+          // 用 currentHour 算今天日期 (Shanghai); 简单起见用系统本地日期
+          const today = new Date();
+          const ymd = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
           return (
             <div
               key={h.hour}
               className="flex-1 h-full flex flex-col items-center justify-end"
-              title={`${String(h.hour).padStart(2, "0")}:00 - ${h.count} 条`}
+              title={`${String(h.hour).padStart(2, "0")}:00 - ${h.count} 条 (点击查看今日推送)`}
             >
-              <div
-                className="w-full rounded-sm"
+              <Link
+                href={`/me/pushes?from=${ymd}&to=${ymd}`}
+                className="block w-full rounded-sm hover:opacity-80 transition-opacity"
                 style={{
                   height: `${Math.max(1, (heightPct / 100) * BAR_MAX_HEIGHT)}px`,
                   backgroundColor: isCurrent ? "#4f46e5" : "#a5b4fc",
