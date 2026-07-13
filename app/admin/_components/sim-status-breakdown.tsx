@@ -13,6 +13,7 @@ export function SimStatusBreakdown({
   newSimsLast7Days,
   newUsersLast7Days,
   bindRateLast7Days,
+  userBindRateLast7Days,
 }: {
   stats: SimStatusBreakdown;
   /** Round 157: 近 7 日新增 sim 统计 */
@@ -21,6 +22,8 @@ export function SimStatusBreakdown({
   newUsersLast7Days?: { total: number; daily: { date: Date; count: number }[] };
   /** Round 172: 近 7 日绑定率历史 (optional) */
   bindRateLast7Days?: { date: Date; boundCount: number; totalSimCount: number; bindRate: number }[];
+  /** Round 193: 近 7 日用户绑定率历史 (optional,镜像 sim 绑定率) */
+  userBindRateLast7Days?: { date: Date; boundCount: number; unboundSimCount: number; totalSimCount: number; bindRate: number }[];
 }) {
   const { total, active, paused, bound, unbound } = stats;
   const activePct = total > 0 ? Math.round((active / total) * 100) : 0;
@@ -150,6 +153,57 @@ export function SimStatusBreakdown({
                         minHeight: "1px",
                       }}
                       aria-label={`${d.date.toISOString().slice(0, 10)} 绑定率 ${d.bindRate}%`}
+                    />
+                  </li>
+                );
+              })}
+            </ul>
+          </div>
+          </Link>
+        );
+      })()}
+
+      {/* Round 193: 近 7 日用户绑定率 sparkline (镜像 sim 绑定率) */}
+      {userBindRateLast7Days && userBindRateLast7Days.length > 0 && (() => {
+        const todayU = userBindRateLast7Days[userBindRateLast7Days.length - 1].bindRate;
+        const firstU = userBindRateLast7Days[0].bindRate;
+        const deltaU = todayU - firstU;
+        const deltaToneU = deltaU > 0 ? "text-emerald-700" : deltaU < 0 ? "text-rose-700" : "text-slate-500";
+        const deltaSignU = deltaU > 0 ? "+" : "";
+        return (
+          <Link
+            href="/admin/sims?bound=no"
+            className="block mt-2 -mx-1 px-1 rounded hover:bg-slate-50 transition-colors"
+          >
+          <div>
+            <div className="flex items-baseline justify-between text-xs text-slate-500 mb-1">
+              <span>近 7 日用户绑定率</span>
+              <span className={deltaToneU}>
+                {deltaSignU}{deltaU}% 变化
+              </span>
+            </div>
+            <ul
+              className="flex items-end gap-px h-4"
+              aria-label="近 7 日用户绑定率变化"
+            >
+              {userBindRateLast7Days.map((d, i) => {
+                const maxU = Math.max(1, ...userBindRateLast7Days.map((x) => x.bindRate));
+                const heightPctU = d.bindRate > 0 ? (d.bindRate / maxU) * 100 : 0;
+                const isTodayU = i === userBindRateLast7Days.length - 1;
+                return (
+                  <li
+                    key={d.date.toISOString()}
+                    className="flex-1 h-full flex flex-col items-center justify-end"
+                    title={`${d.date.toISOString().slice(0, 10)} 用户绑定率 ${d.bindRate}% (${d.boundCount}/${d.totalSimCount})`}
+                  >
+                    <div
+                      className="w-full rounded-sm"
+                      style={{
+                        height: `${Math.max(1, (heightPctU / 100) * 16)}px`,
+                        backgroundColor: isTodayU ? "#6366f1" : "#c7d2fe",
+                        minHeight: "1px",
+                      }}
+                      aria-label={`${d.date.toISOString().slice(0, 10)} 用户绑定率 ${d.bindRate}%`}
                     />
                   </li>
                 );

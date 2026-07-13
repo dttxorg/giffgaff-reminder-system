@@ -631,3 +631,66 @@ export async function getLast7DaysBindRate(): Promise<DailyBindRate[]> {
   void start;
   return daily;
 }
+
+/**
+ * Round 193: 取最近 7 天用户绑定率历史 (镜像 sim 绑定率)
+ *
+ * 业务用例: SimStatusBreakdown 加 "近 7 日用户绑定率" 趋势 sparkline,
+ * 跟 sim 绑定率镜像,看 sim → user 转化趋势。
+ */
+export interface DailyUserBindRate {
+  date: Date;
+  boundCount: number;
+  unboundSimCount: number;
+  totalSimCount: number;
+  bindRate: number;
+}
+
+export async function getLast7DaysUserBindRate(): Promise<DailyUserBindRate[]> {
+  const todayStartUTC = new Date();
+  todayStartUTC.setUTCHours(0, 0, 0, 0);
+
+  const sims = await prisma.sim.findMany({
+    where: { createdAt: { lte: todayStartUTC } },
+    select: { createdAt: true, user: { select: { createdAt: true } } },
+  });
+
+  const daily: DailyUserBindRate[] = Array.from({ length: 7 }, (_, i) => {
+    const date = new Date(todayStartUTC.getTime() - (6 - i) * 24 * 60 * 60 * 1000);
+    return {
+      date: new Date(date.getTime() + 12 * 60 * 60 * 1000),
+      boundCount: 0,
+      unboundSimCount: 0,
+      totalSimCount: 0,
+      bindRate: 0,
+    };
+  });
+  for (const s of sims) {
+    const shanghaiDay = new Date(s.createdAt.getTime() + 8 * 60 * 60 * 1000);
+    const dayIndex = Math.floor(
+      (shanghaiDay.getTime() - (todayStartUTC.getTime() + 12 * 60 * 60 * 1000)) /
+        (24 * 60 * 60 * 1000)
+    );
+    if (dayIndex < 0 || dayIndex >= 7) continue;
+    daily[dayIndex].totalSimCount++;
+    if (s.user) {
+      // user 创建时间 ≤ 当天 = 当天已绑定
+      const userShanghai = new Date(s.user.createdAt.getTime() + 8 * 60 * 60 * 1000);
+      const userDayIndex = Math.floor(
+        (userShanghai.getTime() - (todayStartUTC.getTime() + 12 * 60 * 60 * 1000)) /
+          (24 * 60 * 60 * 1000)
+      );
+      if (userDayIndex <= dayIndex) {
+        daily[dayIndex].boundCount++;
+      } else {
+        daily[dayIndex].unboundSimCount++;
+      }
+    } else {
+      daily[dayIndex].unboundSimCount++;
+    }
+  }
+  for (const d of daily) {
+    d.bindRate = d.totalSimCount > 0 ? Math.round((d.boundCount / d.totalSimCount) * 100) : 0;
+  }
+  return daily;
+}
