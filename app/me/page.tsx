@@ -5,9 +5,11 @@ import { getCurrentUser } from "@/lib/session";
 import {
   bucketForDay,
   dayOffsetFromBaseline,
+  getMilestone,
   isInReminderWindow,
   shanghaiParts,
 } from "@/lib/bucket";
+import { MilestoneBanner } from "./_components/milestone-banner";
 import { formatPhoneForDisplay } from "@/lib/phone";
 import { formatRelativeTime, formatTimeGap } from "@/lib/date";
 import {
@@ -27,6 +29,8 @@ export default async function MePage() {
   const baseline = sim.lastPortedAt ?? sim.activatedAt;
   const dayOffset = dayOffsetFromBaseline(baseline);
   const inWindow = isInReminderWindow(dayOffset);
+  // Round 143: 命中里程碑(0/30/100/365/730/1825 天)时显示庆祝 banner
+  const milestone = getMilestone(dayOffset);
 
   // M3: 最近 5 条 + lifetime 总数(并行)
   // 总数让用户知道系统"一直在跑",透明度提升
@@ -81,6 +85,9 @@ export default async function MePage() {
         <p className="text-sm text-slate-500">欢迎</p>
         <h1 className="text-2xl font-bold">用户 **** {phoneTail4}</h1>
       </div>
+
+      {/* Round 143: 里程碑庆祝 banner */}
+      {milestone && <MilestoneBanner milestone={milestone} />}
 
       {channelMissing && (
         <Link

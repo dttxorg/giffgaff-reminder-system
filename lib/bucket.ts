@@ -162,6 +162,37 @@ export function dayOffsetFromBaseline(baseline: Date, now: Date = new Date()): n
 }
 
 /**
+ * 检查 dayOffset 是否落在"激活里程碑"上,返回里程碑名;否则 null。
+ *
+ * 里程碑: 0 / 30 / 100 / 365 / 730 / 1825 / 3650 天
+ * (0 = 当天, 30 = 一个月, 100 = 百日, 365 = 一年, 730 = 两年, ...)
+ *
+ * 业务用例: /me 主页面在里程碑当天显示小庆祝 banner,
+ * 增强用户对'系统一直在守护'的感知(不只是数字累加)。
+ */
+export type Milestone = {
+  /** 里程碑天数 */
+  days: number;
+  /** 中文标签 (e.g. "100 天里程碑") */
+  label: string;
+  /** emoji-free 简短描述 (e.g. "百日里程碑") */
+  short: string;
+};
+
+const MILESTONES: Milestone[] = [
+  { days: 0, label: "已激活", short: "欢迎使用" },
+  { days: 30, label: "30 天里程碑", short: "一个月" },
+  { days: 100, label: "100 天里程碑", short: "百日" },
+  { days: 365, label: "1 周年里程碑", short: "一年" },
+  { days: 730, label: "2 周年里程碑", short: "两年" },
+  { days: 1825, label: "5 周年里程碑", short: "五年" },
+];
+
+export function getMilestone(dayOffset: number): Milestone | null {
+  return MILESTONES.find((m) => m.days === dayOffset) ?? null;
+}
+
+/**
  * 检查给定 dayOffset 是否在提醒窗口内（170-180）
  */
 export function isInReminderWindow(dayOffset: number): boolean {
