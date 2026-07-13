@@ -4,6 +4,8 @@ import { prisma } from "@/lib/db";
 import { formatRelativeTime, formatUtcShanghaiDual } from "@/lib/date";
 import { dayOffsetFromBaseline } from "@/lib/bucket";
 import { AdminStat } from "./_components/admin-stat";
+import { TodayChannelStats } from "./_components/today-channel-stats";
+import { getTodayChannelStats } from "@/lib/admin-reminder-stats";
 
 export default async function AdminDashboard() {
   await requireAdmin();
@@ -85,6 +87,9 @@ export default async function AdminDashboard() {
     include: { sim: true, user: true },
   });
 
+  // Round 140: 今日按渠道统计(给"今日按渠道"卡片用)
+  const todayChannelStats = await getTodayChannelStats(todayStartUTC);
+
   const channelCoverage = simCount > 0 ? Math.round((channelCount / simCount) * 100) : 0;
 
   // D1: 计算 vs 昨日 delta
@@ -143,6 +148,9 @@ export default async function AdminDashboard() {
         />
         <AdminStat label="卡密未用" value={undefined} sub="在 卡密管理 查看" />
       </div>
+
+      {/* Round 140: 今日按渠道统计(便于排查渠道问题) */}
+      <TodayChannelStats stats={todayChannelStats} />
 
       {/* D1: 7 日发送趋势 sparkline + 卡片总数对比 */}
       <div className="bg-white rounded-xl border border-slate-200 p-5 mb-6">
