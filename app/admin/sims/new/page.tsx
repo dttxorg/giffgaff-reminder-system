@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { LoadingButton } from "@/app/_components/loading-button";
 import { generateSecurePassword } from "@/lib/password-gen";
 import { ConfirmModal } from "@/app/_components/confirm-modal";
 
@@ -140,13 +141,14 @@ export default function NewSimPage() {
         </div>
 
         <div className="flex gap-2 pt-2">
-          <button
+          <LoadingButton
             type="submit"
-            disabled={loading}
-            className="px-4 py-2 rounded-lg bg-indigo-600 text-white text-sm font-medium hover:bg-indigo-700 disabled:opacity-50"
-          >
-            {loading ? "保存中..." : "保存"}
-          </button>
+            loading={loading}
+            loadingLabel="保存中"
+            label="保存"
+            tone="primary"
+            className="px-4 py-2 text-sm"
+          />
           <button
             type="button"
             onClick={() => router.back()}

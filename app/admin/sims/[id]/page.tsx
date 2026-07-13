@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Spinner } from "@/app/_components/skip-to-content";
 import { ConfirmModal } from "@/app/_components/confirm-modal";
+import { LoadingButton } from "@/app/_components/loading-button";
 import { TestPushButton } from "../_components/test-push-button";
 import { formatRelativeTime } from "@/lib/date";
 import { dayOffsetFromBaseline, isInReminderWindow } from "@/lib/bucket";
@@ -218,13 +219,14 @@ export default function EditSimPage({ params }: { params: Promise<{ id: string }
         )}
 
         <div className="flex gap-2">
-          <button
+          <LoadingButton
             type="submit"
-            disabled={loading}
-            className="px-4 py-2 rounded-lg bg-indigo-600 text-white text-sm font-medium hover:bg-indigo-700 disabled:opacity-50"
-          >
-            {loading ? "保存中..." : "保存"}
-          </button>
+            loading={loading}
+            loadingLabel="保存中"
+            label="保存"
+            tone="primary"
+            className="px-4 py-2 text-sm"
+          />
           <button
             type="button"
             onClick={() => setDeleteOpen(true)}
