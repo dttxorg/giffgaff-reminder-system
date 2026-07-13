@@ -38,7 +38,7 @@ export function CopyPhoneButton({ phone }: { phone: string }) {
       type="button"
       onClick={onClick}
       aria-label={`复制完整手机号 ${phone}`}
-      className="text-xs text-indigo-600 hover:underline inline-flex items-center gap-1"
+      className="text-xs text-indigo-600 hover:underline inline-flex items-center gap-1 min-h-[44px] -ml-1 px-1"
     >
       {copied ? (
         <>

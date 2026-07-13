@@ -148,7 +148,7 @@ export default async function MePage() {
           <Link
             href="/me/settings#sim-info"
             title="修改激活日期或上次保号日期"
-            className="text-xs text-indigo-600 hover:underline"
+            className="text-xs text-indigo-600 hover:underline inline-flex items-center min-h-[44px] -ml-1 px-1"
           >
             修改
           </Link>
@@ -312,7 +312,7 @@ export default async function MePage() {
           <Link
             href="/me/settings"
             title={channelMissing ? "设置通知渠道(才能接收保号提醒)" : "修改通知渠道或 key"}
-            className="text-xs text-indigo-600 hover:underline"
+            className="text-xs text-indigo-600 hover:underline inline-flex items-center min-h-[44px] -ml-1 px-1"
           >
             {channelMissing ? "去设置" : "修改"}
           </Link>
