@@ -362,3 +362,44 @@ export async function getLast7DaysSendsForSim(
   );
   return days;
 }
+
+/**
+ * Round 160: 取最近 N 天推送次数最多的 sim 列表
+ *
+ * 业务用例: /admin 仪表盘"近 7 日推送 top 5 sim"卡,
+ * admin 能看到"哪些 sim 最近推送最频繁"(可能:触发频率过高 / 渠道配错 / 滥用)。
+ *
+ * 跟 getTopFailingSims 镜像: topFailingSims 看 '失败次数' 倒序,
+ *                          topActiveSims 看 '总推送次数' 倒序。
+ */
+export type TopActiveSim = TopFailingSim;
+
+export async function getTopActiveSims(
+  days: number,
+  limit: number
+): Promise<TopActiveSim[]> {
+  const since = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
+  const grouped = await prisma.reminderSent.groupBy({
+    by: ["simId"],
+    where: { sentAt: { gte: since } },
+    _count: { _all: true },
+    orderBy: { _count: { simId: "desc" } },
+    take: limit,
+  });
+  if (grouped.length === 0) return [];
+
+  const simIds = grouped.map((g) => g.simId);
+  const sims = await prisma.sim.findMany({
+    where: { id: { in: simIds } },
+    select: { id: true, phoneNumber: true },
+  });
+  const phoneMap = new Map(sims.map((s) => [s.id, s.phoneNumber]));
+
+  return grouped
+    .map((g) => ({
+      simId: g.simId,
+      phoneNumber: phoneMap.get(g.simId) ?? "(已删除)",
+      failedCount: g._count._all, // 复用字段,语义上是"推送次数"
+    }))
+    .filter((s) => s.phoneNumber !== "(已删除)");
+}
