@@ -217,3 +217,80 @@ describe("<SimStatusBreakdown /> 近 7 日新增 user (round 171)", () => {
     expect(screen.queryByText("近 7 日新增用户")).toBeNull();
   });
 });
+
+describe("<SimStatusBreakdown /> 绑定率近 7 日变化 (round 172)", () => {
+  const bindRateLast7Days = [
+    { date: new Date(Date.UTC(2026, 6, 7)), boundCount: 20, totalSimCount: 50, bindRate: 40 },
+    { date: new Date(Date.UTC(2026, 6, 8)), boundCount: 22, totalSimCount: 50, bindRate: 44 },
+    { date: new Date(Date.UTC(2026, 6, 9)), boundCount: 25, totalSimCount: 50, bindRate: 50 },
+    { date: new Date(Date.UTC(2026, 6, 10)), boundCount: 26, totalSimCount: 51, bindRate: 51 },
+    { date: new Date(Date.UTC(2026, 6, 11)), boundCount: 28, totalSimCount: 51, bindRate: 55 },
+    { date: new Date(Date.UTC(2026, 6, 12)), boundCount: 30, totalSimCount: 52, bindRate: 58 },
+    { date: new Date(Date.UTC(2026, 6, 13)), boundCount: 30, totalSimCount: 52, bindRate: 58 },
+  ];
+
+  it("渲染 '近 7 日绑定率' + 7 个 mini bar", () => {
+    render(
+      <SimStatusBreakdown
+        stats={baseStats}
+        bindRateLast7Days={bindRateLast7Days}
+      />
+    );
+    expect(screen.getByText(/近 7 日绑定率/)).toBeInTheDocument();
+    expect(screen.getByLabelText("近 7 日绑定率变化")).toBeInTheDocument();
+  });
+
+  it("今天 (40 → 58) → +18% 变化 (emerald)", () => {
+    render(
+      <SimStatusBreakdown
+        stats={baseStats}
+        bindRateLast7Days={bindRateLast7Days}
+      />
+    );
+    // 58 - 40 = +18%
+    expect(screen.getByText(/\+18% 变化/)).toBeInTheDocument();
+  });
+
+  it("下降趋势 (60 → 50) → -10% 变化 (rose)", () => {
+    const declining = [
+      { date: new Date(Date.UTC(2026, 6, 7)), boundCount: 30, totalSimCount: 50, bindRate: 60 },
+      { date: new Date(Date.UTC(2026, 6, 8)), boundCount: 30, totalSimCount: 51, bindRate: 59 },
+      { date: new Date(Date.UTC(2026, 6, 9)), boundCount: 29, totalSimCount: 51, bindRate: 57 },
+      { date: new Date(Date.UTC(2026, 6, 10)), boundCount: 28, totalSimCount: 52, bindRate: 54 },
+      { date: new Date(Date.UTC(2026, 6, 11)), boundCount: 27, totalSimCount: 52, bindRate: 52 },
+      { date: new Date(Date.UTC(2026, 6, 12)), boundCount: 26, totalSimCount: 53, bindRate: 49 },
+      { date: new Date(Date.UTC(2026, 6, 13)), boundCount: 26, totalSimCount: 52, bindRate: 50 },
+    ];
+    render(
+      <SimStatusBreakdown
+        stats={baseStats}
+        bindRateLast7Days={declining}
+      />
+    );
+    // 50 - 60 = -10%
+    expect(screen.getByText(/-10% 变化/)).toBeInTheDocument();
+  });
+
+  it("稳定趋势 (50 → 50) → 0% 变化 (slate)", () => {
+    const stable = bindRateLast7Days.map((d) => ({ ...d, bindRate: 50 }));
+    render(
+      <SimStatusBreakdown
+        stats={baseStats}
+        bindRateLast7Days={stable}
+      />
+    );
+    expect(screen.getByText(/0% 变化/)).toBeInTheDocument();
+  });
+
+  it("不传 bindRateLast7Days → 不渲染绑定率变化区块", () => {
+    render(<SimStatusBreakdown stats={baseStats} />);
+    expect(screen.queryByText(/近 7 日绑定率/)).toBeNull();
+  });
+
+  it("空数组 → 不渲染", () => {
+    const { container } = render(
+      <SimStatusBreakdown stats={baseStats} bindRateLast7Days={[]} />
+    );
+    expect(container.textContent).not.toContain("近 7 日绑定率");
+  });
+});
