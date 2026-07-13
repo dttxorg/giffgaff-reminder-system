@@ -249,6 +249,14 @@ export default async function MePage() {
             {dayOffset === 0 ? "今天" : dayOffset === 1 ? "昨天" : dayOffset === 2 ? "前天" : dayOffset}
           </span>
           <span className="text-base font-normal text-slate-500">天</span>
+          {/* Round 180: 激活总天数可点击 → /me/pushes (查看完整推送历史) */}
+          <Link
+            href="/me/pushes"
+            className="ml-2 text-xs text-indigo-600 hover:underline"
+            title="查看完整推送历史"
+          >
+            推送历史 →
+          </Link>
           {/* Round 155: 下一个里程碑激励 hint */}
           {nextMilestone && (
             <NextMilestoneHint
