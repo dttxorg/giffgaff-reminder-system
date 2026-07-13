@@ -425,7 +425,14 @@ export default async function MePage() {
                   >
                     · 今日 <strong className={todayFailedCount > 0 ? "text-amber-700" : "text-slate-700"}>{todayCount}</strong> 条
                     {todayFailedCount > 0 && (
-                      <span className="text-rose-600 ml-0.5">(失败 {todayFailedCount})</span>
+                      /* Round 182: '(失败 N)' 加点击跳转 /me/pushes?status=failed 当天 */
+                      <Link
+                        href={`/me/pushes?from=${sp.year}-${String(sp.month).padStart(2, "0")}-${String(sp.day).padStart(2, "0")}&to=${sp.year}-${String(sp.month).padStart(2, "0")}-${String(sp.day).padStart(2, "0")}&status=failed`}
+                        className="text-rose-600 ml-0.5 hover:underline"
+                        title="查看今日失败推送"
+                      >
+                        (失败 {todayFailedCount})
+                      </Link>
                     )}
                     <svg
                       width={10}
