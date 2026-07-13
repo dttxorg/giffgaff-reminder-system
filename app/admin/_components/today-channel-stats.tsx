@@ -16,7 +16,7 @@ const CHANNEL_LABELS: Record<string, string> = {
 
 export function TodayChannelStats({ stats }: { stats: ChannelStat[] }) {
   return (
-    <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 mt-4">
+    <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
       <div className="flex items-baseline justify-between mb-3">
         <h2 className="text-base font-semibold text-slate-900 inline-flex items-center gap-1.5">
           <svg

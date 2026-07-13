@@ -5,7 +5,8 @@ import { formatRelativeTime, formatUtcShanghaiDual } from "@/lib/date";
 import { dayOffsetFromBaseline } from "@/lib/bucket";
 import { AdminStat } from "./_components/admin-stat";
 import { TodayChannelStats } from "./_components/today-channel-stats";
-import { getTodayChannelStats } from "@/lib/admin-reminder-stats";
+import { TopFailingSims } from "./_components/top-failing-sims";
+import { getTodayChannelStats, getTopFailingSims } from "@/lib/admin-reminder-stats";
 
 export default async function AdminDashboard() {
   await requireAdmin();
@@ -90,6 +91,9 @@ export default async function AdminDashboard() {
   // Round 140: 今日按渠道统计(给"今日按渠道"卡片用)
   const todayChannelStats = await getTodayChannelStats(todayStartUTC);
 
+  // Round 141: 7 日失败 top 3 sim(给"top failing"卡片用)
+  const topFailingSims = await getTopFailingSims(7, 3);
+
   const channelCoverage = simCount > 0 ? Math.round((channelCount / simCount) * 100) : 0;
 
   // D1: 计算 vs 昨日 delta
@@ -149,8 +153,11 @@ export default async function AdminDashboard() {
         <AdminStat label="卡密未用" value={undefined} sub="在 卡密管理 查看" />
       </div>
 
-      {/* Round 140: 今日按渠道统计(便于排查渠道问题) */}
-      <TodayChannelStats stats={todayChannelStats} />
+      {/* Round 140+141: 今日按渠道 + 7 日失败 top sim(并排展示,便于交叉排查) */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+        <TodayChannelStats stats={todayChannelStats} />
+        <TopFailingSims sims={topFailingSims} />
+      </div>
 
       {/* D1: 7 日发送趋势 sparkline + 卡片总数对比 */}
       <div className="bg-white rounded-xl border border-slate-200 p-5 mb-6">

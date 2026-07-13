@@ -54,3 +54,50 @@ export async function getTodayChannelStats(
   }
   return ALL_CHANNELS.map((ch) => map.get(ch)!);
 }
+
+/**
+ * 取最近 N 天失败次数最多的 sim 列表。
+ *
+ * 业务用例: /admin 仪表盘"7 日失败 top 3 sim"小卡,
+ * admin 一眼看出哪些号码在反复失败(可能:key 配错 / 渠道限流 / 号码被弃用)。
+ *
+ * 实现: groupBy simId + where status=failed + sentAt 区间,
+ *       按 failed 倒序取前 N,再 join sim 拿 phoneNumber。
+ */
+export interface TopFailingSim {
+  simId: number;
+  phoneNumber: string;
+  failedCount: number;
+}
+
+export async function getTopFailingSims(
+  days: number,
+  limit: number
+): Promise<TopFailingSim[]> {
+  const since = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
+  // groupBy + Prisma 7: 可以直接用,但不能 join sim 拿 phoneNumber
+  // 先 groupBy 拿 simId 列表,再单独 findMany sim
+  const grouped = await prisma.reminderSent.groupBy({
+    by: ["simId"],
+    where: { status: "failed", sentAt: { gte: since } },
+    _count: { _all: true },
+    orderBy: { _count: { simId: "desc" } },
+    take: limit,
+  });
+  if (grouped.length === 0) return [];
+
+  const simIds = grouped.map((g) => g.simId);
+  const sims = await prisma.sim.findMany({
+    where: { id: { in: simIds } },
+    select: { id: true, phoneNumber: true },
+  });
+  const phoneMap = new Map(sims.map((s) => [s.id, s.phoneNumber]));
+
+  return grouped
+    .map((g) => ({
+      simId: g.simId,
+      phoneNumber: phoneMap.get(g.simId) ?? "(已删除)",
+      failedCount: g._count._all,
+    }))
+    .filter((s) => s.phoneNumber !== "(已删除)"); // 防御性过滤
+}
