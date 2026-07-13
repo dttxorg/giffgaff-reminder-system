@@ -294,3 +294,26 @@ describe("<SimStatusBreakdown /> 绑定率近 7 日变化 (round 172)", () => {
     expect(container.textContent).not.toContain("近 7 日绑定率");
   });
 });
+
+describe("<SimStatusBreakdown /> 进度条点击跳转 (round 179)", () => {
+  it("活跃/暂停 进度条变 Link,跳 /admin/sims?status=active", () => {
+    const { container } = render(<SimStatusBreakdown stats={baseStats} />);
+    const activeLink = container.querySelector('a[href="/admin/sims?status=active"]');
+    expect(activeLink).not.toBeNull();
+    expect(activeLink!.getAttribute("href")).toBe("/admin/sims?status=active");
+  });
+
+  it("已绑/未绑 进度条变 Link,跳 /admin/sims?bound=no", () => {
+    const { container } = render(<SimStatusBreakdown stats={baseStats} />);
+    const boundLink = container.querySelector('a[href="/admin/sims?bound=no"]');
+    expect(boundLink).not.toBeNull();
+    expect(boundLink!.getAttribute("href")).toBe("/admin/sims?bound=no");
+  });
+
+  it("hover 进度条变 slate-50 背景色 (transition-colors)", () => {
+    const { container } = render(<SimStatusBreakdown stats={baseStats} />);
+    const activeLink = container.querySelector('a[href="/admin/sims?status=active"]');
+    expect(activeLink!.className).toContain("hover:bg-slate-50");
+    expect(activeLink!.className).toContain("transition-colors");
+  });
+});
