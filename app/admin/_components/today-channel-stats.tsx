@@ -14,7 +14,27 @@ const CHANNEL_LABELS: Record<string, string> = {
   telegram: "Telegram",
 };
 
-export function TodayChannelStats({ stats }: { stats: ChannelStat[] }) {
+export function TodayChannelStats({
+  stats,
+  sortBy = "failRate",
+}: {
+  stats: ChannelStat[];
+  /** Round 173: 排序方式, "failRate" 按失败率倒序, "total" 按总推送数倒序 */
+  sortBy?: "failRate" | "total";
+}) {
+  // Round 173: 排序 (跟 Last7DaysChannelStats 一致)
+  // ChannelStat 没有 failRate 字段,JS 算 (failed/total)
+  const failRate = (s: { total: number; failed: number }) =>
+    s.total > 0 ? (s.failed / s.total) : 0;
+  const sortedStats = [...stats].sort((a, b) => {
+    if (sortBy === "total") {
+      return b.total - a.total;
+    }
+    const fa = failRate(a);
+    const fb = failRate(b);
+    if (fa !== fb) return fb - fa;
+    return b.total - a.total;
+  });
   return (
     <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
       <div className="flex items-baseline justify-between mb-3">
@@ -45,7 +65,7 @@ export function TodayChannelStats({ stats }: { stats: ChannelStat[] }) {
         </Link>
       </div>
       <ul className="space-y-1.5">
-        {stats.map((s) => {
+        {sortedStats.map((s) => {
           const label = CHANNEL_LABELS[s.channel] ?? s.channel;
           const hasFailed = s.failed > 0;
           const noActivity = s.total === 0;
