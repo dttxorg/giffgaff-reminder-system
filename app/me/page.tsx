@@ -236,7 +236,8 @@ export default async function MePage() {
                 </svg>
                 {formatRelativeTime(sim.lastPortedAt)}
                 <span className="text-slate-400 ml-1">({formatTimeGap(new Date(sim.lastPortedAt))})</span>
-              </span>)
+              </span>
+              )
             </span>
           )}
         </div>
