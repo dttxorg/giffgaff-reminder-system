@@ -173,19 +173,22 @@ export function SimStatusBreakdown({
               const heightPct = d.count > 0 ? (d.count / max) * 100 : 0;
               const isToday = i === 6;
               const mmdd = `${String(d.date.getUTCMonth() + 1).padStart(2, "0")}-${String(d.date.getUTCDate()).padStart(2, "0")}`;
+              const ymd = `${d.date.getUTCFullYear()}-${mmdd.slice(0, 2)}-${mmdd.slice(3, 5)}`;
               return (
                 <li
                   key={d.date.toISOString()}
                   className="flex-1 h-full flex flex-col items-center justify-end"
-                  title={`${mmdd} 新增 ${d.count} 个`}
                 >
-                  <div
-                    className="w-full rounded-sm"
+                  {/* Round 187: 点击柱 → /admin/sims?from=&to= 当天 */}
+                  <Link
+                    href={`/admin/sims?from=${ymd}&to=${ymd}`}
+                    className="block w-full rounded-sm hover:opacity-80 transition-opacity"
                     style={{
                       height: `${Math.max(1, (heightPct / 100) * 20)}px`,
                       backgroundColor: isToday ? "#10b981" : "#a7f3d0",
                       minHeight: "1px",
                     }}
+                    title={`${mmdd} 新增 ${d.count} 个 (点击查看当日 sim)`}
                     aria-label={`${mmdd} 新增 ${d.count}`}
                   />
                 </li>
