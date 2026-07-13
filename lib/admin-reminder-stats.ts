@@ -443,3 +443,44 @@ export async function getTodayFailingSims(
     }))
     .filter((s) => s.phoneNumber !== "(已删除)");
 }
+
+/**
+ * Round 165: 取近 7 天按 channel 分组的推送统计
+ *
+ * 业务用例: /admin 仪表盘"近 7 日按 channel"卡(配合 round 140 今日),
+ * admin 看短期 + 中期 channel 健康度。
+ */
+export interface Channel7DayStat {
+  channel: Channel;
+  total: number;
+  success: number;
+  failed: number;
+  /** 失败率 (0-100) */
+  failRate: number;
+}
+
+const ALL_CHANNELS_7D: Channel[] = ["serverchan", "bark", "pushplus", "telegram"];
+
+export async function getChannelStatsLast7Days(): Promise<Channel7DayStat[]> {
+  const since = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+  const reminders = await prisma.reminderSent.findMany({
+    where: { sentAt: { gte: since } },
+    select: { status: true, user: { select: { channel: true } } },
+  });
+
+  const map = new Map<Channel, Channel7DayStat>();
+  for (const ch of ALL_CHANNELS_7D) {
+    map.set(ch, { channel: ch, total: 0, success: 0, failed: 0, failRate: 0 });
+  }
+  for (const r of reminders) {
+    const stat = map.get(r.user.channel);
+    if (!stat) continue;
+    stat.total++;
+    if (r.status === "success") stat.success++;
+    else if (r.status === "failed") stat.failed++;
+  }
+  for (const stat of map.values()) {
+    stat.failRate = stat.total > 0 ? Math.round((stat.failed / stat.total) * 100) : 0;
+  }
+  return ALL_CHANNELS_7D.map((ch) => map.get(ch)!);
+}

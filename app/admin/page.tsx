@@ -8,12 +8,13 @@ import { Last30DaysSends } from "./_components/last-30-days-sends";
 import { Last90DaysSends } from "./_components/last-90-days-sends";
 import { AdminStat } from "./_components/admin-stat";
 import { TodayChannelStats } from "./_components/today-channel-stats";
+import { Last7DaysChannelStats } from "./_components/last-7-days-channel-stats";
 import { SimStatusBreakdown } from "./_components/sim-status-breakdown";
 import { InWindowSims } from "./_components/in-window-sims";
 import { TodayFailingSims } from "./_components/today-failing-sims";
 import { TopActiveSims } from "./_components/top-active-sims";
 import { TopFailingSims } from "./_components/top-failing-sims";
-import { getInWindowSims, getLast30DaysSends, getLast7DaysNewSims, getLast90DaysSends, getSimStatusBreakdown, getTodayChannelStats, getTodayFailingSims, getTopActiveSims, getTopFailingSims } from "@/lib/admin-reminder-stats";
+import { getChannelStatsLast7Days, getInWindowSims, getLast30DaysSends, getLast7DaysNewSims, getLast90DaysSends, getSimStatusBreakdown, getTodayChannelStats, getTodayFailingSims, getTopActiveSims, getTopFailingSims } from "@/lib/admin-reminder-stats";
 
 export default async function AdminDashboard() {
   await requireAdmin();
@@ -119,6 +120,9 @@ export default async function AdminDashboard() {
   // Round 164: 今日失败 sim 列表(给"今日失败 sim"卡用)
   const todayFailingSims = await getTodayFailingSims(todayStartUTC);
 
+  // Round 165: 近 7 日按 channel 统计(给"近 7 日按 channel"卡用)
+  const channelStatsLast7Days = await getChannelStatsLast7Days();
+
   // Round 149: 近 30 日每日发送数(给 30 日 mini bar 用)
   const last30DaysSends = await getLast30DaysSends();
 
@@ -201,6 +205,8 @@ export default async function AdminDashboard() {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
         <TodayChannelStats stats={todayChannelStats} />
         <TopFailingSims sims={topFailingSims} />
+        {/* Round 165: 近 7 日按 channel 统计(短期 + 中期 channel 健康度) */}
+        <Last7DaysChannelStats stats={channelStatsLast7Days} />
         {/* Round 160: 7 日推送 top 5 sim(跟 top failing 并排) */}
         <TopActiveSims sims={topActiveSims} days={7} />
         <TopActiveSims sims={topActiveSims90d} days={90} />
