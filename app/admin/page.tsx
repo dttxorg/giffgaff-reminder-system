@@ -199,6 +199,17 @@ export default async function AdminDashboard() {
           sub={simCount > 0 ? `占 ${Math.round((inWindowSimCount / simCount) * 100)}%` : "—"}
         />
         <AdminStat label="卡密未用" value={undefined} sub="在 卡密管理 查看" />
+        {/* Round 169: 30 日 + 90 日总推送对比(扩展时间窗口) */}
+        <AdminStat
+          label="近 30 日推送"
+          value={last30DaysSends.reduce((a: number, b) => a + b.count, 0)}
+          tone="emerald"
+        />
+        <AdminStat
+          label="近 90 日推送"
+          value={last90DaysSends.reduce((a: number, b) => a + b.count, 0)}
+          tone="emerald"
+        />
       </div>
 
       {/* Round 152: sim 状态分布(总览健康度) */}
