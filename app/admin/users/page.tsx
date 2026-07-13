@@ -9,14 +9,21 @@ import { AutoSubmitForm } from "../_components/auto-submit-form";
 import type { Prisma } from "@/lib/generated/prisma/client";
 
 interface PageProps {
-  searchParams: Promise<{ channel?: string; password?: string; page?: string }>;
+  searchParams: Promise<{
+    channel?: string;
+    password?: string;
+    page?: string;
+    /** Round 195: 日期范围 (yyyy-MM-dd) */
+    from?: string;
+    to?: string;
+  }>;
 }
 
 const PAGE_SIZE = 20;
 
 export default async function UsersPage({ searchParams }: PageProps) {
   await requireAdmin();
-  const { channel, password, page } = await searchParams;
+  const { channel, password, page, from, to } = await searchParams;
   const currentPage = Math.max(1, parseInt(page || "1", 10) || 1);
   const skip = (currentPage - 1) * PAGE_SIZE;
 
@@ -32,6 +39,22 @@ export default async function UsersPage({ searchParams }: PageProps) {
   }
   if (password === "yes") where.passwordHash = { not: null };
   if (password === "no") where.passwordHash = null;
+
+  // Round 195: 日期范围 (createdAt) 过滤 (跟 /admin/sims 镜像)
+  if (from || to) {
+    const createdAtRange: { gte?: Date; lt?: Date } = {};
+    if (from && /^\d{4}-\d{2}-\d{2}$/.test(from)) {
+      createdAtRange.gte = new Date(from + "T00:00:00Z");
+    }
+    if (to && /^\d{4}-\d{2}-\d{2}$/.test(to)) {
+      const lt = new Date(to + "T00:00:00Z");
+      lt.setUTCDate(lt.getUTCDate() + 1);
+      createdAtRange.lt = lt;
+    }
+    if (createdAtRange.gte || createdAtRange.lt) {
+      where.createdAt = createdAtRange;
+    }
+  }
 
   // 列表 + 概览并行(无 filter)
   const [users, totalUsers, withPwd, noPwd, totalCount] = await Promise.all([
@@ -109,13 +132,29 @@ export default async function UsersPage({ searchParams }: PageProps) {
           <option value="yes">已设密码</option>
           <option value="no">未设密码</option>
         </select>
+        {/* Round 195: 日期范围过滤 (跟 /admin/sims 镜像) */}
+        <input
+          name="from"
+          defaultValue={from || ""}
+          placeholder="起始日期"
+          type="date"
+          className="px-3 py-2 rounded-lg border border-slate-300 text-sm focus:border-indigo-500 outline-none"
+        />
+        <span className="text-slate-400">→</span>
+        <input
+          name="to"
+          defaultValue={to || ""}
+          placeholder="结束日期"
+          type="date"
+          className="px-3 py-2 rounded-lg border border-slate-300 text-sm focus:border-indigo-500 outline-none"
+        />
         <button
           type="submit"
           className="px-4 py-2 rounded-lg bg-indigo-600 text-white text-sm font-medium hover:bg-indigo-700"
         >
           应用筛选
         </button>
-        {(channel || password) && (
+        {(channel || password || from || to) && (
           <Link
             href="/admin/users"
             className="px-3 py-2 text-sm text-slate-600 hover:text-slate-900"
