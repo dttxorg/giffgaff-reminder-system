@@ -14,7 +14,7 @@ import { InWindowSims } from "./_components/in-window-sims";
 import { TodayFailingSims } from "./_components/today-failing-sims";
 import { TopActiveSims } from "./_components/top-active-sims";
 import { TopFailingSims } from "./_components/top-failing-sims";
-import { getChannelStatsLast7Days, getInWindowSims, getLast30DaysSends, getLast7DaysNewSims, getLast90DaysSends, getSimStatusBreakdown, getTodayChannelStats, getTodayFailingSims, getTopActiveSims, getTopFailingSims } from "@/lib/admin-reminder-stats";
+import { getChannelStatsLast7Days, getChannelStatsLast90Days, getInWindowSims, getLast30DaysSends, getLast7DaysNewSims, getLast90DaysSends, getSimStatusBreakdown, getTodayChannelStats, getTodayFailingSims, getTopActiveSims, getTopFailingSims } from "@/lib/admin-reminder-stats";
 
 export default async function AdminDashboard() {
   await requireAdmin();
@@ -123,6 +123,9 @@ export default async function AdminDashboard() {
   // Round 165: 近 7 日按 channel 统计(给"近 7 日按 channel"卡用)
   const channelStatsLast7Days = await getChannelStatsLast7Days();
 
+  // Round 167: 近 90 日按 channel 统计(给"近 90 日按 channel"卡用)
+  const channelStatsLast90Days = await getChannelStatsLast90Days();
+
   // Round 149: 近 30 日每日发送数(给 30 日 mini bar 用)
   const last30DaysSends = await getLast30DaysSends();
 
@@ -206,7 +209,9 @@ export default async function AdminDashboard() {
         <TodayChannelStats stats={todayChannelStats} />
         <TopFailingSims sims={topFailingSims} />
         {/* Round 165: 近 7 日按 channel 统计(短期 + 中期 channel 健康度) */}
-        <Last7DaysChannelStats stats={channelStatsLast7Days} sortBy="failRate" />
+        <Last7DaysChannelStats stats={channelStatsLast7Days} sortBy="failRate" days={7} />
+        {/* Round 167: 90 日 channel 失败率排行(更长期) */}
+        <Last7DaysChannelStats stats={channelStatsLast90Days} sortBy="failRate" days={90} />
         {/* Round 160: 7 日推送 top 5 sim(跟 top failing 并排) */}
         <TopActiveSims sims={topActiveSims} days={7} />
         <TopActiveSims sims={topActiveSims90d} days={90} />

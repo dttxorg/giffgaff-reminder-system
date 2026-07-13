@@ -17,10 +17,13 @@ const CHANNEL_LABELS: Record<string, string> = {
 export function Last7DaysChannelStats({
   stats,
   sortBy = "failRate",
+  days = 7,
 }: {
   stats: Channel7DayStat[];
   /** Round 166: 排序方式, "failRate" 按失败率倒序, "total" 按总推送数倒序 */
   sortBy?: "failRate" | "total";
+  /** Round 167: 时间窗口(7 / 30 / 90 等),默认 7 */
+  days?: number;
 }) {
   // Round 166: 按失败率倒序 (失败率相同按 total 倒序),不健康渠道排前
   const sortedStats = [...stats].sort((a, b) => {
@@ -50,7 +53,7 @@ export function Last7DaysChannelStats({
             <line x1="3" y1="6" x2="21" y2="6" />
             <line x1="3" y1="18" x2="21" y2="18" />
           </svg>
-          近 7 日按 channel
+          近 {days} 日按 channel
         </h2>
         <span className="text-xs text-slate-500">7 天累计</span>
       </div>
@@ -71,7 +74,7 @@ export function Last7DaysChannelStats({
                   {label}
                 </span>
                 {noActivity ? (
-                  <span className="text-slate-300 text-xs">— 7 天无活动</span>
+                  <span className="text-slate-300 text-xs">— {days} 天无活动</span>
                 ) : (
                   <>
                     <span className={hasFailed ? "text-rose-700 font-medium" : "text-slate-700"}>

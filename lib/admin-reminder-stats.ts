@@ -484,3 +484,31 @@ export async function getChannelStatsLast7Days(): Promise<Channel7DayStat[]> {
   }
   return ALL_CHANNELS_7D.map((ch) => map.get(ch)!);
 }
+
+/**
+ * Round 167: 取近 90 天按 channel 分组的推送统计
+ * (跟 getChannelStatsLast7Days 镜像,只是窗口 90 天)
+ */
+export async function getChannelStatsLast90Days(): Promise<Channel7DayStat[]> {
+  const since = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000);
+  const reminders = await prisma.reminderSent.findMany({
+    where: { sentAt: { gte: since } },
+    select: { status: true, user: { select: { channel: true } } },
+  });
+
+  const map = new Map<Channel, Channel7DayStat>();
+  for (const ch of ALL_CHANNELS_7D) {
+    map.set(ch, { channel: ch, total: 0, success: 0, failed: 0, failRate: 0 });
+  }
+  for (const r of reminders) {
+    const stat = map.get(r.user.channel);
+    if (!stat) continue;
+    stat.total++;
+    if (r.status === "success") stat.success++;
+    else if (r.status === "failed") stat.failed++;
+  }
+  for (const stat of map.values()) {
+    stat.failRate = stat.total > 0 ? Math.round((stat.failed / stat.total) * 100) : 0;
+  }
+  return ALL_CHANNELS_7D.map((ch) => map.get(ch)!);
+}
