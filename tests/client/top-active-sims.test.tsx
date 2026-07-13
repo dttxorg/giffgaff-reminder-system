@@ -55,3 +55,20 @@ describe("<TopActiveSims />", () => {
     expect(link).toHaveAttribute("href", "/admin/reminders");
   });
 });
+
+describe("<TopActiveSims /> 自定义 days (round 163)", () => {
+  it("days=90 时标题显示 '90 日推送 top N'", () => {
+    render(<TopActiveSims sims={baseSims} days={90} />);
+    expect(screen.getByText(/90 日推送 top 3/)).toBeInTheDocument();
+  });
+
+  it("days=30 时标题显示 '30 日推送 top N'", () => {
+    render(<TopActiveSims sims={baseSims} days={30} />);
+    expect(screen.getByText(/30 日推送 top 3/)).toBeInTheDocument();
+  });
+
+  it("默认 (不传 days) 仍是 '7 日推送'", () => {
+    render(<TopActiveSims sims={baseSims} />);
+    expect(screen.getByText(/7 日推送 top 3/)).toBeInTheDocument();
+  });
+});
