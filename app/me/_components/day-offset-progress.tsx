@@ -1,4 +1,5 @@
 import { COUNTS, nextBucketAt, shanghaiParts } from "@/lib/bucket";
+import { NextPushCountdown } from "./next-push-countdown";
 
 interface DayOffsetProgressProps {
   dayOffset: number;
@@ -122,7 +123,12 @@ export function ReminderWindowAlert({
   const { label, bucketCount } = progressFor(dayOffset);
   // Round 137: 用上海时区算"下次推送时间"
   const parts = shanghaiParts(now ?? new Date());
-  const nextHHMM = nextBucketAt(dayOffset, parts.hour, parts.minute);
+  const nextHHMM = nextBucketAt(dayOffset, parts.hour);
+  // Round 139: nextHHMM="00:00" 在 bucketForDay 边界外,可能是"今天 0 点已过"或"明天 0 点"。
+  // 简单判断:如果 parts.hour >= 12 且 nextHHMM="00:00",则是明天;否则今天已过
+  // (bucketForDay 不会让 hourOfDay 落在最后一个 bucket 之后才返回 0:00,
+  //  所以 nextHHMM="00:00" 几乎都是"明天的 bucket 0")
+  const isTomorrow = nextHHMM === "00:00";
   return (
     <div className="mt-4 p-3 rounded-lg bg-amber-50 border border-amber-200 text-amber-900 text-sm">
       <div className="font-semibold mb-1 inline-flex items-center gap-1">
@@ -157,7 +163,9 @@ export function ReminderWindowAlert({
         ) : null}
         {nextHHMM && (
           <li>
-            下次推送:<strong>{nextHHMM}</strong>
+            下次推送:<strong className="ml-1">{nextHHMM}</strong>
+            {/* Round 139: 实时倒计时(每分钟更新) */}
+            <NextPushCountdown nextHHMM={nextHHMM} isTomorrow={isTomorrow} />
           </li>
         )}
       </ul>
