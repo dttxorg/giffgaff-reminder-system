@@ -3,6 +3,7 @@ import {
   bucketForDay,
   dayOffsetFromBaseline,
   getMilestone,
+  getNextMilestone,
   isInReminderWindow,
   nextBucketAt,
   shanghaiParts,
@@ -271,5 +272,48 @@ describe("getMilestone", () => {
 
   it("负数 → null (防御性)", () => {
     expect(getMilestone(-1)).toBeNull();
+  });
+});
+
+describe("getNextMilestone", () => {
+  it("0 天 → 下一个是 30 天里程碑", () => {
+    const r = getNextMilestone(0);
+    expect(r?.milestone.days).toBe(30);
+    expect(r?.daysLeft).toBe(30);
+  });
+
+  it("15 天 → 下一个是 30 天里程碑 (15 天后)", () => {
+    const r = getNextMilestone(15);
+    expect(r?.milestone.days).toBe(30);
+    expect(r?.daysLeft).toBe(15);
+  });
+
+  it("31 天 → 下一个是 100 天里程碑 (69 天后)", () => {
+    const r = getNextMilestone(31);
+    expect(r?.milestone.days).toBe(100);
+    expect(r?.daysLeft).toBe(69);
+  });
+
+  it("99 天 → 下一个是 100 天 (1 天后,即将到达)", () => {
+    const r = getNextMilestone(99);
+    expect(r?.milestone.days).toBe(100);
+    expect(r?.daysLeft).toBe(1);
+  });
+
+  it("500 天 → 下一个是 730 天里程碑 (230 天后)", () => {
+    const r = getNextMilestone(500);
+    expect(r?.milestone.days).toBe(730);
+    expect(r?.daysLeft).toBe(230);
+  });
+
+  it("超过最大里程碑 (1825+) → null", () => {
+    expect(getNextMilestone(1825)).toBeNull();
+    expect(getNextMilestone(2000)).toBeNull();
+  });
+
+  it("负数 → 下一个是 0 天 (即将激活)", () => {
+    const r = getNextMilestone(-1);
+    expect(r?.milestone.days).toBe(0);
+    expect(r?.daysLeft).toBe(1);
   });
 });
