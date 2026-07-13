@@ -81,12 +81,16 @@ export default async function MePage() {
   const bucketInfo = bucketForDay(dayOffset, hourOfDay);
 
   // Round 138: 本月推送数(更近期的信号,比 lifetimeCount 更相关)
-  const thisMonthCount = await prisma.reminderSent.count({
-    where: {
-      simId: sim.id,
-      sentAt: { gte: new Date(Date.UTC(sp.year, sp.month - 1, 1)) },
-    },
-  });
+  // Round 184: 本月失败数(给"本月失败"副标用)
+  const monthStart = new Date(Date.UTC(sp.year, sp.month - 1, 1));
+  const [thisMonthCount, thisMonthFailedCount] = await Promise.all([
+    prisma.reminderSent.count({
+      where: { simId: sim.id, sentAt: { gte: monthStart } },
+    }),
+    prisma.reminderSent.count({
+      where: { simId: sim.id, sentAt: { gte: monthStart }, status: "failed" },
+    }),
+  ]);
 
   // Round 144: 今日推送数(更近期的信号,比本月更具体)
   // todayStartUTC = 上海时区今天 0 点(用 sp 算)
@@ -454,14 +458,24 @@ export default async function MePage() {
                 </details>
               )}
               {todayCount === 0 && thisMonthCount > 0 && (
-                /* Round 162 + 174: 用 <details> 包裹,点击展开/折叠近 7 日 chart
-                   并加 "查看全部" 链接到 /me/pushes */
+                /* Round 162 + 174 + 184: 用 <details> 包裹,点击展开/折叠近 7 日 chart
+                   并加 "查看全部" 链接到 /me/pushes, 如有失败加 rose-600 "本月失败" link */
                 <details className="ml-2 inline-block">
                   <summary
                     className="text-sm font-normal text-slate-500 inline-flex items-center gap-1 cursor-pointer list-none"
-                    title={`本月 (${sp.year}-${String(sp.month).padStart(2, "0")}) 已推 ${thisMonthCount} 条`}
+                    title={`本月 (${sp.year}-${String(sp.month).padStart(2, "0")}) 已推 ${thisMonthCount} 条${thisMonthFailedCount > 0 ? `, 失败 ${thisMonthFailedCount} 条` : ""}`}
                   >
                     · 本月 <strong className="text-slate-700">{thisMonthCount}</strong> 条
+                    {thisMonthFailedCount > 0 && (
+                      /* Round 184: '(失败 N)' 加点击跳转 /me/pushes 本月失败 */
+                      <Link
+                        href={`/me/pushes?from=${sp.year}-${String(sp.month).padStart(2, "0")}-01&to=${sp.year}-${String(sp.month).padStart(2, "0")}-${new Date(sp.year, sp.month, 0).getUTCDate().toString().padStart(2, "0")}&status=failed`}
+                        className="text-rose-600 ml-1 hover:underline"
+                        title="查看本月失败推送"
+                      >
+                        (失败 {thisMonthFailedCount})
+                      </Link>
+                    )}
                     <svg
                       width={10}
                       height={10}
