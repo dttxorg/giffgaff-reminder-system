@@ -12,6 +12,7 @@ import {
 } from "@/lib/bucket";
 import { getLast7DaysSendsForSim, getTodayHourlySends } from "@/lib/admin-reminder-stats";
 import { AnniversaryProgress } from "./_components/anniversary-progress";
+import { AnniversaryProgressBar } from "./_components/anniversary-progress-bar";
 import { MilestoneBanner } from "./_components/milestone-banner";
 import { NextMilestoneHint } from "./_components/next-milestone-hint";
 import { TodayHourlyChart } from "./_components/today-hourly-chart";
@@ -258,6 +259,10 @@ export default async function MePage() {
           {/* Round 168: 周年进度 (years >= 1 才显示) */}
           {anniversary.years >= 1 && (
             <AnniversaryProgress progress={anniversary} />
+          )}
+          {/* Round 170: 周年 progress bar (可视化,years >= 1 才显示) */}
+          {anniversary.years >= 1 && (
+            <AnniversaryProgressBar progress={anniversary} />
           )}
         </div>
         <DayOffsetProgress dayOffset={dayOffset} />
