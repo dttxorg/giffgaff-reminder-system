@@ -3,6 +3,7 @@ import { requireAdmin } from "@/lib/admin-guard";
 import { prisma } from "@/lib/db";
 import { formatRelativeTime, formatUtcShanghaiDual } from "@/lib/date";
 import { dayOffsetFromBaseline } from "@/lib/bucket";
+import { Last7DaysDetail } from "./_components/last-7-days-detail";
 import { AdminStat } from "./_components/admin-stat";
 import { TodayChannelStats } from "./_components/today-channel-stats";
 import { TopFailingSims } from "./_components/top-failing-sims";
@@ -20,15 +21,24 @@ export default async function AdminDashboard() {
   const yesterdayStartUTC = new Date(todayStartUTC.getTime() - 24 * 60 * 60 * 1000);
 
   // D1: 7 天每日发送数(给 sparkline 用,从今天倒数 7 天)
-  const last7DaysSends = await Promise.all(
-    Array.from({ length: 7 }, (_, i) => {
+  // Round 146: 同步算 (date, count) 给详细列表用
+  const last7DaysData = await Promise.all(
+    Array.from({ length: 7 }, async (_, i) => {
       const dayStart = new Date(todayStartUTC.getTime() - (6 - i) * 24 * 60 * 60 * 1000);
       const dayEnd = new Date(dayStart.getTime() + 24 * 60 * 60 * 1000);
-      return prisma.reminderSent.count({
+      const count = await prisma.reminderSent.count({
         where: { sentAt: { gte: dayStart, lt: dayEnd } },
       });
+      return {
+        // 0-6 表示"6 天前到今天"
+        offset: 6 - i,
+        // 用 sp 算相对日期标签
+        date: new Date(dayStart.getTime() + 12 * 60 * 60 * 1000), // +12h 防时区抖动
+        count,
+      };
     })
   );
+  const last7DaysSends = last7DaysData.map((d) => d.count);
 
   // 算每个 sim 的 dayOffset(只取 status=active),O(N) 但小系统可接受
   // future 7 天会进窗口:now + 7 天时 dayOffset 首次达到 170 的 sim
@@ -176,6 +186,8 @@ export default async function AdminDashboard() {
           </div>
         </div>
         <Sparkline values={last7DaysSends} />
+        {/* Round 146: 近 7 日详细列表(sparkline 下面) */}
+        <Last7DaysDetail days={last7DaysData} />
       </div>
 
       {/* 快捷入口 */}
