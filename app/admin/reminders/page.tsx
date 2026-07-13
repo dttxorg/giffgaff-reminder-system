@@ -4,6 +4,7 @@ import { prisma } from "@/lib/db";
 import { normalizePhone } from "@/lib/phone";
 import { formatRelativeTime, formatUtcShanghaiDual } from "@/lib/date";
 import { shanghaiParts } from "@/lib/bucket";
+import { buildReminderWhere } from "@/lib/admin-reminder-filter";
 import { AdminStat } from "../_components/admin-stat";
 import { Pagination } from "../_components/pagination";
 import { ResendButton } from "./_components/resend-button";
@@ -16,6 +17,10 @@ interface PageProps {
     /** ISO 日期 (yyyy-MM-dd),按 sentAt 区间过滤 */
     from?: string;
     to?: string;
+    /** Round 128: 推送渠道过滤,排查渠道故障 */
+    channel?: string;
+    /** Round 128: 绑定状态 "yes"/"no" */
+    bound?: string;
     /** 当前页码,默认 1 */
     page?: string;
   }>;
@@ -24,69 +29,49 @@ interface PageProps {
 const PAGE_SIZE = 20;
 
 /**
- * 用与 /admin/sims 页面相同的筛选参数构造 where。
- * 复制一份以保持导出 API 独立(便于以后改格式不影响查询逻辑)。
+ * Round 128: 把 where 构造逻辑抽到 lib/admin-reminder-filter.ts (纯函数,可单测),
+ * 这里只剩 DB 查询(q → matching simIds)。
  */
-async function buildWhere(params: URLSearchParams) {
-  const where: {
-    simId?: number | { in: number[] };
-    status?: "success" | "failed";
-    sentAt?: { gte?: Date; lt?: Date };
-  } = {};
-  const simId = params.get("simId");
-  const q = params.get("q");
-  const status = params.get("status");
-
-  if (simId) where.simId = parseInt(simId, 10);
-
-  if (q) {
-    const cleaned = normalizePhone(q);
+async function buildWhere(params: {
+  simId?: string;
+  q?: string;
+  status?: string;
+  from?: string;
+  to?: string;
+  channel?: string;
+  bound?: string;
+}) {
+  let matchingSimIds: number[] | undefined;
+  if (params.q) {
+    const cleaned = normalizePhone(params.q);
     const matchedSims = await prisma.sim.findMany({
-      where: { phoneNumber: { contains: cleaned || q } },
+      where: { phoneNumber: { contains: cleaned || params.q } },
       select: { id: true },
       take: 200,
     });
-    const ids = matchedSims.map((s) => s.id);
-    if (where.simId) {
-      const sid = where.simId as number;
-      where.simId = ids.includes(sid) ? sid : { in: [] };
-    } else {
-      where.simId = { in: ids };
-    }
+    matchingSimIds = matchedSims.map((s) => s.id);
   }
 
-  if (status === "success" || status === "failed") where.status = status;
-
-  const from = params.get("from");
-  const to = params.get("to");
-  const range: { gte?: Date; lt?: Date } = {};
-  if (from && /^\d{4}-\d{2}-\d{2}$/.test(from)) {
-    range.gte = new Date(from + "T00:00:00Z");
-  }
-  if (to && /^\d{4}-\d{2}-\d{2}$/.test(to)) {
-    range.lt = new Date(to + "T00:00:00Z");
-    range.lt.setUTCDate(range.lt.getUTCDate() + 1);
-  }
-  if (range.gte || range.lt) where.sentAt = range;
-
-  return where;
+  return buildReminderWhere({
+    simId: params.simId,
+    status: params.status,
+    from: params.from,
+    to: params.to,
+    channel: params.channel,
+    bound: params.bound,
+    matchingSimIds,
+  });
 }
 
 export default async function RemindersPage({ searchParams }: PageProps) {
   await requireAdmin();
-  const { simId, q, status, from, to, page } = await searchParams;
+  const { simId, q, status, from, to, channel, bound, page } = await searchParams;
 
   // 分页:page 默认 1,parseInt 失败也 fallback 到 1
   const currentPage = Math.max(1, parseInt(page || "1", 10) || 1);
   const skip = (currentPage - 1) * PAGE_SIZE;
 
-  const where = await buildWhere(
-    new URLSearchParams(
-      Object.entries({ simId, q, status, from, to })
-        .filter(([, v]) => v != null)
-        .map(([k, v]) => [k, String(v)])
-    )
-  );
+  const where = await buildWhere({ simId, q, status, from, to, channel, bound });
 
   // 列表 + 概览并行(无 filter,全量)
   const now = new Date();
@@ -114,6 +99,8 @@ export default async function RemindersPage({ searchParams }: PageProps) {
   if (simId) exportQS.set("simId", simId);
   if (q) exportQS.set("q", q);
   if (status) exportQS.set("status", status);
+  if (channel) exportQS.set("channel", channel);
+  if (bound) exportQS.set("bound", bound);
   if (from) exportQS.set("from", from);
   if (to) exportQS.set("to", to);
   const exportUrl = `/api/admin/reminders/export${
@@ -146,6 +133,8 @@ export default async function RemindersPage({ searchParams }: PageProps) {
         simId={simId}
         q={q}
         status={status}
+        channel={channel}
+        bound={bound}
         from={from}
         to={to}
       />
@@ -249,16 +238,20 @@ function SearchForm({
   simId,
   q,
   status,
+  channel,
+  bound,
   from,
   to,
 }: {
   simId?: string;
   q?: string;
   status?: string;
+  channel?: string;
+  bound?: string;
   from?: string;
   to?: string;
 }) {
-  const hasFilter = !!(simId || q || status || from || to);
+  const hasFilter = !!(simId || q || status || channel || bound || from || to);
   return (
     <form className="mb-4 flex gap-2 flex-wrap items-center">
       <input
@@ -283,6 +276,28 @@ function SearchForm({
         <option value="">全部状态</option>
         <option value="success">success</option>
         <option value="failed">failed</option>
+      </select>
+      <select
+        name="channel"
+        defaultValue={channel || ""}
+        title="按推送渠道过滤(排查渠道故障)"
+        className="px-3 py-2 rounded-lg border border-slate-300 text-sm focus:border-indigo-500 outline-none"
+      >
+        <option value="">全部渠道</option>
+        <option value="serverchan">Server酱</option>
+        <option value="bark">Bark</option>
+        <option value="pushplus">pushplus</option>
+        <option value="telegram">Telegram</option>
+      </select>
+      <select
+        name="bound"
+        defaultValue={bound || ""}
+        title="按绑定状态过滤"
+        className="px-3 py-2 rounded-lg border border-slate-300 text-sm focus:border-indigo-500 outline-none"
+      >
+        <option value="">全部绑定</option>
+        <option value="yes">已绑</option>
+        <option value="no">未绑</option>
       </select>
       <input
         name="from"
