@@ -3,6 +3,8 @@
 // - 每行: 手机号 + 失败次数 (rose 高亮)
 // - 0 失败时显示 "7 天无失败" (避免冷启动视觉噪声)
 // - 点击手机号跳到 /admin/sims/[id] 排查
+// - Round 148: 失败次数变 Link → 跳 /admin/reminders?simId=X&status=failed
+//   (保持仪表盘钻取一致性: 跟 r145 渠道行、r147 7 日数字一样可点)
 
 import Link from "next/link";
 import type { TopFailingSim } from "@/lib/admin-reminder-stats";
@@ -54,9 +56,12 @@ export function TopFailingSims({ sims }: { sims: TopFailingSim[] }) {
               >
                 {s.phoneNumber}
               </Link>
-              <span className="text-rose-700 font-medium whitespace-nowrap">
+              <Link
+                href={`/admin/reminders?simId=${s.simId}&status=failed`}
+                className="text-rose-700 font-medium whitespace-nowrap hover:underline"
+              >
                 {s.failedCount} 次失败
-              </span>
+              </Link>
             </li>
           ))}
         </ul>
