@@ -430,7 +430,8 @@ export default async function MePage() {
                 </details>
               )}
               {todayCount === 0 && thisMonthCount > 0 && (
-                /* Round 162: 用 <details> 包裹,点击展开/折叠近 7 日 chart */
+                /* Round 162 + 174: 用 <details> 包裹,点击展开/折叠近 7 日 chart
+                   并加 "查看全部" 链接到 /me/pushes */
                 <details className="ml-2 inline-block">
                   <summary
                     className="text-sm font-normal text-slate-500 inline-flex items-center gap-1 cursor-pointer list-none"
@@ -454,6 +455,13 @@ export default async function MePage() {
                   </summary>
                   {/* Round 158: 近 7 日每日 mini bar (本月视图) */}
                   <MonthDailyChart days={last7DaysForSim} />
+                  {/* Round 174: 查看完整推送历史链接 */}
+                  <Link
+                    href="/me/pushes"
+                    className="block mt-2 text-xs text-indigo-600 hover:underline"
+                  >
+                    查看完整推送历史 →
+                  </Link>
                 </details>
               )}
             </div>
