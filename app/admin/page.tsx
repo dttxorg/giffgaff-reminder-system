@@ -206,7 +206,7 @@ export default async function AdminDashboard() {
         <TodayChannelStats stats={todayChannelStats} />
         <TopFailingSims sims={topFailingSims} />
         {/* Round 165: 近 7 日按 channel 统计(短期 + 中期 channel 健康度) */}
-        <Last7DaysChannelStats stats={channelStatsLast7Days} />
+        <Last7DaysChannelStats stats={channelStatsLast7Days} sortBy="failRate" />
         {/* Round 160: 7 日推送 top 5 sim(跟 top failing 并排) */}
         <TopActiveSims sims={topActiveSims} days={7} />
         <TopActiveSims sims={topActiveSims90d} days={90} />
