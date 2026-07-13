@@ -3,7 +3,9 @@ import {
   bucketForDay,
   dayOffsetFromBaseline,
   isInReminderWindow,
+  nextBucketAt,
   shanghaiParts,
+  timeUntilNextBucket,
 } from "../lib/bucket";
 
 describe("bucketForDay", () => {
@@ -148,5 +150,80 @@ describe("isInReminderWindow", () => {
     expect(isInReminderWindow(0)).toBe(false);
     expect(isInReminderWindow(169)).toBe(false);
     expect(isInReminderWindow(181)).toBe(false);
+  });
+});
+
+
+describe("nextBucketAt", () => {
+  it("不在提醒窗口 (dayOffset < 170) → null", () => {
+    expect(nextBucketAt(169, 10)).toBeNull();
+    expect(nextBucketAt(100, 23)).toBeNull();
+  });
+
+  it("dayOffset=180 (10 buckets) → 每 2.4h 一个", () => {
+    // 0-2 时 → bucket 0 → 下一个 bucket 1 开始 = 2.4h → "02:00" (floor 2.4 = 2)
+    expect(nextBucketAt(180, 0)).toBe("02:00");
+    expect(nextBucketAt(180, 5)).toBe("07:00");
+    expect(nextBucketAt(180, 20)).toBe("21:00");
+  });
+
+  it("dayOffset=170 (1 bucket) → 整天一个,次日凌晨开始下一轮", () => {
+    // 0-23 时都返回 "00:00" (明天)
+    expect(nextBucketAt(170, 10)).toBe("00:00");
+    expect(nextBucketAt(170, 23)).toBe("00:00");
+  });
+
+  it("dayOffset=175 (2 buckets) → 12h 间隔", () => {
+    // 0-11 → bucket 0 → 下一个 = bucket 1 @ 12:00
+    expect(nextBucketAt(175, 0)).toBe("12:00");
+    expect(nextBucketAt(175, 11)).toBe("12:00");
+    // 12-23 → bucket 1 → 下一个 = 明天 0:00
+    expect(nextBucketAt(175, 12)).toBe("00:00");
+    expect(nextBucketAt(175, 20)).toBe("00:00");
+  });
+
+  it("dayOffset=178 (3 buckets) → 8h 间隔", () => {
+    // 0-7 → bucket 0 → next = bucket 1 @ 08:00
+    expect(nextBucketAt(178, 3)).toBe("08:00");
+    // 8-15 → bucket 1 → next = bucket 2 @ 16:00
+    expect(nextBucketAt(178, 10)).toBe("16:00");
+    // 16-23 → bucket 2 → next = 明天 0:00
+    expect(nextBucketAt(178, 20)).toBe("00:00");
+  });
+});
+
+describe("timeUntilNextBucket", () => {
+  const baseDate = new Date(2026, 6, 13, 10, 30); // 7月13日 10:30
+
+  it("3 小时 30 分后", () => {
+    // baseDate = 10:30, target = 14:00, diff = 3h30m
+    expect(timeUntilNextBucket(baseDate, "14:00")).toBe("3 小时 30 分后");
+  });
+
+  it("整小时(无余分钟)", () => {
+    expect(timeUntilNextBucket(baseDate, "13:00")).toBe("2 小时 30 分后");
+    expect(timeUntilNextBucket(baseDate, "12:00")).toBe("1 小时 30 分后");
+  });
+
+  it("不足 1 小时 → 只显示分钟", () => {
+    expect(timeUntilNextBucket(baseDate, "11:00")).toBe("30 分后");
+    expect(timeUntilNextBucket(baseDate, "10:50")).toBe("20 分后");
+  });
+
+  it("0 分钟差(同一时刻)→ 视为明天 24h 后", () => {
+    expect(timeUntilNextBucket(baseDate, "10:30")).toBe("24 小时后");
+  });
+
+  it("过去时间(差为负)→ 视为明天(24h + 差)", () => {
+    // 10:30 → 10:00(已过) → -30m + 24h = 23h30m
+    expect(timeUntilNextBucket(baseDate, "10:00")).toBe("23 小时 30 分后");
+    // 10:30 → 00:00(已过) → -10:30 + 24h = 13h30m
+    expect(timeUntilNextBucket(baseDate, "00:00")).toBe("13 小时 30 分后");
+  });
+
+  it("跨 24h 仍能正确算", () => {
+    // 现在 23:00, nextBucket 02:00 (明天 2 点) → 3 小时后
+    const lateNight = new Date(2026, 6, 13, 23, 0);
+    expect(timeUntilNextBucket(lateNight, "02:00")).toBe("3 小时后");
   });
 });
