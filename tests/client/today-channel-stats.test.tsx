@@ -65,3 +65,24 @@ describe("<TodayChannelStats />", () => {
     expect(screen.getByText(/4 失败/)).toBeInTheDocument();
   });
 });
+
+describe("<TodayChannelStats /> 渠道行点击跳转 (round 145)", () => {
+  it("整行是 Link,点击跳到 /admin/reminders?channel=X", () => {
+    render(<TodayChannelStats stats={baseStats} />);
+    // Server酱 渠道行应跳到 channel=serverchan
+    const serverchanLink = screen.getByRole("link", { name: /Server酱/ });
+    expect(serverchanLink).toHaveAttribute("href", "/admin/reminders?channel=serverchan");
+  });
+
+  it("Bark 渠道行跳到 channel=bark", () => {
+    render(<TodayChannelStats stats={baseStats} />);
+    const barkLink = screen.getByRole("link", { name: /Bark/ });
+    expect(barkLink).toHaveAttribute("href", "/admin/reminders?channel=bark");
+  });
+
+  it("pushplus (0 推送) 仍可点击(去查为什么没活动)", () => {
+    render(<TodayChannelStats stats={baseStats} />);
+    const pushplusLink = screen.getByRole("link", { name: /pushplus/ });
+    expect(pushplusLink).toHaveAttribute("href", "/admin/reminders?channel=pushplus");
+  });
+});
