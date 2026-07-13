@@ -181,3 +181,33 @@ export async function getInWindowSims(limit: number = 10): Promise<InWindowSim[]
 
 // 内部依赖: 导入 dayOffsetFromBaseline
 import { dayOffsetFromBaseline } from "./bucket";
+
+/**
+ * Round 152: sim 状态统计(总览,不受日期区间限制)
+ *
+ * 业务用例: /admin 仪表盘"sim 状态"卡,admin 一眼看到
+ * "总数 50, 活跃 45, 暂停 5" 的整体健康度。
+ */
+export interface SimStatusBreakdown {
+  total: number;
+  active: number;
+  paused: number;
+  bound: number; // 绑定了 user 的 sim
+  unbound: number; // 未绑定 user
+}
+
+export async function getSimStatusBreakdown(): Promise<SimStatusBreakdown> {
+  const [total, active, paused, bound] = await Promise.all([
+    prisma.sim.count(),
+    prisma.sim.count({ where: { status: "active" } }),
+    prisma.sim.count({ where: { status: "paused" } }),
+    prisma.sim.count({ where: { user: { isNot: null } } }),
+  ]);
+  return {
+    total,
+    active,
+    paused,
+    bound,
+    unbound: total - bound,
+  };
+}
