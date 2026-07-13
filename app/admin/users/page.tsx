@@ -164,6 +164,34 @@ export default async function UsersPage({ searchParams }: PageProps) {
         )}
       </AutoSubmitForm>
 
+      {/* Round 196: 当前过滤状态提示 (date 范围 + channel + password) */}
+      {(from || to || channel || password) && (
+        <div className="mb-3 text-sm text-slate-600 flex items-center gap-2 flex-wrap">
+          <span>当前过滤:</span>
+          {channel && (
+            <span className="px-2 py-0.5 rounded bg-slate-100 text-slate-700">
+              渠道 {channel}
+            </span>
+          )}
+          {password && (
+            <span className="px-2 py-0.5 rounded bg-slate-100 text-slate-700">
+              密码 {password === "yes" ? "已设" : "未设"}
+            </span>
+          )}
+          {(from || to) && (
+            <span className="px-2 py-0.5 rounded bg-slate-100 text-slate-700">
+              {from || "..."} → {to || "..."}
+            </span>
+          )}
+          <Link
+            href="/admin/users"
+            className="text-indigo-600 hover:underline text-xs"
+          >
+            清除全部
+          </Link>
+        </div>
+      )}
+
       <UsersClient users={rows} />
 
       <Pagination

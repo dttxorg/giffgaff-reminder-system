@@ -192,6 +192,39 @@ export default async function SimsPage({ searchParams }: PageProps) {
         </button>
       </AutoSubmitForm>
 
+      {/* Round 196: 当前过滤状态提示 (date 范围 + status + bound + search) */}
+      {(from || to || status || bound || q) && (
+        <div className="mb-3 text-sm text-slate-600 flex items-center gap-2 flex-wrap">
+          <span>当前过滤:</span>
+          {q && (
+            <span className="px-2 py-0.5 rounded bg-slate-100 text-slate-700">
+              搜索 &quot;{q}&quot;
+            </span>
+          )}
+          {status && (
+            <span className="px-2 py-0.5 rounded bg-slate-100 text-slate-700">
+              {status}
+            </span>
+          )}
+          {bound && (
+            <span className="px-2 py-0.5 rounded bg-slate-100 text-slate-700">
+              {bound === "yes" ? "已绑" : "未绑"}
+            </span>
+          )}
+          {(from || to) && (
+            <span className="px-2 py-0.5 rounded bg-slate-100 text-slate-700">
+              {from || "..."} → {to || "..."}
+            </span>
+          )}
+          <Link
+            href="/admin/sims"
+            className="text-indigo-600 hover:underline text-xs"
+          >
+            清除全部
+          </Link>
+        </div>
+      )}
+
       <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
         {rows.length === 0 ? (
           <EmptyState
