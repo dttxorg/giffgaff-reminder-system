@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { LoadingButton } from "@/app/_components/loading-button";
 import { useRouter } from "next/navigation";
 
 export function CsvImportButton() {
@@ -102,13 +103,15 @@ export function CsvImportButton() {
               >
                 关闭
               </button>
-              <button
+              <LoadingButton
                 onClick={onImport}
-                disabled={loading || !csv.trim()}
-                className="px-4 py-2 rounded-lg bg-indigo-600 text-white text-sm font-medium hover:bg-indigo-700 disabled:opacity-50"
-              >
-                {loading ? "导入中..." : "开始导入"}
-              </button>
+                loading={loading}
+                loadingLabel="导入中"
+                label="开始导入"
+                tone="primary"
+                disabled={!csv.trim()}
+                className="px-4 py-2 text-sm"
+              />
             </div>
           </div>
         </div>

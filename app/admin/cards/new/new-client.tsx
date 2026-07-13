@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { formatCardCode } from "@/lib/card-key";
+import { LoadingButton } from "@/app/_components/loading-button";
 
 export function NewCardClient() {
   const router = useRouter();
@@ -189,13 +190,14 @@ export function NewCardClient() {
       </div>
 
       <div className="flex gap-2">
-        <button
+        <LoadingButton
           type="submit"
-          disabled={loading}
-          className="px-4 py-2 rounded-lg bg-indigo-600 text-white text-sm font-medium hover:bg-indigo-700 disabled:opacity-50"
-        >
-          {loading ? "生成中..." : "生成"}
-        </button>
+          loading={loading}
+          loadingLabel="生成中"
+          label="生成"
+          tone="primary"
+          className="px-4 py-2 text-sm"
+        />
         <button
           type="button"
           onClick={() => router.push("/admin/cards")}

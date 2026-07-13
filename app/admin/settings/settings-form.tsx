@@ -3,6 +3,7 @@
 import { useMemo, useRef, useState } from "react";
 import { renderTemplate } from "@/lib/template";
 import { ConfirmModal } from "@/app/_components/confirm-modal";
+import { LoadingButton } from "@/app/_components/loading-button";
 
 const DEFAULT = `【Giffgaff 保号提醒】您的号码 {{phone}} 已激活 {{days}} 天，该保号啦！
 点击更新保号时间：{{port_url}}`;
@@ -211,13 +212,14 @@ export default function SettingsForm({ initial }: { initial: string }) {
       )}
 
       <div className="flex gap-2">
-        <button
+        <LoadingButton
           onClick={onSave}
-          disabled={saving}
-          className="px-4 py-2 rounded-lg bg-indigo-600 text-white text-sm font-medium hover:bg-indigo-700 disabled:opacity-50"
-        >
-          {saving ? "保存中..." : "保存"}
-        </button>
+          loading={saving}
+          loadingLabel="保存中"
+          label="保存"
+          tone="primary"
+          className="px-4 py-2 text-sm"
+        />
         <button
           onClick={onRestoreDefault}
           className="px-4 py-2 rounded-lg bg-white border border-slate-300 text-slate-700 text-sm font-medium hover:bg-slate-50"

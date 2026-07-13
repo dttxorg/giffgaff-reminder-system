@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { formatRelativeTime } from "@/lib/date";
 import { generateSecurePassword } from "@/lib/password-gen";
 import { EmptyState } from "@/app/_components/empty-state";
+import { LoadingButton } from "@/app/_components/loading-button";
 
 interface UserRow {
   id: number;
@@ -269,15 +270,15 @@ export function UsersClient({ users }: UsersClientProps) {
                 )}
 
                 <div className="flex gap-2 pt-2">
-                  <button
+                  <LoadingButton
                     onClick={onSubmit}
-                    disabled={
-                      newPassword.length < 8 || resetStatus === "saving"
-                    }
-                    className="flex-1 py-2.5 rounded-lg bg-indigo-600 text-white text-sm font-medium hover:bg-indigo-700 disabled:opacity-50"
-                  >
-                    {resetStatus === "saving" ? "重置中..." : "重置"}
-                  </button>
+                    loading={resetStatus === "saving"}
+                    loadingLabel="重置中"
+                    label="重置"
+                    tone="primary"
+                    disabled={newPassword.length < 8}
+                    className="flex-1 py-2.5 text-sm"
+                  />
                   <button
                     onClick={closeReset}
                     className="px-4 py-2.5 rounded-lg text-slate-600 hover:bg-slate-100 text-sm"
