@@ -82,3 +82,25 @@ describe("<Last7DaysChannelStats /> 排序 (round 166)", () => {
     expect(links[1].textContent).toContain("Server酱");
   });
 });
+
+describe("<Last7DaysChannelStats /> 自定义 days (round 167)", () => {
+  it("days=90 时标题显示 '近 90 日按 channel'", () => {
+    render(<Last7DaysChannelStats stats={baseStats} days={90} />);
+    expect(screen.getByText(/近 90 日按 channel/)).toBeInTheDocument();
+  });
+
+  it("days=30 时标题显示 '近 30 日按 channel'", () => {
+    render(<Last7DaysChannelStats stats={baseStats} days={30} />);
+    expect(screen.getByText(/近 30 日按 channel/)).toBeInTheDocument();
+  });
+
+  it("days=90 时 '— 90 天无活动' (有 days 替换)", () => {
+    render(<Last7DaysChannelStats stats={baseStats} days={90} />);
+    expect(screen.getByText(/90 天无活动/)).toBeInTheDocument();
+  });
+
+  it("默认 (不传 days) 仍是 '近 7 日'", () => {
+    render(<Last7DaysChannelStats stats={baseStats} />);
+    expect(screen.getByText(/近 7 日按 channel/)).toBeInTheDocument();
+  });
+});
