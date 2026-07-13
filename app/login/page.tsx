@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { PasswordInput } from "@/app/_components/password-input";
-import { Spinner } from "@/app/_components/skip-to-content";
+import { LoadingButton } from "@/app/_components/loading-button";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 
@@ -217,21 +217,14 @@ function LoginForm({
           />
         </div>
 
-        <button
+        <LoadingButton
           type="submit"
-          disabled={loading}
-          // L4:disabled 时文字色也变浅(不只 opacity),色盲/弱视用户更易识别禁用
-          className="w-full py-2.5 rounded-lg bg-indigo-600 text-white font-medium hover:bg-indigo-700 disabled:opacity-60 disabled:text-slate-300 disabled:cursor-not-allowed transition-colors inline-flex items-center justify-center gap-2"
-        >
-          {loading ? (
-            <>
-              <Spinner size={16} label="登录中" className="text-white" />
-              <span>登录中...</span>
-            </>
-          ) : (
-            "登录"
-          )}
-        </button>
+          loading={loading}
+          loadingLabel="登录中"
+          label="登录"
+          tone="primary"
+          className="w-full py-2.5"
+        />
       </form>
     </>
   );

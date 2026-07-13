@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { LoadingButton } from "@/app/_components/loading-button";
 
 export default function AdminLoginPage() {
   const router = useRouter();
@@ -83,13 +84,14 @@ export default function AdminLoginPage() {
               className="w-full px-3.5 py-2.5 rounded-lg border border-slate-300 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 outline-none transition"
             />
           </div>
-          <button
+          <LoadingButton
             type="submit"
-            disabled={loading}
-            className="w-full py-2.5 rounded-lg bg-indigo-600 text-white font-medium hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-          >
-            {loading ? "登录中..." : "登录"}
-          </button>
+            loading={loading}
+            loadingLabel="登录中"
+            label="登录"
+            tone="primary"
+            className="w-full py-2.5"
+          />
         </form>
 
         <div className="mt-4 p-3 rounded-lg bg-slate-50 border border-slate-100 text-xs text-slate-600">
