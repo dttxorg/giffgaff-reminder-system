@@ -1,4 +1,4 @@
-import { COUNTS } from "@/lib/bucket";
+import { COUNTS, nextBucketAt, shanghaiParts } from "@/lib/bucket";
 
 interface DayOffsetProgressProps {
   dayOffset: number;
@@ -103,6 +103,8 @@ export function DayOffsetProgress({ dayOffset }: DayOffsetProgressProps) {
 interface ReminderWindowAlertProps {
   dayOffset: number;
   bucketInfo: { count: number; bucket: number } | null;
+  /** Round 137: 当前时间,用于算"距下次推送还有多久" */
+  now?: Date;
 }
 
 /**
@@ -114,9 +116,13 @@ interface ReminderWindowAlertProps {
 export function ReminderWindowAlert({
   dayOffset,
   bucketInfo,
+  now,
 }: ReminderWindowAlertProps) {
   const daysLeft = 180 - dayOffset;
   const { label, bucketCount } = progressFor(dayOffset);
+  // Round 137: 用上海时区算"下次推送时间"
+  const parts = shanghaiParts(now ?? new Date());
+  const nextHHMM = nextBucketAt(dayOffset, parts.hour, parts.minute);
   return (
     <div className="mt-4 p-3 rounded-lg bg-amber-50 border border-amber-200 text-amber-900 text-sm">
       <div className="font-semibold mb-1 inline-flex items-center gap-1">
@@ -149,6 +155,11 @@ export function ReminderWindowAlert({
             今天预计发送 <strong>{bucketCount}</strong> 次
           </li>
         ) : null}
+        {nextHHMM && (
+          <li>
+            下次推送:<strong>{nextHHMM}</strong>
+          </li>
+        )}
       </ul>
     </div>
   );

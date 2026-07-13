@@ -58,7 +58,9 @@ export default async function MePage() {
       : 100;
 
   // 计算当前小时的 bucket(用于显示"今天第几次推送")
-  const hourOfDay = shanghaiParts(new Date()).hour;
+  // Round 137: 把当前时间传给 ReminderWindowAlert,用于算"距下次推送多久"
+  const now = new Date();
+  const hourOfDay = shanghaiParts(now).hour;
   const bucketInfo = bucketForDay(dayOffset, hourOfDay);
 
   const phoneTail4 = sim.phoneNumber.slice(-4);
@@ -210,6 +212,7 @@ export default async function MePage() {
           <ReminderWindowAlert
             dayOffset={dayOffset}
             bucketInfo={bucketInfo}
+            now={now}
           />
         )}
 

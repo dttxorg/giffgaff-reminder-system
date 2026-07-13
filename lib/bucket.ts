@@ -71,6 +71,82 @@ export function bucketForDay(
   return { count, bucket };
 }
 
+
+/**
+ * 返回下一个 bucket 的开始时间(上海时区)。
+ *
+ * 算法:
+ * - 拿当前 bucket 索引 = Math.floor(hourOfDay / windowSize)
+ * - 下一个 bucket = current + 1 (如果 < count)
+ * - 今天的下一个 bucket 起点 = 当天 0 时 + (nextBucket * windowSize) 小时
+ * - 如果今天所有 bucket 都已过(nextBucket === count) → 返回明天 0 时
+ *
+ * @param dayOffset 距基准日的天数
+ * @param hourOfDay 当前小时(0-23,上海时区)
+ * @returns 下次 bucket 开始的 "HH:MM" 字符串(上海),或 null(不在提醒窗口)
+ *
+ * 用例: /me 提醒窗口 alert 显示"下次推送 HH:MM (X 小时 Y 分后)"
+ */
+export function nextBucketAt(
+  dayOffset: number,
+  hourOfDay: number
+): string | null {
+  const info = bucketForDay(dayOffset, hourOfDay);
+  if (!info) return null;
+  const { count, bucket } = info;
+  const windowSizeHours = 24 / count;
+
+  // 当前 bucket 已经发过/正在发,下一个 = bucket + 1
+  // (bucket 索引从 0 开始,所以"今天已发 X 次"对应 bucket=X-1)
+  const nextBucket = bucket + 1;
+
+  // 计算 HH:MM 字符串
+  let hour: number;
+  if (nextBucket < count) {
+    // 今天的下一个 bucket
+    hour = Math.floor(nextBucket * windowSizeHours);
+  } else {
+    // 今天的都过完了 → 明天 0:00(下一天的 bucket 0)
+    hour = 0;
+  }
+  const hh = String(hour).padStart(2, "0");
+  const mm = "00";
+  return `${hh}:${mm}`;
+}
+
+/**
+ * 返回"距下次 bucket 还有多久"的友好描述。
+ *
+ * @param now 当前时间
+ * @param nextHHMM 下次 bucket 时间(如 "14:00")
+ * @returns 如 "3 小时 20 分后" / "25 分后" / "明天 0 点"
+ *
+ * 简化算法:把"今天的 HH:MM"和"now"对比,得到分钟差。
+ * 跨天情况下 nextBucketAt 会返回 "00:00"(表示明天 0 点),此时 diff 加 24h。
+ */
+export function timeUntilNextBucket(now: Date, nextHHMM: string): string {
+  const [hh, mm] = nextHHMM.split(":").map(Number);
+  const nowHH = now.getHours();
+  const nowMM = now.getMinutes();
+  let diffMinutes = (hh - nowHH) * 60 + (mm - nowMM);
+
+  // 跨天(0 点)时,nextHHMM="00:00" 应该是明天 → diff 加 24h
+  if (diffMinutes <= 0) {
+    // 可能是"已经过了,算明天"
+    // 如果是 0:00 + diff <= 0 (说明现在 >= 0:00 但今天 0 点已经过)
+    // → 算明天
+    diffMinutes += 24 * 60;
+  }
+
+  if (diffMinutes < 60) {
+    return `${diffMinutes} 分后`;
+  }
+  const h = Math.floor(diffMinutes / 60);
+  const m = diffMinutes % 60;
+  if (m === 0) return `${h} 小时后`;
+  return `${h} 小时 ${m} 分后`;
+}
+
 /**
  * 便捷：根据日期对象计算 dayOffset（按 Asia/Shanghai 时区算"日期差"）
  * @param baseline 激活日期或上次保号日期（业务语义是日期粒度）
