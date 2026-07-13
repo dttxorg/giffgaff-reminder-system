@@ -272,7 +272,7 @@ npm run dev
 ```bash
 npx tsc --noEmit         # 类型
 npx eslint .            # lint(自动 fix: --fix)
-npx vitest run          # 380 测试
+npx vitest run          # 388 测试
 npx next build --webpack  # 完整构建
 git diff --stat         # 确认改动范围
 git status             # 确认没漏掉新文件
@@ -288,7 +288,7 @@ git status             # 确认没漏掉新文件
 
 ## 测试
 
-业务逻辑 + UI 组件覆盖,Vitest,共 380 个测试:
+业务逻辑 + UI 组件覆盖,Vitest,共 388 个测试:
 
 ```bash
 npm test              # 跑全部
