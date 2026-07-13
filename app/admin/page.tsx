@@ -7,8 +7,9 @@ import { Last7DaysDetail } from "./_components/last-7-days-detail";
 import { Last30DaysSends } from "./_components/last-30-days-sends";
 import { AdminStat } from "./_components/admin-stat";
 import { TodayChannelStats } from "./_components/today-channel-stats";
+import { InWindowSims } from "./_components/in-window-sims";
 import { TopFailingSims } from "./_components/top-failing-sims";
-import { getLast30DaysSends, getTodayChannelStats, getTopFailingSims } from "@/lib/admin-reminder-stats";
+import { getInWindowSims, getLast30DaysSends, getTodayChannelStats, getTopFailingSims } from "@/lib/admin-reminder-stats";
 
 export default async function AdminDashboard() {
   await requireAdmin();
@@ -108,6 +109,9 @@ export default async function AdminDashboard() {
   // Round 149: 近 30 日每日发送数(给 30 日 mini bar 用)
   const last30DaysSends = await getLast30DaysSends();
 
+  // Round 151: 提醒窗口内 sim 列表(给"提醒窗口内 sim 列表"卡用)
+  const inWindowSims = await getInWindowSims(10);
+
   const channelCoverage = simCount > 0 ? Math.round((channelCount / simCount) * 100) : 0;
 
   // D1: 计算 vs 昨日 delta
@@ -167,10 +171,13 @@ export default async function AdminDashboard() {
         <AdminStat label="卡密未用" value={undefined} sub="在 卡密管理 查看" />
       </div>
 
-      {/* Round 140+141: 今日按渠道 + 7 日失败 top sim(并排展示,便于交叉排查) */}
+      {/* Round 140+141+151: 仪表盘 3 个排查卡 (grid 2 列) */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
         <TodayChannelStats stats={todayChannelStats} />
         <TopFailingSims sims={topFailingSims} />
+        <div className="md:col-span-2">
+          <InWindowSims sims={inWindowSims} />
+        </div>
       </div>
 
       {/* D1: 7 日发送趋势 sparkline + 卡片总数对比 */}

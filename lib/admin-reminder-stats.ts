@@ -139,3 +139,45 @@ export async function getLast30DaysSends(): Promise<DailySend[]> {
   );
   return days;
 }
+
+/**
+ * Round 151: 取"提醒窗口内"的 sim 列表(170-180 天)
+ *
+ * 业务用例: /admin 仪表盘"提醒窗口内 sim 列表"卡,
+ * admin 不只看数字(几个 sim 在窗口),还能看到具体哪些 sim。
+ *
+ * 算法: 取所有 active sim,JS 里算 dayOffset 过滤 170-180 区间,
+ * 跟 dashboard 主流程的 inWindowSimCount 算法保持一致。
+ */
+export interface InWindowSim {
+  simId: number;
+  phoneNumber: string;
+  dayOffset: number;
+  daysLeft: number; // 距保号截止 (180 - dayOffset)
+}
+
+export async function getInWindowSims(limit: number = 10): Promise<InWindowSim[]> {
+  const sims = await prisma.sim.findMany({
+    where: { status: "active" },
+    select: { id: true, phoneNumber: true, activatedAt: true, lastPortedAt: true },
+  });
+  const now = new Date();
+  const inWindow = sims
+    .map((s) => {
+      const baseline = s.lastPortedAt ?? s.activatedAt;
+      const dayOffset = dayOffsetFromBaseline(baseline, now);
+      return {
+        simId: s.id,
+        phoneNumber: s.phoneNumber,
+        dayOffset,
+        daysLeft: 180 - dayOffset,
+      };
+    })
+    .filter((s) => s.dayOffset >= 170 && s.dayOffset <= 180)
+    .sort((a, b) => a.daysLeft - b.daysLeft) // 最紧急的(剩最少天)排前
+    .slice(0, limit);
+  return inWindow;
+}
+
+// 内部依赖: 导入 dayOffsetFromBaseline
+import { dayOffsetFromBaseline } from "./bucket";
