@@ -66,3 +66,77 @@ describe("<SimStatusBreakdown />", () => {
     expect(activeBar).toBeInTheDocument();
   });
 });
+
+describe("<SimStatusBreakdown /> 近 7 日新增 (round 157)", () => {
+  const newSimsLast7Days = {
+    total: 5,
+    daily: [
+      { date: new Date(Date.UTC(2026, 6, 7)), count: 0 },
+      { date: new Date(Date.UTC(2026, 6, 8)), count: 1 },
+      { date: new Date(Date.UTC(2026, 6, 9)), count: 0 },
+      { date: new Date(Date.UTC(2026, 6, 10)), count: 2 },
+      { date: new Date(Date.UTC(2026, 6, 11)), count: 0 },
+      { date: new Date(Date.UTC(2026, 6, 12)), count: 1 },
+      { date: new Date(Date.UTC(2026, 6, 13)), count: 1 },
+    ],
+  };
+
+  it("渲染 '近 7 日新增 N 个'", () => {
+    render(
+      <SimStatusBreakdown
+        stats={baseStats}
+        newSimsLast7Days={newSimsLast7Days}
+      />
+    );
+    expect(screen.getByText("近 7 日新增")).toBeInTheDocument();
+    // 5 个,数字在 strong 标签里
+    expect(screen.getByText("5")).toBeInTheDocument();
+  });
+
+  it("7 天无新增时显示 '7 天无新增'", () => {
+    const emptyNew = { total: 0, daily: newSimsLast7Days.daily.map((d) => ({ ...d, count: 0 })) };
+    render(
+      <SimStatusBreakdown stats={baseStats} newSimsLast7Days={emptyNew} />
+    );
+    expect(screen.getByText("7 天无新增")).toBeInTheDocument();
+  });
+
+  it("渲染 7 个新增 sim 柱", () => {
+    render(
+      <SimStatusBreakdown
+        stats={baseStats}
+        newSimsLast7Days={newSimsLast7Days}
+      />
+    );
+    // 找 7-13 每天的柱
+    expect(screen.getByLabelText("07-13 新增 1")).toBeInTheDocument();
+    expect(screen.getByLabelText("07-10 新增 2")).toBeInTheDocument();
+  });
+
+  it("今天的柱 (offset=6) 用 emerald-500 深色", () => {
+    render(
+      <SimStatusBreakdown
+        stats={baseStats}
+        newSimsLast7Days={newSimsLast7Days}
+      />
+    );
+    const todayBar = screen.getByLabelText("07-13 新增 1");
+    expect(todayBar.getAttribute("style")).toContain("rgb(16, 185, 129)"); // emerald-500
+  });
+
+  it("其他天用 emerald-300 浅色", () => {
+    render(
+      <SimStatusBreakdown
+        stats={baseStats}
+        newSimsLast7Days={newSimsLast7Days}
+      />
+    );
+    const otherBar = screen.getByLabelText("07-10 新增 2");
+    expect(otherBar.getAttribute("style")).toContain("rgb(167, 243, 208)"); // emerald-300
+  });
+
+  it("不传 newSimsLast7Days → 不渲染近 7 日区块 (向后兼容)", () => {
+    render(<SimStatusBreakdown stats={baseStats} />);
+    expect(screen.queryByText("近 7 日新增")).toBeNull();
+  });
+});
