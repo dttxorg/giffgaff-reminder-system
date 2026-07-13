@@ -86,3 +86,32 @@ describe("<TodayChannelStats /> 渠道行点击跳转 (round 145)", () => {
     expect(pushplusLink).toHaveAttribute("href", "/admin/reminders?channel=pushplus");
   });
 });
+
+describe("<TodayChannelStats /> 排序 (round 173)", () => {
+  const sortableStats = [
+    { channel: "serverchan" as const, total: 10, success: 10, failed: 0 },
+    { channel: "bark" as const, total: 5, success: 3, failed: 2 },
+    { channel: "pushplus" as const, total: 3, success: 3, failed: 0 },
+    { channel: "telegram" as const, total: 1, success: 0, failed: 1 },
+  ];
+
+  it("默认按失败率倒序 (Telegram 100% → Bark 40% → pushplus 0% → Server酱 0%)", () => {
+    render(<TodayChannelStats stats={sortableStats} />);
+    // skip '查看详细日志' link (index 0)
+    const links = screen.getAllByRole("link").slice(1);
+    // Telegram (100% 失败率) 应排第一
+    expect(links[0].textContent).toContain("Telegram");
+    // Bark (40%) 第二
+    expect(links[1].textContent).toContain("Bark");
+  });
+
+  it("sortBy='total' 按总推送数倒序 (Server酱 10 → Bark 5 → pushplus 3 → Telegram 1)", () => {
+    render(<TodayChannelStats stats={sortableStats} sortBy="total" />);
+    // skip '查看详细日志' link (index 0)
+    const links = screen.getAllByRole("link").slice(1);
+    expect(links[0].textContent).toContain("Server酱");
+    expect(links[1].textContent).toContain("Bark");
+    expect(links[2].textContent).toContain("pushplus");
+    expect(links[3].textContent).toContain("Telegram");
+  });
+});
