@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { buildReminderWhere, isChannelValue } from "../lib/admin-reminder-filter";
+import { buildReminderWhere, hasAnyReminderFilter, isChannelValue } from "../lib/admin-reminder-filter";
 
 describe("isChannelValue", () => {
   it("接受 4 个合法 channel", () => {
@@ -170,5 +170,30 @@ describe("buildReminderWhere — 综合场景", () => {
     expect(r.user).toEqual({ isNot: null });
     const range = r.sentAt as { gte?: Date; lt?: Date } | undefined;
     expect(range?.gte).toEqual(new Date("2026-07-01T00:00:00Z"));
+  });
+});
+
+describe("hasAnyReminderFilter", () => {
+  it("全空 → false", () => {
+    expect(hasAnyReminderFilter({})).toBe(false);
+  });
+  it("只设 page 风格参数(空对象) → false", () => {
+    expect(
+      hasAnyReminderFilter({ q: "", status: "", channel: "", bound: "", from: "", to: "" })
+    ).toBe(false);
+  });
+  it("任意单个维度非空 → true", () => {
+    expect(hasAnyReminderFilter({ simId: "1" })).toBe(true);
+    expect(hasAnyReminderFilter({ q: "abc" })).toBe(true);
+    expect(hasAnyReminderFilter({ status: "failed" })).toBe(true);
+    expect(hasAnyReminderFilter({ channel: "bark" })).toBe(true);
+    expect(hasAnyReminderFilter({ bound: "yes" })).toBe(true);
+    expect(hasAnyReminderFilter({ from: "2026-07-01" })).toBe(true);
+    expect(hasAnyReminderFilter({ to: "2026-07-12" })).toBe(true);
+  });
+  it("多个维度同时 → true", () => {
+    expect(
+      hasAnyReminderFilter({ channel: "bark", status: "failed", from: "2026-07-12" })
+    ).toBe(true);
   });
 });
