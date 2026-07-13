@@ -388,15 +388,34 @@ export default async function MePage() {
               <span className="text-sm font-normal text-slate-500 ml-1.5">条累计</span>
               {/* Round 144: 今日推送(最近期信号) + Round 138: 本月 */}
               {todayCount > 0 && (
-                <span
-                  className="text-sm font-normal text-slate-500 ml-2"
-                  title={`今日 (${sp.year}-${String(sp.month).padStart(2, "0")}-${String(sp.day).padStart(2, "0")}) 已推 ${todayCount} 条${todayFailedCount > 0 ? `, 失败 ${todayFailedCount} 条` : ""}`}
-                >
-                  · 今日 <strong className={todayFailedCount > 0 ? "text-amber-700" : "text-slate-700"}>{todayCount}</strong> 条
-                  {todayFailedCount > 0 && (
-                    <span className="text-rose-600 ml-0.5">(失败 {todayFailedCount})</span>
-                  )}
-                </span>
+                /* Round 161: 用 <details> 包裹,点击展开/折叠按小时 chart */
+                <details className="ml-2 inline-block">
+                  <summary
+                    className="text-sm font-normal text-slate-500 inline-flex items-center gap-1 cursor-pointer list-none"
+                    title={`今日 (${sp.year}-${String(sp.month).padStart(2, "0")}-${String(sp.day).padStart(2, "0")}) 已推 ${todayCount} 条${todayFailedCount > 0 ? `, 失败 ${todayFailedCount} 条` : ""}`}
+                  >
+                    · 今日 <strong className={todayFailedCount > 0 ? "text-amber-700" : "text-slate-700"}>{todayCount}</strong> 条
+                    {todayFailedCount > 0 && (
+                      <span className="text-rose-600 ml-0.5">(失败 {todayFailedCount})</span>
+                    )}
+                    <svg
+                      width={10}
+                      height={10}
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth={2.5}
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      aria-hidden="true"
+                      className="text-slate-400 ml-0.5 details-chevron"
+                    >
+                      <polyline points="6 9 12 15 18 9" />
+                    </svg>
+                  </summary>
+                  {/* Round 153: 今日按小时分布 (24 个 mini bar) */}
+                  <TodayHourlyChart hours={todayHourlySends} currentHour={sp.hour} />
+                </details>
               )}
               {todayCount === 0 && thisMonthCount > 0 && (
                 <span className="text-sm font-normal text-slate-500 ml-2" title={`本月 (${sp.year}-${String(sp.month).padStart(2, "0")}) 已推 ${thisMonthCount} 条`}>
@@ -404,10 +423,7 @@ export default async function MePage() {
                 </span>
               )}
             </div>
-            {/* Round 153: 今日按小时分布 (24 个 mini bar) */}
-            {todayCount > 0 && (
-              <TodayHourlyChart hours={todayHourlySends} currentHour={sp.hour} />
-            )}
+
             {/* Round 158: 近 7 日每日 mini bar (本月视图) */}
             {thisMonthCount > 0 && (
               <MonthDailyChart days={last7DaysForSim} />

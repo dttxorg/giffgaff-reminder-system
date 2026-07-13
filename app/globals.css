@@ -57,3 +57,14 @@ input[type="number"] {
   outline-offset: 2px;
   border-radius: 4px;
 }
+
+/* === Round 161: <details> 折叠箭头旋转 ===
+ * 跟 /help 现有 group-open 模式一致: 折叠时朝下,展开时朝上。
+ * 用 details[open] 选择器 (原生支持),无需 JS。
+ */
+details > summary .details-chevron {
+  transition: transform 0.2s;
+}
+details[open] > summary .details-chevron {
+  transform: rotate(180deg);
+}
