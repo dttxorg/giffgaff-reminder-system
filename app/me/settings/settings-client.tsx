@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { todayLocalISODate } from "@/lib/date";
 import { PasswordInput } from "@/app/_components/password-input";
+import { LoadingButton } from "@/app/_components/loading-button";
 
 type Channel = "serverchan" | "bark" | "pushplus" | "telegram";
 type TestStatus = "idle" | "sending" | "success" | "error";
@@ -410,14 +411,15 @@ export function MeSettingsClient({
               {cooldown > 0 ? (
                 <CooldownRing seconds={cooldown} total={30} />
               ) : (
-                <button
+                <LoadingButton
                   type="button"
                   onClick={onTest}
-                  disabled={testStatus === "sending"}
-                  className="px-3 py-1.5 text-xs rounded-md border border-slate-300 text-slate-700 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                >
-                  {testStatus === "sending" ? "发送中..." : "测试推送"}
-                </button>
+                  loading={testStatus === "sending"}
+                  loadingLabel="发送中"
+                  label="测试推送"
+                  tone="primary"
+                  className="px-3 py-1.5 text-xs border border-slate-300 hover:bg-slate-50 !bg-white !text-slate-700 hover:!bg-slate-50"
+                />
               )}
               {testStatus === "success" && testMessage && (
                 <span className="text-xs text-emerald-700 flex items-center gap-1">
