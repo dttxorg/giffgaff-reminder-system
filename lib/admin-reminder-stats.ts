@@ -280,3 +280,53 @@ export async function getLast90DaysSends(): Promise<DailySend[]> {
   );
   return days;
 }
+
+/**
+ * Round 157: 取最近 7 天每日新增 sim 数
+ *
+ * 业务用例: /admin 仪表盘 sim 状态卡加"近 7 日新增 N 个"小指标,
+ * admin 能看到 sim 库增长速度(波动大的话可能有批量录入)。
+ *
+ * 注: schema 没有 deletedAt(用级联删除),所以不统计删除。
+ * 只展示"新增"维度。
+ */
+export interface SimDailyCreated {
+  date: Date;
+  count: number;
+}
+
+export async function getLast7DaysNewSims(): Promise<{
+  total: number;
+  daily: SimDailyCreated[];
+}> {
+  const todayStartUTC = new Date();
+  todayStartUTC.setUTCHours(0, 0, 0, 0);
+  const since = new Date(todayStartUTC.getTime() - 6 * 24 * 60 * 60 * 1000);
+
+  const [total, sims] = await Promise.all([
+    prisma.sim.count({ where: { createdAt: { gte: since } } }),
+    prisma.sim.findMany({
+      where: { createdAt: { gte: since } },
+      select: { createdAt: true },
+    }),
+  ]);
+
+  // 按天 group (用上海时区)
+  const daily: SimDailyCreated[] = Array.from({ length: 7 }, (_, i) => {
+    const date = new Date(todayStartUTC.getTime() - (6 - i) * 24 * 60 * 60 * 1000);
+    return { date: new Date(date.getTime() + 12 * 60 * 60 * 1000), count: 0 };
+  });
+  for (const s of sims) {
+    // +8 算上海时区
+    const shanghaiDay = new Date(s.createdAt.getTime() + 8 * 60 * 60 * 1000);
+    const dayIndex = Math.floor(
+      (shanghaiDay.getTime() - (todayStartUTC.getTime() + 12 * 60 * 60 * 1000)) /
+        (24 * 60 * 60 * 1000)
+    );
+    if (dayIndex >= 0 && dayIndex < 7) {
+      daily[dayIndex].count++;
+    }
+  }
+
+  return { total, daily };
+}

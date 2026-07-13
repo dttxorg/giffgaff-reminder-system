@@ -11,7 +11,7 @@ import { TodayChannelStats } from "./_components/today-channel-stats";
 import { SimStatusBreakdown } from "./_components/sim-status-breakdown";
 import { InWindowSims } from "./_components/in-window-sims";
 import { TopFailingSims } from "./_components/top-failing-sims";
-import { getInWindowSims, getLast30DaysSends, getLast90DaysSends, getSimStatusBreakdown, getTodayChannelStats, getTopFailingSims } from "@/lib/admin-reminder-stats";
+import { getInWindowSims, getLast30DaysSends, getLast7DaysNewSims, getLast90DaysSends, getSimStatusBreakdown, getTodayChannelStats, getTopFailingSims } from "@/lib/admin-reminder-stats";
 
 export default async function AdminDashboard() {
   await requireAdmin();
@@ -118,7 +118,11 @@ export default async function AdminDashboard() {
   const inWindowSims = await getInWindowSims(10);
 
   // Round 152: sim 状态统计(给"sim 状态"卡用)
-  const simStatusBreakdown = await getSimStatusBreakdown();
+  const [simStatusBreakdown, newSimsLast7Days] = await Promise.all([
+    getSimStatusBreakdown(),
+    // Round 157: 近 7 日新增 sim 统计
+    getLast7DaysNewSims(),
+  ]);
 
   const channelCoverage = simCount > 0 ? Math.round((channelCount / simCount) * 100) : 0;
 
@@ -180,7 +184,7 @@ export default async function AdminDashboard() {
       </div>
 
       {/* Round 152: sim 状态分布(总览健康度) */}
-      <SimStatusBreakdown stats={simStatusBreakdown} />
+      <SimStatusBreakdown stats={simStatusBreakdown} newSimsLast7Days={newSimsLast7Days} />
 
       {/* Round 140+141+151: 仪表盘 3 个排查卡 (grid 2 列) */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
