@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 import {
   bucketForDay,
   dayOffsetFromBaseline,
+  getMilestone,
   isInReminderWindow,
   nextBucketAt,
   shanghaiParts,
@@ -225,5 +226,50 @@ describe("timeUntilNextBucket", () => {
     // 现在 23:00, nextBucket 02:00 (明天 2 点) → 3 小时后
     const lateNight = new Date(2026, 6, 13, 23, 0);
     expect(timeUntilNextBucket(lateNight, "02:00")).toBe("3 小时后");
+  });
+});
+
+describe("getMilestone", () => {
+  it("0 天 → '已激活' (当天)", () => {
+    const m = getMilestone(0);
+    expect(m).not.toBeNull();
+    expect(m?.days).toBe(0);
+    expect(m?.label).toBe("已激活");
+  });
+
+  it("30 天 → '30 天里程碑'", () => {
+    const m = getMilestone(30);
+    expect(m?.label).toBe("30 天里程碑");
+  });
+
+  it("100 天 → '100 天里程碑'", () => {
+    const m = getMilestone(100);
+    expect(m?.label).toBe("100 天里程碑");
+  });
+
+  it("365 天 → '1 周年里程碑'", () => {
+    const m = getMilestone(365);
+    expect(m?.label).toBe("1 周年里程碑");
+  });
+
+  it("730 天 → '2 周年里程碑'", () => {
+    const m = getMilestone(730);
+    expect(m?.label).toBe("2 周年里程碑");
+  });
+
+  it("1825 天 → '5 周年里程碑'", () => {
+    const m = getMilestone(1825);
+    expect(m?.label).toBe("5 周年里程碑");
+  });
+
+  it("非里程碑天数 → null (e.g. 1, 50, 200, 500)", () => {
+    expect(getMilestone(1)).toBeNull();
+    expect(getMilestone(50)).toBeNull();
+    expect(getMilestone(200)).toBeNull();
+    expect(getMilestone(500)).toBeNull();
+  });
+
+  it("负数 → null (防御性)", () => {
+    expect(getMilestone(-1)).toBeNull();
   });
 });
