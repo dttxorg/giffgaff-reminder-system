@@ -5,7 +5,7 @@ import { getCurrentUser } from "@/lib/session";
 import {
   bucketForDay,
   dayOffsetFromBaseline,
-  getMilestone,
+  getMilestone, COUNTS,
   getAnniversaryProgress, getNextMilestone,
   isInReminderWindow,
   shanghaiParts,
@@ -434,7 +434,15 @@ export default async function MePage() {
                 <details className="ml-2 inline-block">
                   <summary
                     className="text-sm font-normal text-slate-500 inline-flex items-center gap-1 cursor-pointer list-none"
-                    title={`今日 (${sp.year}-${String(sp.month).padStart(2, "0")}-${String(sp.day).padStart(2, "0")}) 已推 ${todayCount} 条${todayFailedCount > 0 ? `, 失败 ${todayFailedCount} 条` : ""}`}
+                    title={`今日 (${sp.year}-${String(sp.month).padStart(2, "0")}-${String(sp.day).padStart(2, "0")}) 已推 ${todayCount} 条${todayFailedCount > 0 ? `, 失败 ${todayFailedCount} 条` : ""}${
+                      (COUNTS[dayOffset] ?? 0) > 0
+                        ? `, 今日预期 ${COUNTS[dayOffset]} 次 (提醒窗口 170-180 天)`
+                        : dayOffset > 180
+                          ? " (已超过提醒窗口,系统不再自动推送)"
+                          : dayOffset < 170
+                            ? " (提醒窗口 170-180 天,未到推送时间)"
+                            : ""
+                    }`}
                   >
                     · 今日 <strong className={todayFailedCount > 0 ? "text-amber-700" : "text-slate-700"}>{todayCount}</strong> 条
                     {todayFailedCount > 0 && (
