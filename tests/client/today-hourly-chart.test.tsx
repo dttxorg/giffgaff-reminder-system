@@ -16,11 +16,11 @@ describe("<TodayHourlyChart />", () => {
     expect(chart.querySelectorAll("div[class*='flex-1']").length).toBe(24);
   });
 
-  it("hover tooltip 显示 HH:00 - N 条", () => {
+  it("hover tooltip 显示 HH:00 - N 条 (round 176 加 '点击查看今日推送' 提示)", () => {
     render(<TodayHourlyChart hours={sampleHours} currentHour={14} />);
-    // hour=0 count=2 → title="00:00 - 2 条"
-    expect(screen.getByTitle("00:00 - 2 条")).toBeInTheDocument();
-    expect(screen.getByTitle("04:00 - 2 条")).toBeInTheDocument();
+    // hour=0 count=2 → title="00:00 - 2 条 (点击查看今日推送)"
+    expect(screen.getByTitle(/00:00 - 2 条/)).toBeInTheDocument();
+    expect(screen.getByTitle(/04:00 - 2 条/)).toBeInTheDocument();
   });
 
   it("当前小时用 indigo-600 (深色)", () => {
@@ -58,5 +58,22 @@ describe("<TodayHourlyChart />", () => {
   it("aria-label 包含 '今日按小时推送分布'", () => {
     render(<TodayHourlyChart hours={sampleHours} currentHour={14} />);
     expect(screen.getByLabelText("今日按小时推送分布")).toBeInTheDocument();
+  });
+});
+
+describe("<TodayHourlyChart /> 点击跳转 (round 176)", () => {
+  it("每个柱是 Link,跳 /me/pushes?from=&to= 当天", () => {
+    render(<TodayHourlyChart hours={sampleHours} currentHour={14} />);
+    // 找 hour=0 的柱 (count=0)
+    const link = screen.getByRole("link", { name: /00:00 2 条/ });
+    // 验证 href 包含 /me/pushes?from=&to= 模式
+    expect(link.getAttribute("href")).toMatch(/^\/me\/pushes\?from=\d{4}-\d{2}-\d{2}&to=\d{4}-\d{2}-\d{2}$/);
+  });
+
+  it("hover tooltip 在 24 个柱上都有 '(点击查看今日推送)' 提示", () => {
+    render(<TodayHourlyChart hours={sampleHours} currentHour={14} />);
+    // 所有 24 个柱都应该有提示
+    const links = screen.getAllByTitle(/点击查看今日推送/);
+    expect(links.length).toBe(24);
   });
 });
