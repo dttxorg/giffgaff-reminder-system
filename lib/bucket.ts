@@ -193,6 +193,21 @@ export function getMilestone(dayOffset: number): Milestone | null {
 }
 
 /**
+ * Round 155: 返回下一个还没到达的里程碑 + 距它还有多少天。
+ *
+ * 业务用例: /me 在没命中里程碑时,显示"距 100 天还差 23 天"激励用户继续使用。
+ * 命中里程碑当天 getMilestone() 优先显示庆祝 banner,
+ * 这里只负责"下一个"目标。
+ */
+export function getNextMilestone(
+  dayOffset: number
+): { milestone: Milestone; daysLeft: number } | null {
+  const next = MILESTONES.find((m) => m.days > dayOffset);
+  if (!next) return null; // 已超过最大里程碑(1825 天)
+  return { milestone: next, daysLeft: next.days - dayOffset };
+}
+
+/**
  * 检查给定 dayOffset 是否在提醒窗口内（170-180）
  */
 export function isInReminderWindow(dayOffset: number): boolean {

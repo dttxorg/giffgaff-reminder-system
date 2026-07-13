@@ -6,11 +6,13 @@ import {
   bucketForDay,
   dayOffsetFromBaseline,
   getMilestone,
+  getNextMilestone,
   isInReminderWindow,
   shanghaiParts,
 } from "@/lib/bucket";
 import { getTodayHourlySends } from "@/lib/admin-reminder-stats";
 import { MilestoneBanner } from "./_components/milestone-banner";
+import { NextMilestoneHint } from "./_components/next-milestone-hint";
 import { TodayHourlyChart } from "./_components/today-hourly-chart";
 import { formatPhoneForDisplay } from "@/lib/phone";
 import { formatRelativeTime, formatTimeGap } from "@/lib/date";
@@ -33,6 +35,8 @@ export default async function MePage() {
   const inWindow = isInReminderWindow(dayOffset);
   // Round 143: 命中里程碑(0/30/100/365/730/1825 天)时显示庆祝 banner
   const milestone = getMilestone(dayOffset);
+  // Round 155: 下一个里程碑激励 hint(只在未命中里程碑时显示)
+  const nextMilestone = milestone ? null : getNextMilestone(dayOffset);
 
   // M3: 最近 5 条 + lifetime 总数(并行)
   // 总数让用户知道系统"一直在跑",透明度提升
@@ -237,6 +241,13 @@ export default async function MePage() {
             {dayOffset === 0 ? "今天" : dayOffset === 1 ? "昨天" : dayOffset === 2 ? "前天" : dayOffset}
           </span>
           <span className="text-base font-normal text-slate-500">天</span>
+          {/* Round 155: 下一个里程碑激励 hint */}
+          {nextMilestone && (
+            <NextMilestoneHint
+              milestone={nextMilestone.milestone}
+              daysLeft={nextMilestone.daysLeft}
+            />
+          )}
         </div>
         <DayOffsetProgress dayOffset={dayOffset} />
 
