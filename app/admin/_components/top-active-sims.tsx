@@ -7,7 +7,14 @@
 import Link from "next/link";
 import type { TopActiveSim } from "@/lib/admin-reminder-stats";
 
-export function TopActiveSims({ sims }: { sims: TopActiveSim[] }) {
+export function TopActiveSims({
+  sims,
+  days = 7,
+}: {
+  sims: TopActiveSim[];
+  /** Round 163: 时间窗口(7 / 30 / 90 等),默认 7 */
+  days?: number;
+}) {
   return (
     <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 mt-4">
       <div className="flex items-baseline justify-between mb-3">
@@ -26,7 +33,7 @@ export function TopActiveSims({ sims }: { sims: TopActiveSim[] }) {
           >
             <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />
           </svg>
-          7 日推送 top {sims.length || 5}
+          {days} 日推送 top {sims.length || 5}
         </h2>
         <Link
           href="/admin/reminders"

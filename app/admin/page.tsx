@@ -112,6 +112,9 @@ export default async function AdminDashboard() {
   // Round 160: 7 日推送 top 5 sim(给"top active"卡片用,跟 top failing 镜像)
   const topActiveSims = await getTopActiveSims(7, 5);
 
+  // Round 163: 90 日推送 top 5 sim(更长期活跃 sim 排行)
+  const topActiveSims90d = await getTopActiveSims(90, 5);
+
   // Round 149: 近 30 日每日发送数(给 30 日 mini bar 用)
   const last30DaysSends = await getLast30DaysSends();
 
@@ -195,7 +198,8 @@ export default async function AdminDashboard() {
         <TodayChannelStats stats={todayChannelStats} />
         <TopFailingSims sims={topFailingSims} />
         {/* Round 160: 7 日推送 top 5 sim(跟 top failing 并排) */}
-        <TopActiveSims sims={topActiveSims} />
+        <TopActiveSims sims={topActiveSims} days={7} />
+        <TopActiveSims sims={topActiveSims90d} days={90} />
         <div className="md:col-span-2">
           <InWindowSims sims={inWindowSims} />
         </div>
