@@ -221,7 +221,10 @@ export default async function AdminDashboard() {
 
       {/* Round 140+141+151: 仪表盘 3 个排查卡 (grid 2 列) */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+        {/* Round 173: 默认按失败率倒序 (不健康排前) */}
         <TodayChannelStats stats={todayChannelStats} />
+        {/* Round 189: 同一数据按总推送数倒序 (高频优先) */}
+        <TodayChannelStats stats={todayChannelStats} sortBy="total" />
         <TopFailingSims sims={topFailingSims} />
         {/* Round 165: 近 7 日按 channel 统计(短期 + 中期 channel 健康度) */}
         <Last7DaysChannelStats stats={channelStatsLast7Days} sortBy="failRate" days={7} />
