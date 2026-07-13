@@ -494,14 +494,14 @@ export function MeSettingsClient({
         )}
 
         <div className="mt-6 flex flex-wrap items-center gap-3">
-          <button
+          <LoadingButton
             onClick={onSave}
-            disabled={saveStatus === "saving"}
-            // 这里不直接禁用 — 让用户点了能看到错误,而不是无声禁用
-            className="px-5 py-2.5 rounded-lg bg-indigo-600 text-white text-sm font-medium hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-          >
-            {saveStatus === "saving" ? "保存中..." : "保存"}
-          </button>
+            loading={saveStatus === "saving"}
+            loadingLabel="保存中"
+            label="保存"
+            tone="primary"
+            className="px-5 py-2.5 text-sm"
+          />
           {!verified && !saveMessage && (
             <span className="text-xs text-amber-700">
               <span className="inline-flex items-center gap-1">
@@ -713,14 +713,16 @@ function ActivatedAtSection({
           )}
 
           <div className="flex gap-2">
-            <button
+            <LoadingButton
               type="button"
               onClick={onSubmit}
+              loading={saving}
+              loadingLabel="保存中"
+              label="保存"
+              tone="primary"
               disabled={!canSubmit}
-              className="px-5 py-2.5 rounded-lg bg-indigo-600 text-white text-sm font-medium hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-            >
-              {saving ? "保存中..." : "保存"}
-            </button>
+              className="px-5 py-2.5 text-sm"
+            />
             <button
               type="button"
               onClick={() => {
@@ -795,14 +797,15 @@ function ActivatedAtSection({
               >
                 取消
               </button>
-              <button
+              <LoadingButton
                 type="button"
                 onClick={confirmAndSave}
-                disabled={saving}
-                className="px-4 py-2 rounded-lg bg-rose-600 text-white text-sm font-medium hover:bg-rose-700 disabled:opacity-50"
-              >
-                {saving ? "保存中..." : "确认修改"}
-              </button>
+                loading={saving}
+                loadingLabel="保存中"
+                label="确认修改"
+                tone="danger"
+                className="px-4 py-2 text-sm"
+              />
             </div>
           </div>
         </div>
@@ -914,13 +917,15 @@ function PasswordSection() {
       )}
 
       <div className="mt-5 flex gap-2">
-        <button
+        <LoadingButton
           onClick={onSubmit}
+          loading={status === "saving"}
+          loadingLabel="保存中"
+          label="更新密码"
+          tone="primary"
           disabled={!canSubmit}
-          className="px-5 py-2.5 rounded-lg bg-slate-900 text-white text-sm font-medium hover:bg-slate-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-        >
-          {status === "saving" ? "保存中..." : "更新密码"}
-        </button>
+          className="px-5 py-2.5 text-sm !bg-slate-900 hover:!bg-slate-800 disabled:!bg-slate-300"
+        />
       </div>
     </div>
   );
