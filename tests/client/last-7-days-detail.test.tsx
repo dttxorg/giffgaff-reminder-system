@@ -56,3 +56,31 @@ describe("<Last7DaysDetail />", () => {
     expect(today.className).toContain("font-semibold");
   });
 });
+
+describe("<Last7DaysDetail /> 数字点击跳转 (round 147)", () => {
+  it("每个日期的数字是 Link,跳 /admin/reminders?from=&to= 当天", () => {
+    render(<Last7DaysDetail days={sampleDays} />);
+    // 07-13 (今天, offset=0) count=6
+    const todayLink = screen.getByRole("link", { name: "6" });
+    expect(todayLink).toHaveAttribute(
+      "href",
+      "/admin/reminders?from=2026-07-13&to=2026-07-13"
+    );
+  });
+
+  it("其他日期同样跳 from=to=当天", () => {
+    render(<Last7DaysDetail days={sampleDays} />);
+    // 07-09 (offset=4) count=0
+    const link = screen.getByRole("link", { name: "0" });
+    expect(link).toHaveAttribute(
+      "href",
+      "/admin/reminders?from=2026-07-09&to=2026-07-09"
+    );
+  });
+
+  it("hover link 变 indigo(视觉反馈)", () => {
+    render(<Last7DaysDetail days={sampleDays} />);
+    const todayLink = screen.getByRole("link", { name: "6" });
+    expect(todayLink.className).toContain("hover:text-indigo-600");
+  });
+});
