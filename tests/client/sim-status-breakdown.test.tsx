@@ -317,3 +317,50 @@ describe("<SimStatusBreakdown /> 进度条点击跳转 (round 179)", () => {
     expect(activeLink!.className).toContain("transition-colors");
   });
 });
+
+describe("<SimStatusBreakdown /> 近 7 日新增 sim 柱 (round 187)", () => {
+  const newSimsLast7Days = {
+    total: 5,
+    daily: [
+      { date: new Date(Date.UTC(2026, 6, 7)), count: 0 },
+      { date: new Date(Date.UTC(2026, 6, 8)), count: 1 },
+      { date: new Date(Date.UTC(2026, 6, 9)), count: 0 },
+      { date: new Date(Date.UTC(2026, 6, 10)), count: 2 },
+      { date: new Date(Date.UTC(2026, 6, 11)), count: 0 },
+      { date: new Date(Date.UTC(2026, 6, 12)), count: 1 },
+      { date: new Date(Date.UTC(2026, 6, 13)), count: 1 },
+    ],
+  };
+
+  it("每根 sim 柱是 Link,跳 /admin/sims?from=&to= 当天", () => {
+    const { container } = render(
+      <SimStatusBreakdown
+        stats={baseStats}
+        newSimsLast7Days={newSimsLast7Days}
+      />
+    );
+    const simLinks = container.querySelectorAll('a[href^="/admin/sims?from="]');
+    expect(simLinks.length).toBe(7);
+  });
+
+  it("今天的 sim 柱 (offset=6) 跳今天日期", () => {
+    const { container } = render(
+      <SimStatusBreakdown
+        stats={baseStats}
+        newSimsLast7Days={newSimsLast7Days}
+      />
+    );
+    const todayLink = container.querySelector('a[aria-label="07-13 新增 1"]');
+    expect(todayLink?.getAttribute("href")).toBe("/admin/sims?from=2026-07-13&to=2026-07-13");
+  });
+
+  it("hover 提示 '(点击查看当日 sim)'", () => {
+    const { container } = render(
+      <SimStatusBreakdown
+        stats={baseStats}
+        newSimsLast7Days={newSimsLast7Days}
+      />
+    );
+    expect(container.querySelectorAll("a[title*='点击查看当日 sim']").length).toBe(7);
+  });
+});
