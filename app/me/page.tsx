@@ -418,16 +418,34 @@ export default async function MePage() {
                 </details>
               )}
               {todayCount === 0 && thisMonthCount > 0 && (
-                <span className="text-sm font-normal text-slate-500 ml-2" title={`本月 (${sp.year}-${String(sp.month).padStart(2, "0")}) 已推 ${thisMonthCount} 条`}>
-                  · 本月 <strong className="text-slate-700">{thisMonthCount}</strong> 条
-                </span>
+                /* Round 162: 用 <details> 包裹,点击展开/折叠近 7 日 chart */
+                <details className="ml-2 inline-block">
+                  <summary
+                    className="text-sm font-normal text-slate-500 inline-flex items-center gap-1 cursor-pointer list-none"
+                    title={`本月 (${sp.year}-${String(sp.month).padStart(2, "0")}) 已推 ${thisMonthCount} 条`}
+                  >
+                    · 本月 <strong className="text-slate-700">{thisMonthCount}</strong> 条
+                    <svg
+                      width={10}
+                      height={10}
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth={2.5}
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      aria-hidden="true"
+                      className="text-slate-400 ml-0.5 details-chevron"
+                    >
+                      <polyline points="6 9 12 15 18 9" />
+                    </svg>
+                  </summary>
+                  {/* Round 158: 近 7 日每日 mini bar (本月视图) */}
+                  <MonthDailyChart days={last7DaysForSim} />
+                </details>
               )}
             </div>
 
-            {/* Round 158: 近 7 日每日 mini bar (本月视图) */}
-            {thisMonthCount > 0 && (
-              <MonthDailyChart days={last7DaysForSim} />
-            )}
             {lifetimeCount > 0 && (
               <p className="text-xs text-slate-500 mt-1">
                 送达率
