@@ -57,3 +57,30 @@ describe("<TodayFailingSims />", () => {
     expect(roseContainers.length).toBeGreaterThan(0);
   });
 });
+
+describe("<TodayFailingSims /> 排序 (round 183)", () => {
+  const sortableSims: TodayFailingSim[] = [
+    { simId: 1, phoneNumber: "07724215611", failedCount: 3 },
+    { simId: 2, phoneNumber: "07724215622", failedCount: 1 },
+    { simId: 3, phoneNumber: "07724215633", failedCount: 2 },
+  ];
+
+  it("默认按失败次数倒序 (failedCount 3→2→1 → simId 1/3/2)", () => {
+    render(<TodayFailingSims sims={sortableSims} />);
+    // skip '查看所有失败' link (index 0)
+    // 每个 sim row 有 2 links (phone + count),indexes 0,2,4 是 phone
+    const links = screen.getAllByRole("link").slice(1);
+    expect(links[0].textContent).toContain("07724215611"); // sim 1 phone
+    expect(links[2].textContent).toContain("07724215633"); // sim 3 phone
+    expect(links[4].textContent).toContain("07724215622"); // sim 2 phone
+  });
+
+  it("sortBy='simId' 按 simId 升序 (1 → 2 → 3)", () => {
+    render(<TodayFailingSims sims={sortableSims} sortBy="simId" />);
+    // skip '查看所有失败' link (index 0)
+    const links = screen.getAllByRole("link").slice(1);
+    expect(links[0].textContent).toContain("07724215611"); // sim 1 phone
+    expect(links[2].textContent).toContain("07724215622"); // sim 2 phone
+    expect(links[4].textContent).toContain("07724215633"); // sim 3 phone
+  });
+});
