@@ -110,7 +110,7 @@ export function SimStatusBreakdown({
         </div>
       </Link>
 
-      {/* Round 172: 绑定率近 7 日变化 (mini sparkline) */}
+      {/* Round 172 + 192: 绑定率近 7 日变化 (mini sparkline,整块可点 → /admin/sims?bound=no) */}
       {bindRateLast7Days && bindRateLast7Days.length > 0 && (() => {
         // 找今天和 7 天前的绑定率,算 delta
         const today = bindRateLast7Days[bindRateLast7Days.length - 1].bindRate;
@@ -119,7 +119,11 @@ export function SimStatusBreakdown({
         const deltaTone = delta > 0 ? "text-emerald-700" : delta < 0 ? "text-rose-700" : "text-slate-500";
         const deltaSign = delta > 0 ? "+" : "";
         return (
-          <div className="mt-2">
+          <Link
+            href="/admin/sims?bound=no"
+            className="block mt-2 -mx-1 px-1 rounded hover:bg-slate-50 transition-colors"
+          >
+          <div>
             <div className="flex items-baseline justify-between text-xs text-slate-500 mb-1">
               <span>近 7 日绑定率</span>
               <span className={deltaTone}>
@@ -152,6 +156,7 @@ export function SimStatusBreakdown({
               })}
             </ul>
           </div>
+          </Link>
         );
       })()}
 
