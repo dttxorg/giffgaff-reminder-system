@@ -558,3 +558,76 @@ export async function getLast7DaysNewUsers(): Promise<{
 
   return { total, daily };
 }
+
+/**
+ * Round 172: 取最近 7 天每天的"绑定率"历史
+ *
+ * 算法: 用 User.createdAt 算每天"已绑定的 sim 数",
+ * 总 sim 数是相对稳定的(只看 createdAt <= 那天)。
+ *
+ * 业务用例: SimStatusBreakdown 顶部"绑定率"进度条加 7 日 sparkline,
+ * admin 看"绑定率"是不是持续增长(健康)还是停滞/下降(异常)。
+ */
+export interface DailyBindRate {
+  date: Date;
+  boundCount: number;
+  totalSimCount: number;
+  bindRate: number; // 0-100
+}
+
+export async function getLast7DaysBindRate(): Promise<DailyBindRate[]> {
+  const todayStartUTC = new Date();
+  todayStartUTC.setUTCHours(0, 0, 0, 0);
+
+  // 7 天前 (含今天 7 天)
+  const start = new Date(todayStartUTC.getTime() - 6 * 24 * 60 * 60 * 1000);
+
+  // 1) 7 天内每天 createdAt <= 那天的 user 总数
+  const users = await prisma.user.findMany({
+    where: { createdAt: { lte: todayStartUTC } },
+    select: { createdAt: true },
+  });
+  // 2) 7 天内每天 createdAt <= 那天的 sim 总数
+  const sims = await prisma.sim.findMany({
+    where: { createdAt: { lte: todayStartUTC } },
+    select: { createdAt: true },
+  });
+
+  const daily: DailyBindRate[] = Array.from({ length: 7 }, (_, i) => {
+    const date = new Date(todayStartUTC.getTime() - (6 - i) * 24 * 60 * 60 * 1000);
+    return {
+      date: new Date(date.getTime() + 12 * 60 * 60 * 1000),
+      boundCount: 0,
+      totalSimCount: 0,
+      bindRate: 0,
+    };
+  });
+
+  for (const u of users) {
+    const shanghaiDay = new Date(u.createdAt.getTime() + 8 * 60 * 60 * 1000);
+    const dayIndex = Math.floor(
+      (shanghaiDay.getTime() - (todayStartUTC.getTime() + 12 * 60 * 60 * 1000)) /
+        (24 * 60 * 60 * 1000)
+    );
+    if (dayIndex >= 0 && dayIndex < 7) {
+      daily[dayIndex].boundCount++;
+    }
+  }
+  for (const s of sims) {
+    const shanghaiDay = new Date(s.createdAt.getTime() + 8 * 60 * 60 * 1000);
+    const dayIndex = Math.floor(
+      (shanghaiDay.getTime() - (todayStartUTC.getTime() + 12 * 60 * 60 * 1000)) /
+        (24 * 60 * 60 * 1000)
+    );
+    if (dayIndex >= 0 && dayIndex < 7) {
+      daily[dayIndex].totalSimCount++;
+    }
+  }
+  for (const d of daily) {
+    d.bindRate =
+      d.totalSimCount > 0 ? Math.round((d.boundCount / d.totalSimCount) * 100) : 0;
+  }
+  // sanity: 不用 start (保留参数避免 lint 警告)
+  void start;
+  return daily;
+}

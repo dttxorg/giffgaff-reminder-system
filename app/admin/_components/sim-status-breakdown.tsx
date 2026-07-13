@@ -11,12 +11,15 @@ export function SimStatusBreakdown({
   stats,
   newSimsLast7Days,
   newUsersLast7Days,
+  bindRateLast7Days,
 }: {
   stats: SimStatusBreakdown;
   /** Round 157: 近 7 日新增 sim 统计 */
   newSimsLast7Days?: { total: number; daily: SimDailyCreated[] };
   /** Round 171: 近 7 日新增 user 统计 (optional) */
   newUsersLast7Days?: { total: number; daily: { date: Date; count: number }[] };
+  /** Round 172: 近 7 日绑定率历史 (optional) */
+  bindRateLast7Days?: { date: Date; boundCount: number; totalSimCount: number; bindRate: number }[];
 }) {
   const { total, active, paused, bound, unbound } = stats;
   const activePct = total > 0 ? Math.round((active / total) * 100) : 0;
@@ -99,6 +102,51 @@ export function SimStatusBreakdown({
           />
         </div>
       </div>
+
+      {/* Round 172: 绑定率近 7 日变化 (mini sparkline) */}
+      {bindRateLast7Days && bindRateLast7Days.length > 0 && (() => {
+        // 找今天和 7 天前的绑定率,算 delta
+        const today = bindRateLast7Days[bindRateLast7Days.length - 1].bindRate;
+        const first = bindRateLast7Days[0].bindRate;
+        const delta = today - first;
+        const deltaTone = delta > 0 ? "text-emerald-700" : delta < 0 ? "text-rose-700" : "text-slate-500";
+        const deltaSign = delta > 0 ? "+" : "";
+        return (
+          <div className="mt-2">
+            <div className="flex items-baseline justify-between text-xs text-slate-500 mb-1">
+              <span>近 7 日绑定率</span>
+              <span className={deltaTone}>
+                {deltaSign}{delta}% 变化
+              </span>
+            </div>
+            <ul
+              className="flex items-end gap-px h-4"
+              aria-label="近 7 日绑定率变化"
+            >
+              {bindRateLast7Days.map((d, i) => {
+                const isToday = i === bindRateLast7Days.length - 1;
+                return (
+                  <li
+                    key={d.date.toISOString()}
+                    className="flex-1 h-full flex flex-col items-center justify-end"
+                    title={`${d.date.toISOString().slice(0, 10)} 绑定率 ${d.bindRate}% (${d.boundCount}/${d.totalSimCount})`}
+                  >
+                    <div
+                      className="w-full rounded-sm"
+                      style={{
+                        height: `${Math.max(1, d.bindRate / 100 * 16)}px`,
+                        backgroundColor: isToday ? "#4f46e5" : "#a5b4fc",
+                        minHeight: "1px",
+                      }}
+                      aria-label={`${d.date.toISOString().slice(0, 10)} 绑定率 ${d.bindRate}%`}
+                    />
+                  </li>
+                );
+              })}
+            </ul>
+          </div>
+        );
+      })()}
 
       {/* Round 157: 近 7 日新增 sim 趋势 */}
       {newSimsLast7Days && (
