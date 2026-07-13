@@ -512,3 +512,49 @@ export async function getChannelStatsLast90Days(): Promise<Channel7DayStat[]> {
   }
   return ALL_CHANNELS_7D.map((ch) => map.get(ch)!);
 }
+
+/**
+ * Round 171: 取最近 7 天每日新增 user 数
+ *
+ * 业务用例: /admin 仪表盘 sim 状态卡加"近 7 日新增用户" mini bar,
+ * 跟 round 157 "近 7 日新增 sim" 镜像,看用户绑定增长趋势。
+ */
+export interface DailyUserCreated {
+  date: Date;
+  count: number;
+}
+
+export async function getLast7DaysNewUsers(): Promise<{
+  total: number;
+  daily: DailyUserCreated[];
+}> {
+  const todayStartUTC = new Date();
+  todayStartUTC.setUTCHours(0, 0, 0, 0);
+  const since = new Date(todayStartUTC.getTime() - 6 * 24 * 60 * 60 * 1000);
+
+  const [total, users] = await Promise.all([
+    prisma.user.count({ where: { createdAt: { gte: since } } }),
+    prisma.user.findMany({
+      where: { createdAt: { gte: since } },
+      select: { createdAt: true },
+    }),
+  ]);
+
+  // 按天 group (用上海时区)
+  const daily: DailyUserCreated[] = Array.from({ length: 7 }, (_, i) => {
+    const date = new Date(todayStartUTC.getTime() - (6 - i) * 24 * 60 * 60 * 1000);
+    return { date: new Date(date.getTime() + 12 * 60 * 60 * 1000), count: 0 };
+  });
+  for (const u of users) {
+    const shanghaiDay = new Date(u.createdAt.getTime() + 8 * 60 * 60 * 1000);
+    const dayIndex = Math.floor(
+      (shanghaiDay.getTime() - (todayStartUTC.getTime() + 12 * 60 * 60 * 1000)) /
+        (24 * 60 * 60 * 1000)
+    );
+    if (dayIndex >= 0 && dayIndex < 7) {
+      daily[dayIndex].count++;
+    }
+  }
+
+  return { total, daily };
+}

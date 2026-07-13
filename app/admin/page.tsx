@@ -14,7 +14,7 @@ import { InWindowSims } from "./_components/in-window-sims";
 import { TodayFailingSims } from "./_components/today-failing-sims";
 import { TopActiveSims } from "./_components/top-active-sims";
 import { TopFailingSims } from "./_components/top-failing-sims";
-import { getChannelStatsLast7Days, getChannelStatsLast90Days, getInWindowSims, getLast30DaysSends, getLast7DaysNewSims, getLast90DaysSends, getSimStatusBreakdown, getTodayChannelStats, getTodayFailingSims, getTopActiveSims, getTopFailingSims } from "@/lib/admin-reminder-stats";
+import { getChannelStatsLast7Days, getChannelStatsLast90Days, getInWindowSims, getLast30DaysSends, getLast7DaysNewSims, getLast7DaysNewUsers, getLast90DaysSends, getSimStatusBreakdown, getTodayChannelStats, getTodayFailingSims, getTopActiveSims, getTopFailingSims } from "@/lib/admin-reminder-stats";
 
 export default async function AdminDashboard() {
   await requireAdmin();
@@ -135,11 +135,13 @@ export default async function AdminDashboard() {
   // Round 151: 提醒窗口内 sim 列表(给"提醒窗口内 sim 列表"卡用)
   const inWindowSims = await getInWindowSims(10);
 
-  // Round 152: sim 状态统计(给"sim 状态"卡用)
-  const [simStatusBreakdown, newSimsLast7Days] = await Promise.all([
+  // Round 152+157+171: sim 状态 + 近 7 日新增 sim/user 统计(给"sim 状态"卡用)
+  const [simStatusBreakdown, newSimsLast7Days, newUsersLast7Days] = await Promise.all([
     getSimStatusBreakdown(),
     // Round 157: 近 7 日新增 sim 统计
     getLast7DaysNewSims(),
+    // Round 171: 近 7 日新增 user 统计
+    getLast7DaysNewUsers(),
   ]);
 
   const channelCoverage = simCount > 0 ? Math.round((channelCount / simCount) * 100) : 0;
@@ -213,7 +215,7 @@ export default async function AdminDashboard() {
       </div>
 
       {/* Round 152: sim 状态分布(总览健康度) */}
-      <SimStatusBreakdown stats={simStatusBreakdown} newSimsLast7Days={newSimsLast7Days} />
+      <SimStatusBreakdown stats={simStatusBreakdown} newSimsLast7Days={newSimsLast7Days} newUsersLast7Days={newUsersLast7Days} />
 
       {/* Round 140+141+151: 仪表盘 3 个排查卡 (grid 2 列) */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">

@@ -2,16 +2,21 @@
 // - 4 维度: 总数 / 活跃 / 暂停 / 已绑 / 未绑
 // - 进度条可视化
 // - 数字 hover 显示百分比
+// - Round 157: 加近 7 日新增 sim 趋势
+// - Round 171: 加近 7 日新增 user 趋势 (镜像 sim,indigo 色)
 
 import type { SimStatusBreakdown, SimDailyCreated } from "@/lib/admin-reminder-stats";
 
 export function SimStatusBreakdown({
   stats,
   newSimsLast7Days,
+  newUsersLast7Days,
 }: {
   stats: SimStatusBreakdown;
   /** Round 157: 近 7 日新增 sim 统计 */
   newSimsLast7Days?: { total: number; daily: SimDailyCreated[] };
+  /** Round 171: 近 7 日新增 user 统计 (optional) */
+  newUsersLast7Days?: { total: number; daily: { date: Date; count: number }[] };
 }) {
   const { total, active, paused, bound, unbound } = stats;
   const activePct = total > 0 ? Math.round((active / total) * 100) : 0;
@@ -97,42 +102,82 @@ export function SimStatusBreakdown({
 
       {/* Round 157: 近 7 日新增 sim 趋势 */}
       {newSimsLast7Days && (
-      <div className="mt-3 pt-3 border-t border-slate-100">
-        <div className="flex items-baseline justify-between text-xs text-slate-600 mb-1.5">
-          <span>近 7 日新增</span>
-          <span>
-            <strong className="text-slate-900">{newSimsLast7Days.total}</strong> 个
-            {newSimsLast7Days.total === 0 && (
-              <span className="text-slate-400 ml-1">7 天无新增</span>
-            )}
-          </span>
+        <div className="mt-3 pt-3 border-t border-slate-100">
+          <div className="flex items-baseline justify-between text-xs text-slate-600 mb-1.5">
+            <span>近 7 日新增 sim</span>
+            <span>
+              <strong className="text-slate-900">{newSimsLast7Days.total}</strong> 个
+              {newSimsLast7Days.total === 0 && (
+                <span className="text-slate-400 ml-1">7 天无新增</span>
+              )}
+            </span>
+          </div>
+          <ul className="flex items-end gap-1 h-6" aria-label="近 7 日新增 sim 趋势">
+            {newSimsLast7Days.daily.map((d, i) => {
+              const max = Math.max(1, ...newSimsLast7Days.daily.map((x) => x.count));
+              const heightPct = d.count > 0 ? (d.count / max) * 100 : 0;
+              const isToday = i === 6;
+              const mmdd = `${String(d.date.getUTCMonth() + 1).padStart(2, "0")}-${String(d.date.getUTCDate()).padStart(2, "0")}`;
+              return (
+                <li
+                  key={d.date.toISOString()}
+                  className="flex-1 h-full flex flex-col items-center justify-end"
+                  title={`${mmdd} 新增 ${d.count} 个`}
+                >
+                  <div
+                    className="w-full rounded-sm"
+                    style={{
+                      height: `${Math.max(1, (heightPct / 100) * 20)}px`,
+                      backgroundColor: isToday ? "#10b981" : "#a7f3d0",
+                      minHeight: "1px",
+                    }}
+                    aria-label={`${mmdd} 新增 ${d.count}`}
+                  />
+                </li>
+              );
+            })}
+          </ul>
         </div>
-        <ul className="flex items-end gap-1 h-6" aria-label="近 7 日新增 sim 趋势">
-          {newSimsLast7Days.daily.map((d, i) => {
-            const max = Math.max(1, ...newSimsLast7Days.daily.map((x) => x.count));
-            const heightPct = d.count > 0 ? (d.count / max) * 100 : 0;
-            const isToday = i === 6;
-            const mmdd = `${String(d.date.getUTCMonth() + 1).padStart(2, "0")}-${String(d.date.getUTCDate()).padStart(2, "0")}`;
-            return (
-              <li
-                key={d.date.toISOString()}
-                className="flex-1 h-full flex flex-col items-center justify-end"
-                title={`${mmdd} 新增 ${d.count} 个`}
-              >
-                <div
-                  className="w-full rounded-sm"
-                  style={{
-                    height: `${Math.max(1, (heightPct / 100) * 20)}px`,
-                    backgroundColor: isToday ? "#10b981" : "#a7f3d0",
-                    minHeight: "1px",
-                  }}
-                  aria-label={`${mmdd} 新增 ${d.count}`}
-                />
-              </li>
-            );
-          })}
-        </ul>
-      </div>
+      )}
+
+      {/* Round 171: 近 7 日新增 user 趋势 (镜像 sim,indigo 色系) */}
+      {newUsersLast7Days && (
+        <div className="mt-3">
+          <div className="flex items-baseline justify-between text-xs text-slate-600 mb-1.5">
+            <span>近 7 日新增用户</span>
+            <span>
+              <strong className="text-slate-900">{newUsersLast7Days.total}</strong> 个
+              {newUsersLast7Days.total === 0 && (
+                <span className="text-slate-400 ml-1">7 天无新绑定</span>
+              )}
+            </span>
+          </div>
+          <ul className="flex items-end gap-1 h-6" aria-label="近 7 日新增 user 趋势">
+            {newUsersLast7Days.daily.map((d, i) => {
+              const max = Math.max(1, ...newUsersLast7Days.daily.map((x) => x.count));
+              const heightPct = d.count > 0 ? (d.count / max) * 100 : 0;
+              const isToday = i === 6;
+              const mmdd = `${String(d.date.getUTCMonth() + 1).padStart(2, "0")}-${String(d.date.getUTCDate()).padStart(2, "0")}`;
+              return (
+                <li
+                  key={d.date.toISOString()}
+                  className="flex-1 h-full flex flex-col items-center justify-end"
+                  title={`${mmdd} 新增 ${d.count} 个`}
+                >
+                  <div
+                    className="w-full rounded-sm"
+                    style={{
+                      height: `${Math.max(1, (heightPct / 100) * 20)}px`,
+                      backgroundColor: isToday ? "#6366f1" : "#c7d2fe",
+                      minHeight: "1px",
+                    }}
+                    aria-label={`${mmdd} 新增 ${d.count}`}
+                  />
+                </li>
+              );
+            })}
+          </ul>
+        </div>
       )}
     </div>
   );
