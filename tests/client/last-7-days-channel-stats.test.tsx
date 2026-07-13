@@ -57,3 +57,28 @@ describe("<Last7DaysChannelStats />", () => {
     expect(screen.getByText(/合计 50/)).toBeInTheDocument();
   });
 });
+
+describe("<Last7DaysChannelStats /> 排序 (round 166)", () => {
+  it("默认按失败率倒序(Bark 10% 应该排第一)", () => {
+    render(<Last7DaysChannelStats stats={baseStats} />);
+    // 第一个 Link 是 Bark (10% 失败率)
+    const firstLink = screen.getAllByRole("link")[0];
+    expect(firstLink.textContent).toContain("Bark");
+  });
+
+  it("sortBy='total' 按总推送数倒序(Server酱 100 应该排第一)", () => {
+    render(<Last7DaysChannelStats stats={baseStats} sortBy="total" />);
+    const firstLink = screen.getAllByRole("link")[0];
+    expect(firstLink.textContent).toContain("Server酱");
+  });
+
+  it("失败率相同时按 total 倒序(本测试数据无重复失败率,跳过)", () => {
+    // 服务器酱 2% 总 100, Telegram 0% 总 30, Bark 10% 总 50
+    // 失败率: Bark 10 > 服务器酱 2 > Telegram 0 = pushplus 0
+    // 排序: Bark, 服务器酱, Telegram, pushplus
+    render(<Last7DaysChannelStats stats={baseStats} />);
+    const links = screen.getAllByRole("link");
+    expect(links[0].textContent).toContain("Bark");
+    expect(links[1].textContent).toContain("Server酱");
+  });
+});
