@@ -35,6 +35,16 @@ export default async function MePage() {
 
   const sim = user.sim;
   const baseline = sim.lastPortedAt ?? sim.activatedAt;
+  // Round 206: 复用 formatRelativeTime 算激活/保号距今 (避免 react-hooks/purity 错误)
+  // 提取 "168 天前" 形式里的数字部分
+  const _daysFromRelative = (rel: string): number => {
+    const m = rel.match(/^(\d+)\s*天/);
+    return m ? parseInt(m[1], 10) : 0;
+  };
+  const daysSinceActivated = _daysFromRelative(formatRelativeTime(sim.activatedAt));
+  const daysSinceLastPorted = sim.lastPortedAt
+    ? _daysFromRelative(formatRelativeTime(sim.lastPortedAt))
+    : 0;
   const dayOffset = dayOffsetFromBaseline(baseline);
   const inWindow = isInReminderWindow(dayOffset);
   // Round 143: 命中里程碑(0/30/100/365/730/1825 天)时显示庆祝 banner
@@ -202,8 +212,8 @@ export default async function MePage() {
         <div className="text-base mb-4">
           <span
             className="cursor-help inline-flex items-center gap-1"
-            /* Round 190: 显示完整激活时间 (年月日 时分秒) */
-            title={`激活于 ${new Date(sim.activatedAt).toLocaleString("zh-CN", { year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", second: "2-digit" })}`}
+            /* Round 190: 显示完整激活时间 + Round 206: 包含修改记录 (激活 + 上次保号) */
+            title={`激活于 ${new Date(sim.activatedAt).toLocaleString("zh-CN", { year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", second: "2-digit" })}${sim.lastPortedAt ? `\n上次保号于 ${new Date(sim.lastPortedAt).toLocaleString("zh-CN", { year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", second: "2-digit" })}` : ""}\n\n修改记录: ${sim.lastPortedAt ? `${daysSinceLastPorted} 天前保号, ${daysSinceActivated} 天前激活` : `尚未保号, ${daysSinceActivated} 天前激活`}`}
           >
             <svg
               width={12}
