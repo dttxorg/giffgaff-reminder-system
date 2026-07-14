@@ -290,13 +290,28 @@ export default async function MePage() {
             </span>
           )}
           {/* Round 181: 成功推送次数 (lifetimeCount = total, successCount = delivered) */}
-          <span className="ml-2 text-xs text-slate-500" title={`系统累计推送 ${lifetimeCount} 次 (成功 ${successCount} 次, 失败 ${failedCount} 次)`}>
+          <span
+            className="ml-2 text-xs text-slate-500"
+            /* Round 209: 加 "今日预期 X 次" 提示 (从 COUNTS 算) */
+            title={`系统累计推送 ${lifetimeCount} 次 (成功 ${successCount} 次, 失败 ${failedCount} 次)${
+              (COUNTS[dayOffset] ?? 0) > 0
+                ? `, 今日预期 ${COUNTS[dayOffset]} 次`
+                : dayOffset > 180
+                  ? ", 已超过提醒窗口"
+                  : dayOffset < 170
+                    ? ", 未到提醒窗口"
+                    : ""
+            }`}
+          >
             <Link
               href="/me/pushes?status=success"
               className="text-emerald-700 hover:underline"
             >
               {successCount} 次成功
             </Link>
+            {(COUNTS[dayOffset] ?? 0) > 0 && (
+              <span className="ml-1">/ 今日预期 {COUNTS[dayOffset]} 次</span>
+            )}
           </span>
           {/* Round 155: 下一个里程碑激励 hint */}
           {nextMilestone && (
