@@ -502,6 +502,15 @@ export default async function MePage() {
                     title={`本月 (${sp.year}-${String(sp.month).padStart(2, "0")}) 已推 ${thisMonthCount} 条${thisMonthFailedCount > 0 ? `, 失败 ${thisMonthFailedCount} 条` : ""}${thisMonthExpected > 0 ? `, 本月预期 ${thisMonthExpected} 次` : ""}`}
                   >
                     · 本月 <strong className="text-slate-700">{thisMonthCount}</strong> 条
+                    {thisMonthExpected > thisMonthCount && (
+                      /* Round 207: 显示 'X 次剩余' 提示 (本月预期 - 已推) */
+                      <span
+                        className="ml-1 text-slate-500"
+                        title={`本月预期 ${thisMonthExpected} 次, 已推 ${thisMonthCount} 次, 还差 ${thisMonthExpected - thisMonthCount} 次`}
+                      >
+                        (还差 {thisMonthExpected - thisMonthCount} 次)
+                      </span>
+                    )}
                     {thisMonthFailedCount > 0 && (
                       /* Round 184: '(失败 N)' 加点击跳转 /me/pushes 本月失败 */
                       <Link
