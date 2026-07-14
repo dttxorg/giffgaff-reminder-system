@@ -2,20 +2,30 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import { getCurrentUser } from "@/lib/session";
 import { SimCard } from "./_components/sim-card";
+import { SimTabs } from "./_components/sim-tabs";
 
-export default async function MePage() {
+interface PageProps {
+  searchParams: Promise<{ simId?: string }>;
+}
+
+export default async function MePage({ searchParams }: PageProps) {
   const user = await getCurrentUser();
   if (!user) redirect("/login");
 
+  const { simId: simIdParam } = await searchParams;
   const sims = user.sims;
   const simCount = sims.length;
   // 同一请求内多 SimCard 共用一个 now,保证 timeline 一致
   const now = new Date();
 
+  // 选中的 sim:?simId=X 优先,否则默认 sims[0]
+  const activeSim =
+    sims.find((s) => String(s.id) === simIdParam) ?? sims[0] ?? null;
+
   return (
-    <div className="max-w-md mx-auto px-4 py-8 sm:py-12">
+    <div className="max-w-md mx-auto px-4 py-6 sm:py-8">
       {/* 顶部欢迎:用账号(username),不用手机号(脱敏) */}
-      <div className="mb-4">
+      <div className="mb-3">
         <p className="text-sm text-slate-500">欢迎</p>
         <h1 className="text-2xl font-bold flex items-center gap-2 flex-wrap">
           <span className="font-mono">{user.username}</span>
@@ -40,35 +50,46 @@ export default async function MePage() {
         </div>
       )}
 
-      {/* 每张卡渲染一个 SimCard */}
-      {sims.map((sim, idx) => (
-        <div key={sim.id} className={idx > 0 ? "mt-8 pt-8 border-t border-slate-200" : ""}>
-          <SimCard
-            sim={{
-              id: sim.id,
-              phoneNumber: sim.phoneNumber,
-              activatedAt: sim.activatedAt,
-              lastPortedAt: sim.lastPortedAt,
-              portToken: sim.portToken,
-              status: sim.status,
-              channel: sim.channel,
-              channelKey: sim.channelKey,
-            }}
-            isPrimary={idx === 0}
-            indexLabel={simCount > 1 ? `副卡 #${idx + 1}` : undefined}
-            now={now}
-          />
-        </div>
-      ))}
+      {/* 多卡场景:顶部 tabs 切换(单卡不显示 tabs,直接渲染) */}
+      {simCount > 1 && activeSim && (
+        <SimTabs
+          sims={sims.map((s) => ({
+            id: s.id,
+            phoneTail4: s.phoneNumber.slice(-4),
+            status: s.status,
+            // 简易预警:没设渠道时打个小红点
+            missingChannel: !s.channelKey,
+          }))}
+          activeSimId={activeSim.id}
+        />
+      )}
 
-      {/* 账号级操作(多卡时也只放在最后,避免重复) */}
+      {/* 只渲染选中那一张 sim */}
+      {activeSim && (
+        <SimCard
+          sim={{
+            id: activeSim.id,
+            phoneNumber: activeSim.phoneNumber,
+            activatedAt: activeSim.activatedAt,
+            lastPortedAt: activeSim.lastPortedAt,
+            portToken: activeSim.portToken,
+            status: activeSim.status,
+            channel: activeSim.channel,
+            channelKey: activeSim.channelKey,
+          }}
+          isPrimary={activeSim.id === sims[0].id}
+          now={now}
+        />
+      )}
+
+      {/* 账号级操作(固定在底部) */}
       {simCount > 0 && (
-        <div className="mt-8 pt-6 border-t border-slate-200">
+        <div className="mt-6 pt-5 border-t border-slate-200">
           <div className="flex items-center justify-center gap-4 text-sm flex-wrap">
             <Link
-              href="/me/settings"
+              href={`/me/settings?simId=${activeSim?.id ?? ""}`}
               className="text-indigo-600 hover:underline inline-flex items-center gap-1"
-              title="修改密码 / 各 SIM 卡的推送渠道 / 激活日期"
+              title="修改密码 / 通知渠道 / 激活日期"
             >
               <svg
                 width={14}

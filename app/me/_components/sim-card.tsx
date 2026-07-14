@@ -43,10 +43,8 @@ export interface SimCardProps {
     channel: "serverchan" | "bark" | "pushplus" | "telegram";
     channelKey: string;
   };
-  /** 是否当前账号下的第一个 SIM(用于显示"主卡"标记和只在主卡上显示部分 UI) */
+  /** 是否当前账号下的第一个 SIM(用于"主"标记) */
   isPrimary: boolean;
-  /** 多个 SIM 时,用来生成 ?simId= 切换链接 */
-  indexLabel?: string;
   /** 当前时间(从父组件传入,确保同一请求内多次渲染一致) */
   now: Date;
 }
@@ -59,7 +57,6 @@ export interface SimCardProps {
 export async function SimCard({
   sim,
   isPrimary,
-  indexLabel,
   now,
 }: SimCardProps) {
   const baseline = sim.lastPortedAt ?? sim.activatedAt;
@@ -145,17 +142,7 @@ export async function SimCard({
     <div>
       {milestone && <MilestoneBanner milestone={milestone} />}
 
-      {/* 主卡/副卡小标记(多卡场景) */}
-      {!isPrimary && indexLabel && (
-        <div className="mb-3 flex items-center gap-2">
-          <span className="inline-flex items-center px-2 py-0.5 rounded bg-indigo-100 text-indigo-800 text-xs font-medium">
-            {indexLabel}
-          </span>
-          <span className="text-xs text-slate-500 font-mono">
-            {formatPhoneForDisplay(sim.phoneNumber)}
-          </span>
-        </div>
-      )}
+      {/* tabs 已在外层标识当前是哪张卡,这里不再重复显示 indexLabel */}
 
       {channelMissing && (
         <Link
