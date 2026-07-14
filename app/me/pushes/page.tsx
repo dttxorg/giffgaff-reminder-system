@@ -45,6 +45,13 @@ export default async function MePushesPage({ searchParams }: PageProps) {
   const _lastMonthEnd = `${_year - (_month === 1 ? 1 : 0)}-${String(_month === 1 ? 12 : _month - 1).padStart(2, "0")}-${String(_lastMonthLastDay).padStart(2, "0")}`;
   // 本年起 (今年 1 月 1 号)
   const _yearStart = `${_year}-01-01`;
+  // Round 200: 近 30/90 日起
+  const _30daysAgoDate = new Date(_monthEnd);
+  _30daysAgoDate.setDate(_30daysAgoDate.getDate() - 30);
+  const _30daysAgo = `${_30daysAgoDate.getFullYear()}-${String(_30daysAgoDate.getMonth() + 1).padStart(2, "0")}-${String(_30daysAgoDate.getDate()).padStart(2, "0")}`;
+  const _90daysAgoDate = new Date(_monthEnd);
+  _90daysAgoDate.setDate(_90daysAgoDate.getDate() - 90);
+  const _90daysAgo = `${_90daysAgoDate.getFullYear()}-${String(_90daysAgoDate.getMonth() + 1).padStart(2, "0")}-${String(_90daysAgoDate.getDate()).padStart(2, "0")}`;
 
   const validStatus: "success" | "failed" | undefined =
     status === "success" || status === "failed" ? status : undefined;
@@ -159,6 +166,20 @@ export default async function MePushesPage({ searchParams }: PageProps) {
           className={`px-2 py-1 rounded ${from === _yearStart ? "bg-indigo-600 text-white" : "bg-slate-100 text-slate-600 hover:bg-slate-200"}`}
         >
           本年
+        </Link>
+        {/* Round 200: 近 30 日 (镜像 admin 仪表盘 round 169) */}
+        <Link
+          href={`/me/pushes?from=${_30daysAgo}&to=${_monthEnd.getFullYear()}-${String(_monthEnd.getMonth() + 1).padStart(2, "0")}-${String(_monthEnd.getDate()).padStart(2, "0")}`}
+          className={`px-2 py-1 rounded ${from === _30daysAgo ? "bg-indigo-600 text-white" : "bg-slate-100 text-slate-600 hover:bg-slate-200"}`}
+        >
+          近 30 日
+        </Link>
+        {/* Round 200: 近 90 日 (镜像 admin 仪表盘 round 169) */}
+        <Link
+          href={`/me/pushes?from=${_90daysAgo}&to=${_monthEnd.getFullYear()}-${String(_monthEnd.getMonth() + 1).padStart(2, "0")}-${String(_monthEnd.getDate()).padStart(2, "0")}`}
+          className={`px-2 py-1 rounded ${from === _90daysAgo ? "bg-indigo-600 text-white" : "bg-slate-100 text-slate-600 hover:bg-slate-200"}`}
+        >
+          近 90 日
         </Link>
         <Link
           href={`/me/pushes?status=${status || ""}`}
