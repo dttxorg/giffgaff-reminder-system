@@ -92,6 +92,13 @@ export default async function MePage() {
     }),
   ]);
 
+  // Round 202: 本月预期推送 (从 monthStart 到今天每天的 COUNTS 求和)
+  let thisMonthExpected = 0;
+  for (let d = 1; d <= sp.day; d++) {
+    const dayOffsetAtMonth = dayOffsetFromBaseline(new Date(Date.UTC(sp.year, sp.month - 1, d)), baseline);
+    thisMonthExpected += COUNTS[dayOffsetAtMonth] ?? 0;
+  }
+
   // Round 144: 今日推送数(更近期的信号,比本月更具体)
   // todayStartUTC = 上海时区今天 0 点(用 sp 算)
   const todayStartUTC = new Date(Date.UTC(sp.year, sp.month - 1, sp.day));
@@ -482,7 +489,7 @@ export default async function MePage() {
                 <details className="ml-2 inline-block">
                   <summary
                     className="text-sm font-normal text-slate-500 inline-flex items-center gap-1 cursor-pointer list-none"
-                    title={`本月 (${sp.year}-${String(sp.month).padStart(2, "0")}) 已推 ${thisMonthCount} 条${thisMonthFailedCount > 0 ? `, 失败 ${thisMonthFailedCount} 条` : ""}`}
+                    title={`本月 (${sp.year}-${String(sp.month).padStart(2, "0")}) 已推 ${thisMonthCount} 条${thisMonthFailedCount > 0 ? `, 失败 ${thisMonthFailedCount} 条` : ""}${thisMonthExpected > 0 ? `, 本月预期 ${thisMonthExpected} 次` : ""}`}
                   >
                     · 本月 <strong className="text-slate-700">{thisMonthCount}</strong> 条
                     {thisMonthFailedCount > 0 && (
