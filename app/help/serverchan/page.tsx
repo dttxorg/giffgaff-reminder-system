@@ -2,7 +2,7 @@ import Link from "next/link";
 import { ExternalLink } from "@/app/_components/external-link";
 import { HelpPagination } from "../_components";
 
-const SEVERCHAN_HOME = "https://sct.ftqq.com";
+const SEVERCHAN_HOME = "https://sct.ftqq.com/";
 const SEVERCHAN_LOGIN = "https://sct.ftqq.com/login";
 const SEVERCHAN_SENDKEY_PAGE = "https://sct.ftqq.com/sendkey";
 
@@ -23,11 +23,13 @@ export default function ServerChanHelpPage() {
         </span>
       </p>
 
-      {/* 快速通道: 已有账号直接拿 SendKey */}
+      {/* 快速通道: 已有账号 → 登录 → 找 SendKey 回填 */}
       <div className="not-prose my-6 p-4 rounded-lg bg-emerald-50 border border-emerald-300">
-        <div className="font-semibold text-emerald-900 mb-1">⚡ 已经有 Sever酱 账号?直接拿 SendKey</div>
+        <div className="font-semibold text-emerald-900 mb-1">⚡ 已经有 Sever酱 账号?登录后直接拿 SendKey</div>
         <div className="text-sm text-emerald-800 mb-3">
-          登录后首页就有您的 SendKey,点&quot;复制&quot;按钮,然后直接到第 3 步配置本系统。
+          打开 <ExternalLink href="https://sct.ftqq.com/" className="font-mono font-semibold underline">sct.ftqq.com</ExternalLink> →
+          点右上角<strong>「菜单」→「登录」</strong> → 微信扫一扫确认 →
+          登录成功跳到 SendKey 页 → 点<strong>「复制」</strong> → 回到本系统粘贴即可
         </div>
         <div className="flex flex-wrap gap-2">
           <ExternalLink href={SEVERCHAN_SENDKEY_PAGE} className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-emerald-600 text-white text-sm font-medium hover:bg-emerald-700 shadow-sm">
@@ -75,12 +77,19 @@ export default function ServerChanHelpPage() {
         </li>
 
         <li>
-          <strong>登录 Sever酱 拿到 SendKey</strong>
+          <strong>登录 Sever酱 拿到 SendKey(整个过程就这一步要点几下)</strong>
           <p>
-            访问 <ExternalLink href={SEVERCHAN_LOGIN} className="">sct.ftqq.com/login</ExternalLink>,
-            用刚关注的微信扫页面上的登录二维码 → 微信会弹出&quot;确认登录&quot;提示,点确认。
+            打开 <ExternalLink href="https://sct.ftqq.com/" className="">sct.ftqq.com</ExternalLink> →
+            点页面右上角<strong>「菜单」→「登录」</strong>(或直接访问
+            <ExternalLink href={SEVERCHAN_LOGIN} className="">sct.ftqq.com/login</ExternalLink>)→
+            微信扫页面上的登录二维码 → 微信弹出&quot;确认登录&quot;提示,点确认。
           </p>
-          <p>登录后会自动跳到 <ExternalLink href={SEVERCHAN_SENDKEY_PAGE} className="">SendKey 页面</ExternalLink>。</p>
+          <p>
+            登录成功后会<strong>自动跳到 SendKey 页面</strong>(
+            <ExternalLink href={SEVERCHAN_SENDKEY_PAGE} className="">sct.ftqq.com/sendkey</ExternalLink>),
+            在那里直接点 SendKey 旁边的<strong>「复制」</strong>按钮。
+            然后回到本系统,把 SendKey 粘贴到下面的输入框。
+          </p>
           <div className="not-prose mt-2 p-3 rounded-lg bg-slate-50 border border-slate-200 text-sm">
             <div className="font-semibold text-slate-900 mb-1">SendKey 长这样:</div>
             <code className="text-slate-800 break-all">SCT2abcdefGhijKLMNopQRstUVwxYz123456789</code>
@@ -89,7 +98,7 @@ export default function ServerChanHelpPage() {
             </div>
           </div>
           <p className="text-amber-700 bg-amber-50 p-3 rounded text-sm mt-3">
-            <strong>注意</strong>:SendKey 相当于您的密码,不要发给任何人。复制后妥善保存,丢了可以随时回 SendKey 页看。
+            <strong>注意</strong>:SendKey 相当于您的密码,不要发给任何人。复制后妥善保存,丢了可以随时回 SendKey 页查看。
           </p>
         </li>
 

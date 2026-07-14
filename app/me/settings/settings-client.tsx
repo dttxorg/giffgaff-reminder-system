@@ -6,6 +6,7 @@ import Link from "next/link";
 import { todayLocalISODate } from "@/lib/date";
 import { PasswordInput } from "@/app/_components/password-input";
 import { LoadingButton } from "@/app/_components/loading-button";
+import { ExternalLink } from "@/app/_components/external-link";
 
 type Channel = "serverchan" | "bark" | "pushplus" | "telegram";
 type TestStatus = "idle" | "sending" | "success" | "error";
@@ -375,6 +376,33 @@ export function MeSettingsClient({
               <span aria-hidden="true">↗</span>
             </Link>
           </div>
+
+          {/* 渠道专属快速指引:点开 Sever酱 后直接显示 3 步流程,主链接 https://sct.ftqq.com/ */}
+          {channel === "serverchan" && (
+            <div className="mt-2 p-3 rounded-lg bg-emerald-50 border border-emerald-200">
+              <div className="text-xs font-semibold text-emerald-900 mb-2">
+                ⚡ 还没 SendKey?3 步搞定:
+              </div>
+              <ol className="text-xs text-emerald-900 space-y-1.5 list-decimal list-inside">
+                <li>
+                  打开 <ExternalLink href="https://sct.ftqq.com/" className="font-mono font-semibold underline decoration-emerald-400 hover:decoration-emerald-600">sct.ftqq.com</ExternalLink>,
+                  微信扫首页二维码<strong>关注「Server酱」公众号</strong>
+                </li>
+                <li>
+                  点页面右上角<strong>「菜单」→「登录」</strong>(或直接访问
+                  <ExternalLink href="https://sct.ftqq.com/login" className="font-mono underline decoration-emerald-400 hover:decoration-emerald-600">登录页</ExternalLink>),
+                  微信扫二维码确认
+                </li>
+                <li>
+                  登录后跳到 SendKey 页面,点<strong>「复制」</strong>,
+                  粘贴到下面输入框即可
+                </li>
+              </ol>
+              <div className="mt-2 text-[11px] text-emerald-800">
+                💡 SendKey 以 <code className="font-mono">SCT</code> 开头,约 40 位字母数字
+              </div>
+            </div>
+          )}
 
           <div>
             <label className="block text-sm font-medium mb-1.5">
