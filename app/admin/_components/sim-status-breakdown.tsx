@@ -6,6 +6,7 @@ import Link from "next/link";
 // - Round 157: 加近 7 日新增 sim 趋势
 // - Round 171: 加近 7 日新增 user 趋势 (镜像 sim,indigo 色)
 
+import { ActiveSimStats } from "./active-sim-stats";
 import { PausedSimStats } from "./paused-sim-stats";
 import type { SimStatusBreakdown, SimDailyCreated } from "@/lib/admin-reminder-stats";
 
@@ -16,6 +17,7 @@ export function SimStatusBreakdown({
   bindRateLast7Days,
   userBindRateLast7Days,
   pausedSimStats,
+  activeSimStats,
 }: {
   stats: SimStatusBreakdown;
   /** Round 157: 近 7 日新增 sim 统计 */
@@ -28,6 +30,8 @@ export function SimStatusBreakdown({
   userBindRateLast7Days?: { date: Date; boundCount: number; unboundSimCount: number; totalSimCount: number; bindRate: number }[];
   /** Round 203: 近 7 日暂停 sim 统计 (optional) */
   pausedSimStats?: { currentlyPaused: number; recentlyPaused: number; recentlyCreated: number };
+  /** Round 204: 近 7 日激活 sim 统计 (optional,镜像 paused) */
+  activeSimStats?: { currentlyActive: number; recentlyActivated: number; recentlyCreated: number };
 }) {
   const { total, active, paused, bound, unbound } = stats;
   const activePct = total > 0 ? Math.round((active / total) * 100) : 0;
@@ -220,6 +224,9 @@ export function SimStatusBreakdown({
 
       {/* Round 203: 近 7 日暂停 sim 统计 (点击 → /admin/sims?status=paused) */}
       {pausedSimStats && <PausedSimStats stats={pausedSimStats} />}
+
+      {/* Round 204: 近 7 日激活 sim 统计 (点击 → /admin/sims?status=active) */}
+      {activeSimStats && <ActiveSimStats stats={activeSimStats} />}
 
       {/* Round 157: 近 7 日新增 sim 趋势 */}
       {newSimsLast7Days && (

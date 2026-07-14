@@ -721,3 +721,27 @@ export async function getPausedSimStats(): Promise<PausedSimStats> {
   ]);
   return { currentlyPaused, recentlyPaused, recentlyCreated };
 }
+
+/**
+ * Round 204: 统计当前 active 状态的 sim 数量 + 7 日新增 sim 中 active 数
+ *
+ * 镜像 round 203 (getPausedSimStats),看的是 active 那一面。
+ */
+export interface ActiveSimStats {
+  currentlyActive: number;
+  recentlyActivated: number;
+  recentlyCreated: number;
+}
+
+export async function getActiveSimStats(): Promise<ActiveSimStats> {
+  const todayStartUTC = new Date();
+  todayStartUTC.setUTCHours(0, 0, 0, 0);
+  const since = new Date(todayStartUTC.getTime() - 6 * 24 * 60 * 60 * 1000);
+
+  const [currentlyActive, recentlyActivated, recentlyCreated] = await Promise.all([
+    prisma.sim.count({ where: { status: "active" } }),
+    prisma.sim.count({ where: { status: "active", createdAt: { gte: since } } }),
+    prisma.sim.count({ where: { createdAt: { gte: since } } }),
+  ]);
+  return { currentlyActive, recentlyActivated, recentlyCreated };
+}
