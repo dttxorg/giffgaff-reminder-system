@@ -21,12 +21,30 @@ export default async function MePushesPage({ searchParams }: PageProps) {
 
   const { status, from, to } = await searchParams;
 
-  // Round 198: 本月起止日期 (用于"本月"快捷链接)
-  // JS Date 0 日 = 上月最后一天,getUTCDate 拿到上月最后一天的号 = 本月总天数
+  // Round 198 + 199: 日期范围快捷链接所需变量
+  // 本月 (本月 1 号到本月最后一天,或今天)
+  // 本周 (周一到今天)
+  // 上月 (上月 1 号到上月最后一天)
+  // 本年 (今年 1 月 1 号到今天)
   const _monthEnd = new Date();
-  const monthStart = `${_monthEnd.getFullYear()}-${String(_monthEnd.getMonth() + 1).padStart(2, "0")}-01`;
-  const _monthLastDay = new Date(_monthEnd.getFullYear(), _monthEnd.getMonth() + 1, 0).getDate();
-  const monthEnd = `${_monthEnd.getFullYear()}-${String(_monthEnd.getMonth() + 1).padStart(2, "0")}-${String(_monthLastDay).padStart(2, "0")}`;
+  const _year = _monthEnd.getFullYear();
+  const _month = _monthEnd.getMonth() + 1;
+  // 本月起止
+  const monthStart = `${_year}-${String(_month).padStart(2, "0")}-01`;
+  const _monthLastDay = new Date(_year, _month, 0).getDate();
+  const monthEnd = `${_year}-${String(_month).padStart(2, "0")}-${String(_monthLastDay).padStart(2, "0")}`;
+  // 本周起 (本周一)
+  const _dayOfWeek = _monthEnd.getDay(); // 0 (Sun) - 6 (Sat)
+  const _mondayOffset = _dayOfWeek === 0 ? 6 : _dayOfWeek - 1;
+  const _weekStartDate = new Date(_monthEnd);
+  _weekStartDate.setDate(_monthEnd.getDate() - _mondayOffset);
+  const _weekStart = `${_weekStartDate.getFullYear()}-${String(_weekStartDate.getMonth() + 1).padStart(2, "0")}-${String(_weekStartDate.getDate()).padStart(2, "0")}`;
+  // 上月起止
+  const _lastMonthStart = `${_year - (_month === 1 ? 1 : 0)}-${String(_month === 1 ? 12 : _month - 1).padStart(2, "0")}-01`;
+  const _lastMonthLastDay = new Date(_year, _month - 1, 0).getDate();
+  const _lastMonthEnd = `${_year - (_month === 1 ? 1 : 0)}-${String(_month === 1 ? 12 : _month - 1).padStart(2, "0")}-${String(_lastMonthLastDay).padStart(2, "0")}`;
+  // 本年起 (今年 1 月 1 号)
+  const _yearStart = `${_year}-01-01`;
 
   const validStatus: "success" | "failed" | undefined =
     status === "success" || status === "failed" ? status : undefined;
@@ -115,11 +133,32 @@ export default async function MePushesPage({ searchParams }: PageProps) {
         >
           今天
         </Link>
+        {/* Round 199: 本周 (周一到今天) */}
+        <Link
+          href={`/me/pushes?from=${_weekStart}&to=${_monthEnd.getFullYear()}-${String(_monthEnd.getMonth() + 1).padStart(2, "0")}-${String(_monthEnd.getDate()).padStart(2, "0")}`}
+          className={`px-2 py-1 rounded ${from === _weekStart ? "bg-indigo-600 text-white" : "bg-slate-100 text-slate-600 hover:bg-slate-200"}`}
+        >
+          本周
+        </Link>
+        {/* Round 199: 上月 */}
+        <Link
+          href={`/me/pushes?from=${_lastMonthStart}&to=${_lastMonthEnd}`}
+          className={`px-2 py-1 rounded ${from === _lastMonthStart && to === _lastMonthEnd ? "bg-indigo-600 text-white" : "bg-slate-100 text-slate-600 hover:bg-slate-200"}`}
+        >
+          上月
+        </Link>
         <Link
           href={`/me/pushes?from=${monthStart}&to=${monthEnd}`}
           className={`px-2 py-1 rounded ${from === monthStart && to === monthEnd ? "bg-indigo-600 text-white" : "bg-slate-100 text-slate-600 hover:bg-slate-200"}`}
         >
           本月
+        </Link>
+        {/* Round 199: 本年 */}
+        <Link
+          href={`/me/pushes?from=${_yearStart}&to=${_monthEnd.getFullYear()}-${String(_monthEnd.getMonth() + 1).padStart(2, "0")}-${String(_monthEnd.getDate()).padStart(2, "0")}`}
+          className={`px-2 py-1 rounded ${from === _yearStart ? "bg-indigo-600 text-white" : "bg-slate-100 text-slate-600 hover:bg-slate-200"}`}
+        >
+          本年
         </Link>
         <Link
           href={`/me/pushes?status=${status || ""}`}
