@@ -11,10 +11,12 @@ const BAR_MAX_HEIGHT = 24; // px
 
 export function MonthDailyChart({ days }: { days: DailySend[] }) {
   const max = Math.max(1, ...days.map((d) => d.count));
+  const total = days.reduce((sum, d) => sum + d.count, 0);
   return (
     <ul
       className="mt-2 flex items-end gap-1 h-7"
-      aria-label="近 7 日每日推送数"
+      aria-label={`近 7 日每日推送数 (共 ${total} 次)`}
+      title={`近 7 日共 ${total} 次推送`}
     >
       {days.map((d) => {
         const heightPct = d.count > 0 ? (d.count / max) * 100 : 0;
