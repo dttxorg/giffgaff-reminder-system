@@ -55,6 +55,7 @@ export default async function MePage({ searchParams }: PageProps) {
         <SimTabs
           sims={sims.map((s) => ({
             id: s.id,
+            phoneNumber: s.phoneNumber,
             phoneTail4: s.phoneNumber.slice(-4),
             status: s.status,
             // 简易预警:没设渠道时打个小红点
