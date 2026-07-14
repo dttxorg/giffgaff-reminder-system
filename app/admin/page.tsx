@@ -173,17 +173,20 @@ export default async function AdminDashboard() {
           label="号码总数"
           value={simCount}
           sub={`active ${activeSimCount} · paused ${pausedSimCount}`}
+          href="/admin/sims"
         />
         <AdminStat
           label="已绑定渠道"
           value={`${channelCount}/${simCount}`}
           sub={simCount > 0 ? `覆盖率 ${channelCoverage}%` : "—"}
           tone={channelCoverage >= 80 ? "indigo" : channelCoverage >= 50 ? "amber" : "rose"}
+          href="/admin/sims?bound=yes"
         />
         <AdminStat
           label="用户数"
           value={userCount}
           sub={simCount > 0 ? `绑定率 ${Math.round((userCount / simCount) * 100)}%` : "—"}
+          href="/admin/users"
         />
         <AdminStat
           label="今日发送"
@@ -191,18 +194,21 @@ export default async function AdminDashboard() {
           tone="indigo"
           sub={sendDeltaLabel}
           subTone={sendDeltaTone}
+          href="/admin/reminders"
         />
         <AdminStat
           label="今日失败"
           value={todayFailed}
           tone={todayFailed > 0 ? "rose" : "slate"}
           sub={todayFailed > 0 ? `7 天累计 ${failedRecent}` : "全部成功"}
+          href="/admin/reminders?status=failed"
         />
         <AdminStat
           label="提醒窗口内"
           value={inWindowSimCount}
           tone={inWindowSimCount > 0 ? "amber" : "slate"}
           sub={simCount > 0 ? `占 ${Math.round((inWindowSimCount / simCount) * 100)}%` : "—"}
+          href="/admin/sims?status=active"
         />
         <AdminStat label="卡密未用" value={undefined} sub="在 卡密管理 查看" />
         {/* Round 169: 30 日 + 90 日总推送对比(扩展时间窗口) */}
