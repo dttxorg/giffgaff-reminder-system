@@ -292,7 +292,7 @@ export default async function MePage() {
           {/* Round 181: 成功推送次数 (lifetimeCount = total, successCount = delivered) */}
           <span
             className="ml-2 text-xs text-slate-500"
-            /* Round 209: 加 "今日预期 X 次" 提示 (从 COUNTS 算) */
+            /* Round 209 + 212: 加 "今日预期" + "距激活 1 周年" 提示 */
             title={`系统累计推送 ${lifetimeCount} 次 (成功 ${successCount} 次, 失败 ${failedCount} 次)${
               (COUNTS[dayOffset] ?? 0) > 0
                 ? `, 今日预期 ${COUNTS[dayOffset]} 次`
@@ -301,7 +301,7 @@ export default async function MePage() {
                   : dayOffset < 170
                     ? ", 未到提醒窗口"
                     : ""
-            }`}
+            }${365 - daysSinceActivated > 0 ? `, 距激活 1 周年 ${365 - daysSinceActivated} 天` : ""}`}
           >
             <Link
               href="/me/pushes?status=success"
@@ -311,6 +311,12 @@ export default async function MePage() {
             </Link>
             {(COUNTS[dayOffset] ?? 0) > 0 && (
               <span className="ml-1">/ 今日预期 {COUNTS[dayOffset]} 次</span>
+            )}
+            {365 - daysSinceActivated > 0 && (
+              /* Round 212: 距激活 1 周年 X 天 (镜像 round 185) */
+              <span className="ml-1" title={`还有 ${365 - daysSinceActivated} 天到 1 周年`}>
+                / 距 1 周年 {365 - daysSinceActivated} 天
+              </span>
             )}
           </span>
           {/* Round 155: 下一个里程碑激励 hint */}
