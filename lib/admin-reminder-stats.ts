@@ -694,3 +694,30 @@ export async function getLast7DaysUserBindRate(): Promise<DailyUserBindRate[]> {
   }
   return daily;
 }
+
+/**
+ * Round 203: 统计当前 paused 状态的 sim 数量 + 7 日新增 sim 中 paused 数
+ *
+ * 注意: sim 没有 status 变更历史,只能算 '当前状态',不是真趋势。
+ * 但 '近 7 日新增 sim 中 paused 数' 有意义 (admin 主动 pause 新 sim 异常)。
+ */
+export interface PausedSimStats {
+  currentlyPaused: number;
+  /** 近 7 日新增 sim 中当前 paused 的数量 (异常指标) */
+  recentlyPaused: number;
+  /** 近 7 日新增 sim 总数 (用于算比例) */
+  recentlyCreated: number;
+}
+
+export async function getPausedSimStats(): Promise<PausedSimStats> {
+  const todayStartUTC = new Date();
+  todayStartUTC.setUTCHours(0, 0, 0, 0);
+  const since = new Date(todayStartUTC.getTime() - 6 * 24 * 60 * 60 * 1000);
+
+  const [currentlyPaused, recentlyPaused, recentlyCreated] = await Promise.all([
+    prisma.sim.count({ where: { status: "paused" } }),
+    prisma.sim.count({ where: { status: "paused", createdAt: { gte: since } } }),
+    prisma.sim.count({ where: { createdAt: { gte: since } } }),
+  ]);
+  return { currentlyPaused, recentlyPaused, recentlyCreated };
+}
