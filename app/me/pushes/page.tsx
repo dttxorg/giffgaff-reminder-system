@@ -62,6 +62,10 @@ export default async function MePushesPage({ searchParams }: PageProps) {
   const _6monthsAgoDate = new Date(_monthEnd);
   _6monthsAgoDate.setDate(_6monthsAgoDate.getDate() - 180);
   const _6monthsAgo = `${_6monthsAgoDate.getFullYear()}-${String(_6monthsAgoDate.getMonth() + 1).padStart(2, "0")}-${String(_6monthsAgoDate.getDate()).padStart(2, "0")}`;
+  // Round 210: 近 1 年 (365 天,看长期推送模式)
+  const _1yearAgoDate = new Date(_monthEnd);
+  _1yearAgoDate.setDate(_1yearAgoDate.getDate() - 365);
+  const _1yearAgo = `${_1yearAgoDate.getFullYear()}-${String(_1yearAgoDate.getMonth() + 1).padStart(2, "0")}-${String(_1yearAgoDate.getDate()).padStart(2, "0")}`;
 
   const validStatus: "success" | "failed" | undefined =
     status === "success" || status === "failed" ? status : undefined;
@@ -211,6 +215,13 @@ export default async function MePushesPage({ searchParams }: PageProps) {
           className={`px-2 py-1 rounded ${from === _6monthsAgo ? "bg-indigo-600 text-white" : "bg-slate-100 text-slate-600 hover:bg-slate-200"}`}
         >
           近 6 个月
+        </Link>
+        {/* Round 210: 近 1 年 (365 天,看长期推送模式) */}
+        <Link
+          href={`/me/pushes?from=${_1yearAgo}&to=${_monthEnd.getFullYear()}-${String(_monthEnd.getMonth() + 1).padStart(2, "0")}-${String(_monthEnd.getDate()).padStart(2, "0")}`}
+          className={`px-2 py-1 rounded ${from === _1yearAgo ? "bg-indigo-600 text-white" : "bg-slate-100 text-slate-600 hover:bg-slate-200"}`}
+        >
+          近 1 年
         </Link>
         <Link
           href={`/me/pushes?status=${status || ""}`}
