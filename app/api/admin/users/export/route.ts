@@ -1,7 +1,7 @@
 // GET /api/admin/users/export?channel=&password=
 // 导出用户列表为 CSV
 //
-// CSV 列:用户ID, 号码, 后6位, 渠道, 是否设密码, 推送数, 注册时间
+// CSV 列:用户ID, 账号(手机号或自定义名), 号码, 渠道, 是否设密码, 推送数, 注册时间
 // 与 /admin/users 页面 share 同样的 channel + password 筛选
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
@@ -53,12 +53,12 @@ export async function GET(req: Request) {
     },
   });
 
-  const header = "用户ID,号码,后6位,渠道,已设密码,推送数,注册时间(UTC)\n";
+  const header = "用户ID,账号,号码,渠道,已设密码,推送数,注册时间(UTC)\n";
   const lines = users.map((u) =>
     [
       String(u.id),
-      csvEscape(u.sim.phoneNumber),
-      csvEscape(u.simLookupKey),
+      csvEscape(u.username),
+      csvEscape(u.sim?.phoneNumber ?? null),
       u.channel,
       u.passwordHash ? "是" : "否",
       String(u._count.reminders),

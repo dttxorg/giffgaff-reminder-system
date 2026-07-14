@@ -12,13 +12,13 @@ datasource db {
 }
 
 // 号码库（giffgaff sim 卡）
+// 一个 sim 绑定 1 个 user(可空 = 孤卡,管理员导入但未绑定用户)
+// 每个 user 对应 1 个 sim: 一个兑换码 = 一个 (user, sim) 配对
+// 想多张 SIM 卡提醒?用多个兑换码,产生多个账号
 model Sim {
   id           Int       @id @default(autoincrement())
   phoneNumber  String    @unique // 完整号，如 07724215611（只存数字）
   // portToken 是公开 URL(/p/[token])用的不可枚举随机串,32 字符 url-safe
-  // - 新 sim 在创建时由应用层生成并持久化
-  // - 旧 sim 会在下一次被 cron reminder / 任何 portUrl 生成路径触达时 lazy-backfill
-  // - 旧 URL(/p/${id})仍可工作,作为向后兼容(直到所有现存推送过期)
   portToken    String?   @unique
   activatedAt  DateTime // 激活日期（保号起算日）
   lastPortedAt DateTime? // 上次保号日期，NULL = 还没保过号
@@ -26,7 +26,9 @@ model Sim {
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt
 
-  user      User?
+  // 1:1 反向关系:每个 sim 最多被 1 个 user 拥有
+  // User 是关系持有方(Sim 在 userId 上),这里只是 backref
+  user      User?         @relation
   reminders ReminderSent[]
 
   @@index([phoneNumber])
@@ -38,26 +40,33 @@ enum SimStatus {
   paused
 }
 
-// 用户档案（一个 user 绑定一个 sim）
+// 用户档案：一个 user 绑定 1 个 sim,登录用 username + password
+// 历史：之前是 User.simId 1:1 + User.simLookupKey(last 6 位) 模糊匹配登录。
+//       重构为 username 唯一账号 + 1:1 的 sim 关联。
+//       老用户迁移时 username 直接 = sim.phoneNumber,客户无感(继续用原手机号登录)。
+//       新用户可以选账号或继续用手机号作账号。
 model User {
   id               Int       @id @default(autoincrement())
-  simId            Int       @unique // 1:1 绑定 sim
-  simLookupKey     String // 冗余存后 6 位（用于审计/反查）
+  // 登录账号：可以是手机号(老用户)或自定义账号(新用户)
+  // 唯一索引;case-sensitive 区分(老用户手机号是数字不涉及大小写)
+  username         String    @unique
   channel          Channel // serverchan / bark
   channelKey       String // SendKey 或 Bark URL（明文存 V1）
   // 登录密码：scrypt 哈希（null = 旧用户未升级，需管理员重置）
   passwordHash     String?
+  // 1:1 - 一个账号对应 1 张 sim 卡
+  simId            Int?      @unique
   // 登录限流：连续失败 5 次锁 15 分钟
   failedLoginCount Int       @default(0)
   lockedUntil      DateTime?
   createdAt        DateTime  @default(now())
   updatedAt        DateTime  @updatedAt
 
-  sim       Sim            @relation(fields: [simId], references: [id], onDelete: Cascade)
+  sim       Sim?           @relation(fields: [simId], references: [id], onDelete: SetNull)
   reminders ReminderSent[]
   sessions  UserSession[]
 
-  @@index([simLookupKey])
+  @@index([username])
 }
 
 enum Channel {
@@ -97,7 +106,7 @@ model Setting {
   updatedAt DateTime @updatedAt
 }
 
-// 验证码
+// 验证码（保留 model 但已不再使用 - V1 send-code/verify 流程已下线）
 model VerificationCode {
   id           Int      @id @default(autoincrement())
   simLookupKey String // 后 6 位（与 simLookupKey 对齐）

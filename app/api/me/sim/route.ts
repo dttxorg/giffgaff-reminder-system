@@ -22,6 +22,12 @@ export async function PATCH(req: Request) {
   if (!user) {
     return NextResponse.json({ ok: false, error: "未登录" }, { status: 401 });
   }
+  if (!user.sim) {
+    return NextResponse.json(
+      { ok: false, error: "您账号下没有 SIM 卡" },
+      { status: 400 }
+    );
+  }
 
   let body: unknown;
   try {
@@ -52,7 +58,7 @@ export async function PATCH(req: Request) {
   }
 
   await prisma.sim.update({
-    where: { id: user.simId },
+    where: { id: user.sim.id },
     data: { activatedAt: newActivated },
   });
 

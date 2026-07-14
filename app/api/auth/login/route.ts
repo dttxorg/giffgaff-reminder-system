@@ -1,12 +1,12 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/db";
-import { toLookupKey } from "@/lib/phone";
+import { normalizeUsername } from "@/lib/auth";
 import { createUserSession } from "@/lib/session";
 import { verifyPassword } from "@/lib/auth";
 
 const BodySchema = z.object({
-  simNumber: z.string().min(1, "请输入 giffgaff 号码"),
+  username: z.string().min(1, "请输入账号"),
   password: z.string().min(1, "请输入密码"),
 });
 
@@ -16,12 +16,12 @@ const LOCK_DURATION_MS = 15 * 60 * 1000; // 15 分钟
 
 /**
  * POST /api/auth/login
- * 手机号末 6 位 + 密码登录
+ * username + password 登录
  *
  * 安全设计：
+ * - username 入库前 normalizeUsername (lowercase + trim)
  * - 错 5 次锁账号 15 分钟（DB 持久化，serverless 多实例安全）
  * - 旧 user（passwordHash = NULL）拒绝登录，提示联系管理员重置
- * - 查 sim 时末 6 位匹配，结果取 id 最小（双保险：业务上 1:1）
  */
 export async function POST(req: Request) {
   let body: unknown;
@@ -35,29 +35,20 @@ export async function POST(req: Request) {
     return NextResponse.json({ ok: false, error: "参数错误" }, { status: 400 });
   }
 
-  const lookupKey = toLookupKey(parsed.data.simNumber);
-  if (!lookupKey) {
-    return NextResponse.json({ ok: false, error: "号码至少 6 位数字" }, { status: 400 });
+  // username 可以是:
+  //  - 自定义账号: alice_2024 (normalizeUsername → lowercase)
+  //  - 手机号: 07724215611 / "07724 215611" (normalizeUsername → 去空格/横线)
+  const username = normalizeUsername(parsed.data.username);
+  if (!username) {
+    return NextResponse.json({ ok: false, error: "账号不合法" }, { status: 400 });
   }
 
-  // 模糊匹配 sim（最多取 1 条；id 最小做兜底）
-  const sim = await prisma.sim.findFirst({
-    where: { phoneNumber: { endsWith: lookupKey }, status: "active" },
-    orderBy: { id: "asc" },
-  });
-  if (!sim) {
-    return NextResponse.json(
-      { ok: false, error: "未找到您的号码，请联系管理员添加" },
-      { status: 404 }
-    );
-  }
-
-  // 找 user
-  const user = await prisma.user.findUnique({ where: { simId: sim.id } });
+  // 按 username 直接查 user(索引走 @@index([username]))
+  const user = await prisma.user.findUnique({ where: { username } });
   if (!user) {
     return NextResponse.json(
-      { ok: false, error: "账号未初始化，请联系管理员" },
-      { status: 404 }
+      { ok: false, error: "账号或密码错误" }, // 不暴露账号是否存在,统一错误信息
+      { status: 401 }
     );
   }
 
@@ -104,7 +95,7 @@ export async function POST(req: Request) {
     }
     const remaining = MAX_FAILED_ATTEMPTS - newCount;
     return NextResponse.json(
-      { ok: false, error: `密码错误，还可尝试 ${remaining} 次` },
+      { ok: false, error: `账号或密码错误，还可尝试 ${remaining} 次` },
       { status: 401 }
     );
   }

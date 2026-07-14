@@ -21,6 +21,15 @@ function parseChannel(input: string | undefined): Channel {
 export default async function MeSettingsPage({ searchParams }: PageProps) {
   const user = await getCurrentUser();
   if (!user) redirect("/login");
+  if (!user.sim) {
+    return (
+      <div className="max-w-md mx-auto px-4 py-8 sm:py-12 text-center">
+        <h1 className="text-2xl font-bold mb-2">账号 <span className="font-mono">{user.username}</span></h1>
+        <p className="text-slate-600">该账号下没有 SIM 卡数据</p>
+        <Link href="/me" className="text-indigo-600 hover:underline mt-3 inline-block">返回用户中心</Link>
+      </div>
+    );
+  }
 
   const { channel: channelParam } = await searchParams;
   const isFirstTime = !user.channelKey;

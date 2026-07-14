@@ -34,6 +34,17 @@ export default async function MePage() {
   if (!user) redirect("/login");
 
   const sim = user.sim;
+  if (!sim) {
+    // 极端情况:账号存在但 sim 不存在(被管理员删除后留下孤 user)
+    // 正常流程不会发生(删 user 级联 sim),但兜底
+    return (
+      <div className="max-w-md mx-auto px-4 py-8 sm:py-12 text-center">
+        <h1 className="text-2xl font-bold mb-2">账号 <span className="font-mono">{user.username}</span></h1>
+        <p className="text-slate-600 mb-4">该账号下没有 SIM 卡数据</p>
+        <Link href="/redeem" className="text-indigo-600 hover:underline">去兑换卡密 →</Link>
+      </div>
+    );
+  }
   const baseline = sim.lastPortedAt ?? sim.activatedAt;
   // Round 206: 复用 formatRelativeTime 算激活/保号距今 (避免 react-hooks/purity 错误)
   // 提取 "168 天前" 形式里的数字部分
@@ -132,7 +143,13 @@ export default async function MePage() {
     <div className="max-w-md mx-auto px-4 py-8 sm:py-12">
       <div className="mb-4">
         <p className="text-sm text-slate-500">欢迎</p>
-        <h1 className="text-2xl font-bold">用户 **** {phoneTail4}</h1>
+        <h1 className="text-2xl font-bold flex items-center gap-2 flex-wrap">
+          <span className="font-mono">{user.username}</span>
+          {/* 老用户 username = 手机号,这里仅显示后 4 位避免完全暴露号码 */}
+          {user.username !== sim.phoneNumber && (
+            <span className="text-base font-normal text-slate-500">· 号码 **** {phoneTail4}</span>
+          )}
+        </h1>
       </div>
 
       {/* Round 143: 里程碑庆祝 banner */}
@@ -212,7 +229,6 @@ export default async function MePage() {
         <div className="text-base mb-4">
           <span
             className="cursor-help inline-flex items-center gap-1"
-            /* Round 190: 显示完整激活时间 + Round 206: 包含修改记录 (激活 + 上次保号) */
             title={`激活于 ${new Date(sim.activatedAt).toLocaleString("zh-CN", { year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", second: "2-digit" })}${sim.lastPortedAt ? `\n上次保号于 ${new Date(sim.lastPortedAt).toLocaleString("zh-CN", { year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", second: "2-digit" })}` : ""}\n\n修改记录: ${sim.lastPortedAt ? `${daysSinceLastPorted} 天前保号, ${daysSinceActivated} 天前激活` : `尚未保号, ${daysSinceActivated} 天前激活`}`}
           >
             <svg
@@ -272,7 +288,6 @@ export default async function MePage() {
             {dayOffset === 0 ? "今天" : dayOffset === 1 ? "昨天" : dayOffset === 2 ? "前天" : dayOffset}
           </span>
           <span className="text-base font-normal text-slate-500">天</span>
-          {/* Round 180: 激活总天数可点击 → /me/pushes (查看完整推送历史) */}
           <Link
             href="/me/pushes"
             className="ml-2 text-xs text-indigo-600 hover:underline"
@@ -280,7 +295,6 @@ export default async function MePage() {
           >
             推送历史 →
           </Link>
-          {/* Round 185: 距 1 周年还差 N 天 (新用户激励,仅 years=0) */}
           {anniversary.years === 0 && anniversary.daysLeft > 0 && anniversary.daysLeft < 365 && (
             <span
               className="ml-2 text-xs text-amber-700"
@@ -289,10 +303,8 @@ export default async function MePage() {
               · 距 1 周年 <strong className="font-semibold">{anniversary.daysLeft}</strong> 天
             </span>
           )}
-          {/* Round 181: 成功推送次数 (lifetimeCount = total, successCount = delivered) */}
           <span
             className="ml-2 text-xs text-slate-500"
-            /* Round 209 + 212: 加 "今日预期" + "距激活 1 周年" 提示 */
             title={`系统累计推送 ${lifetimeCount} 次 (成功 ${successCount} 次, 失败 ${failedCount} 次)${
               (COUNTS[dayOffset] ?? 0) > 0
                 ? `, 今日预期 ${COUNTS[dayOffset]} 次`
@@ -313,24 +325,20 @@ export default async function MePage() {
               <span className="ml-1">/ 今日预期 {COUNTS[dayOffset]} 次</span>
             )}
             {365 - daysSinceActivated > 0 && (
-              /* Round 212: 距激活 1 周年 X 天 (镜像 round 185) */
               <span className="ml-1" title={`还有 ${365 - daysSinceActivated} 天到 1 周年`}>
                 / 距 1 周年 {365 - daysSinceActivated} 天
               </span>
             )}
           </span>
-          {/* Round 155: 下一个里程碑激励 hint */}
           {nextMilestone && (
             <NextMilestoneHint
               milestone={nextMilestone.milestone}
               daysLeft={nextMilestone.daysLeft}
             />
           )}
-          {/* Round 168: 周年进度 (years >= 1 才显示) */}
           {anniversary.years >= 1 && (
             <AnniversaryProgress progress={anniversary} />
           )}
-          {/* Round 170: 周年 progress bar (可视化,years >= 1 才显示) */}
           {anniversary.years >= 1 && (
             <AnniversaryProgressBar progress={anniversary} />
           )}
@@ -381,7 +389,6 @@ export default async function MePage() {
                 <strong className="text-slate-900">
                   {170 - dayOffset} 天
                 </strong>
-                {/* Round 159: 实时倒计时 (每小时更新) */}
                 <DaysUntilWindowCountdown
                   targetDayOffset={170}
                   currentDayOffset={dayOffset}
@@ -394,8 +401,6 @@ export default async function MePage() {
       </div>
 
       <Link
-        // 优先用 portToken(不可枚举);老 sim 可能还没有,fallback 到 id
-        // (route handler 会自动 lazy-backfill 第一次访问时)
         href={`/p/${sim.portToken ?? sim.id}`}
         title="打开保号页面,选一个日期提交即重置 170 天倒计时"
         className="block w-full text-center py-3 rounded-lg bg-indigo-600 text-white font-medium hover:bg-indigo-700 transition-colors shadow-sm inline-flex items-center justify-center gap-1.5"
@@ -416,11 +421,9 @@ export default async function MePage() {
           <polyline points="12 5 19 12 12 19" />
         </svg>
       </Link>
-      {/* M4:按钮副标告诉用户会发生什么,避免点进去一脸懵 */}
       <p className="text-xs text-slate-500 text-center mb-3">
         选个最近一次保号的日期提交,系统从那天重新计时 170 天
       </p>
-      {/* 复制保号链接:用户可分享给其他设备/家人 */}
       <div className="flex justify-center mb-3 -mt-2">
         <CopyPortLinkButton
           portUrl={
@@ -460,6 +463,59 @@ export default async function MePage() {
         )}
       </div>
 
+      {/* 账号级操作:多 sim 入口(已登录用户可以再兑换新卡) */}
+      <div className="mt-6 pt-4 border-t border-slate-200 flex items-center justify-center gap-3 text-xs text-slate-500">
+        <Link
+          href="/me/settings"
+          className="hover:text-slate-700 inline-flex items-center gap-1"
+        >
+          <svg
+            width={12}
+            height={12}
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth={2}
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            aria-hidden="true"
+          >
+            <circle cx="12" cy="12" r="3" />
+            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" />
+          </svg>
+          设置
+        </Link>
+        <span className="text-slate-300">|</span>
+        <Link
+          href="/redeem"
+          className="hover:text-slate-700 inline-flex items-center gap-1"
+          title="用新卡密开新账号,提醒另一张 SIM 卡(同账号只能管 1 张卡)"
+        >
+          <svg
+            width={12}
+            height={12}
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth={2}
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            aria-hidden="true"
+          >
+            <line x1="12" y1="5" x2="12" y2="19" />
+            <line x1="5" y1="12" x2="19" y2="12" />
+          </svg>
+          兑换新卡(开新账号)
+        </Link>
+        <span className="text-slate-300">|</span>
+        <Link
+          href="/api/auth/logout"
+          className="hover:text-slate-700"
+        >
+          退出
+        </Link>
+      </div>
+
       {/* M3: 最近发送给我的提醒 — 透明度,让用户知道系统到底推过啥 */}
       <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 mt-4">
         <div className="flex items-baseline justify-between mb-3 flex-wrap gap-2">
@@ -468,9 +524,7 @@ export default async function MePage() {
             <div className="text-2xl font-bold text-slate-900 mt-0.5">
               {lifetimeCount}
               <span className="text-sm font-normal text-slate-500 ml-1.5">条累计</span>
-              {/* Round 144: 今日推送(最近期信号) + Round 138: 本月 */}
               {todayCount > 0 && (
-                /* Round 161: 用 <details> 包裹,点击展开/折叠按小时 chart */
                 <details className="ml-2 inline-block">
                   <summary
                     className="text-sm font-normal text-slate-500 inline-flex items-center gap-1 cursor-pointer list-none"
@@ -486,7 +540,6 @@ export default async function MePage() {
                   >
                     · 今日 <strong className={todayFailedCount > 0 ? "text-amber-700" : "text-slate-700"}>{todayCount}</strong> 条
                     {todayFailedCount > 0 && (
-                      /* Round 182: '(失败 N)' 加点击跳转 /me/pushes?status=failed 当天 */
                       <Link
                         href={`/me/pushes?from=${sp.year}-${String(sp.month).padStart(2, "0")}-${String(sp.day).padStart(2, "0")}&to=${sp.year}-${String(sp.month).padStart(2, "0")}-${String(sp.day).padStart(2, "0")}&status=failed`}
                         className="text-rose-600 ml-0.5 hover:underline"
@@ -510,13 +563,10 @@ export default async function MePage() {
                       <polyline points="6 9 12 15 18 9" />
                     </svg>
                   </summary>
-                  {/* Round 153: 今日按小时分布 (24 个 mini bar) */}
                   <TodayHourlyChart hours={todayHourlySends} currentHour={sp.hour} />
                 </details>
               )}
               {todayCount === 0 && thisMonthCount > 0 && (
-                /* Round 162 + 174 + 184: 用 <details> 包裹,点击展开/折叠近 7 日 chart
-                   并加 "查看全部" 链接到 /me/pushes, 如有失败加 rose-600 "本月失败" link */
                 <details className="ml-2 inline-block">
                   <summary
                     className="text-sm font-normal text-slate-500 inline-flex items-center gap-1 cursor-pointer list-none"
@@ -524,7 +574,6 @@ export default async function MePage() {
                   >
                     · 本月 <strong className="text-slate-700">{thisMonthCount}</strong> 条
                     {thisMonthExpected > thisMonthCount && (
-                      /* Round 207: 显示 'X 次剩余' 提示 (本月预期 - 已推) */
                       <span
                         className="ml-1 text-slate-500"
                         title={`本月预期 ${thisMonthExpected} 次, 已推 ${thisMonthCount} 次, 还差 ${thisMonthExpected - thisMonthCount} 次`}
@@ -533,13 +582,11 @@ export default async function MePage() {
                       </span>
                     )}
                     {thisMonthExpected > thisMonthCount && todayCount > 0 && (
-                      /* Round 213: '今日 X / 预期 Y' 显示 (今日实际 / 本月预期) */
                       <span className="ml-1 text-slate-500" title={`本月预期 ${thisMonthExpected} 次, 今日已推 ${todayCount} 次`}>
                         (今日 {todayCount} / 预期 {thisMonthExpected})
                       </span>
                     )}
                     {thisMonthFailedCount > 0 && (
-                      /* Round 184: '(失败 N)' 加点击跳转 /me/pushes 本月失败 */
                       <Link
                         href={`/me/pushes?from=${sp.year}-${String(sp.month).padStart(2, "0")}-01&to=${sp.year}-${String(sp.month).padStart(2, "0")}-${new Date(sp.year, sp.month, 0).getUTCDate().toString().padStart(2, "0")}&status=failed`}
                         className="text-rose-600 ml-1 hover:underline"
@@ -563,9 +610,7 @@ export default async function MePage() {
                       <polyline points="6 9 12 15 18 9" />
                     </svg>
                   </summary>
-                  {/* Round 158: 近 7 日每日 mini bar (本月视图) */}
                   <MonthDailyChart days={last7DaysForSim} />
-                  {/* Round 174: 查看完整推送历史链接 */}
                   <Link
                     href="/me/pushes"
                     className="block mt-2 text-xs text-indigo-600 hover:underline"
@@ -600,7 +645,6 @@ export default async function MePage() {
           </div>
           <span className="text-xs text-slate-400">显示最近 5 条</span>
         </div>
-        {/* 满了 5 条说明还有更多,提示用户历史量级 */}
         {recentReminders.length === 5 && lifetimeCount > 5 && (
           <p
             className="text-xs text-slate-500 -mt-2 mb-3"
@@ -686,10 +730,7 @@ export default async function MePage() {
           </span>
           <span aria-hidden="true" className="text-slate-400 group-open:rotate-180 transition-transform">▾</span>
         </summary>
-        <p
-          className="text-xs text-slate-500 mt-2 mb-3"
-          title="在折叠的 <details> 里展开后,会显示一个用样例数据模拟的真实推送样例(显示在 <PushPreview> 组件里)"
-        >
+        <p className="text-xs text-slate-500 mt-2 mb-3">
           折叠打开,看系统到日子会给您发什么。
           {channelMissing && (
             <>

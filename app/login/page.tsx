@@ -11,7 +11,7 @@ type Mode = "login" | "redeem";
 export default function LoginPage() {
   const router = useRouter();
   const [mode, setMode] = useState<Mode>("login");
-  const [simNumber, setSimNumber] = useState("");
+  const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -29,7 +29,7 @@ export default function LoginPage() {
       const resp = await fetch("/api/auth/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ simNumber, password }),
+        body: JSON.stringify({ username: username.trim().toLowerCase(), password }),
       });
       const data = await resp.json();
       if (!data.ok) {
@@ -110,8 +110,8 @@ export default function LoginPage() {
 
         {mode === "login" ? (
           <LoginForm
-            simNumber={simNumber}
-            setSimNumber={setSimNumber}
+            username={username}
+            setUsername={setUsername}
             password={password}
             setPassword={setPassword}
             error={error}
@@ -144,16 +144,16 @@ export default function LoginPage() {
 }
 
 function LoginForm({
-  simNumber,
-  setSimNumber,
+  username,
+  setUsername,
   password,
   setPassword,
   error,
   loading,
   onSubmit,
 }: {
-  simNumber: string;
-  setSimNumber: (v: string) => void;
+  username: string;
+  setUsername: (v: string) => void;
   password: string;
   setPassword: (v: string) => void;
   error: string | null;
@@ -163,7 +163,7 @@ function LoginForm({
   return (
     <>
       <p className="text-slate-600 text-sm mb-5">
-        输入您的 giffgaff 号码和登录密码。首次登录后会被引导设置通知渠道。
+        输入您的账号(或手机号)和登录密码。首次登录后会被引导设置通知渠道。
       </p>
 
         {error && (
@@ -190,19 +190,19 @@ function LoginForm({
 
       <form onSubmit={onSubmit} className="space-y-4">
         <div>
-          <label className="block text-sm font-medium mb-1.5">Giffgaff 号码</label>
+          <label className="block text-sm font-medium mb-1.5">账号或手机号</label>
           <input
             type="text"
-            value={simNumber}
-            onChange={(e) => setSimNumber(e.target.value)}
-            placeholder="如 07724 215611"
+            value={username}
+            onChange={(e) => setUsername(e.target.value)}
+            placeholder="手机号(如 07724215611)或账号(如 alice_2024)"
             required
-            autoComplete="off"
-            inputMode="tel"
-            className="w-full px-3.5 py-2.5 rounded-lg border border-slate-300 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 outline-none transition"
+            autoComplete="username"
+            spellCheck={false}
+            className="w-full px-3.5 py-2.5 rounded-lg border border-slate-300 font-mono focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 outline-none transition"
           />
           <p className="text-xs text-slate-500 mt-1">
-            支持带空格 / 横线,系统按后 6 位匹配
+            老用户直接用手机号登录(无感迁移);新用户用兑换时设置的账号
           </p>
         </div>
 
@@ -239,8 +239,11 @@ function RedeemPanel() {
 
       <ol className="space-y-2.5 text-sm text-slate-700 mb-5 list-decimal list-inside">
         <li>在兑换页填卡密 + 手机号 + 激活日期</li>
-        <li>设置登录密码(至少 8 位)</li>
+        <li>设置登录账号和密码(账号至少 3 位,密码至少 8 位)</li>
         <li>登录后绑定 Sever酱 / Bark / Telegram 任一推送渠道</li>
+        <li>
+          <strong>同一个账号</strong>可以绑定多张 SIM 卡,一张提醒不够?再买一张卡密即可
+        </li>
       </ol>
 
       <div className="p-3 rounded-lg bg-amber-50 border border-amber-200 text-amber-900 text-sm mb-4">

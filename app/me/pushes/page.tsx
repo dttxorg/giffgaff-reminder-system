@@ -82,6 +82,15 @@ export default async function MePushesPage({ searchParams }: PageProps) {
     sentAtRange.lt = lt;
   }
 
+  if (!user.sim) {
+    return (
+      <div className="max-w-2xl mx-auto px-4 py-8 sm:py-12 text-center">
+        <p className="text-slate-600">该账号下没有 SIM 卡数据</p>
+        <Link href="/me" className="text-indigo-600 hover:underline mt-3 inline-block">返回用户中心</Link>
+      </div>
+    );
+  }
+
   const where = {
     simId: user.sim.id,
     ...(validStatus ? { status: validStatus } : {}),

@@ -73,8 +73,8 @@ export default async function UsersPage({ searchParams }: PageProps) {
 
   const rows = users.map((u) => ({
     id: u.id,
-    simPhone: u.sim.phoneNumber,
-    simLookupKey: u.simLookupKey,
+    username: u.username,
+    simPhone: u.sim?.phoneNumber ?? null,
     channel: u.channel,
     reminderCount: u._count.reminders,
     createdAt: u.createdAt.toISOString().replace("T", " ").slice(0, 19),

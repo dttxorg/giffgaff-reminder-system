@@ -86,6 +86,13 @@ export default async function CardsPage({ searchParams }: PageProps) {
             导出 CSV
           </a>
           <Link
+            href="/admin/cards/import"
+            className="px-4 py-2 rounded-lg bg-white border border-slate-300 text-slate-700 text-sm font-medium hover:bg-slate-50"
+            title="把已有的卡密列表批量导入(适合分销商给的批次)"
+          >
+            ⬆ 批量导入
+          </Link>
+          <Link
             href="/admin/cards/new"
             className="px-4 py-2 rounded-lg bg-indigo-600 text-white text-sm font-medium hover:bg-indigo-700"
           >

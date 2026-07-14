@@ -1,23 +1,26 @@
 // 卡密兑换核心逻辑：事务 + 幂等
 //
-// 客户拿到 unbound 卡密后，提交手机号 + 激活日期 + 设置密码。
-// 系统创建 sim、user（带密码哈希），标记卡密已用，自动登录。
+// 客户拿到 unbound 卡密后,提交账号 + 密码 + 手机号 + 激活日期。
+// 每个卡密 = 1 个新 (user, sim) 配对(1:1)。
+// 想多张 SIM 卡提醒?用多个卡密,产生多个账号,各自登录。
 //
-// 卡密本身就是"一次性激活凭证"，兑换后用手机号+密码登录。
+// 卡密本身就是"一次性激活凭证"，兑换后用 username + password 登录。
 import { prisma } from "./db";
 import { normalizeCardCode } from "./card-key";
-import { hashPassword } from "./auth";
+import { hashPassword, normalizeUsername, usernameError } from "./auth";
 import type { Prisma } from "./generated/prisma/client";
 
 export type RedeemInput = {
-  /** 用户输入的卡密（已归一化为原始 16 字符） */
+  /** 用户输入的卡密(已归一化为原始 16 字符) */
   rawCode: string;
+  /** 客户自己想要的账号(老用户场景可填手机号,新用户可填自定义账号) */
+  username: string;
+  /** 客户自己设置的登录密码(明文,函数内哈希) */
+  password: string;
   /** 客户自己的手机号 */
   phoneNumber: string;
   /** 客户自己的激活日期 (yyyy-MM-dd) */
   activatedAt: string;
-  /** 客户自己设置的登录密码（明文，函数内哈希） */
-  password: string;
 };
 
 export type RedeemResult =
@@ -36,6 +39,8 @@ export type RedeemResult =
         | "INVALID_PHONE" // 手机号格式错
         | "INVALID_DATE" // 日期格式错
         | "PASSWORD_TOO_SHORT" // 密码太短
+        | "USERNAME_INVALID" // 账号格式错
+        | "USERNAME_TAKEN" // 账号已被占用
         | "PHONE_TAKEN"; // 手机号已被绑定
     };
 
@@ -61,17 +66,22 @@ export function parseDate(input: string): { ok: true; date: Date } | { ok: false
 }
 
 /**
- * 手机号：6-15 位数字
+ * 手机号:6-15 位数字
  */
 export function isValidPhone(input: string): boolean {
   return /^\d{6,15}$/.test(input);
 }
 
 /**
- * 兑换卡密（事务安全）
+ * 兑换卡密(事务安全)
  *
  * 成功返回 { ok: true, userId, simId }
  * 失败返回 { ok: false, error }
+ *
+ * 业务规则:
+ *  - 每个卡密 = 1 个新 (user, sim) 配对
+ *  - username 必须唯一(老用户的手机号也算 username)
+ *  - phoneNumber 必须未被绑定
  */
 export async function redeemCard(
   input: RedeemInput,
@@ -96,6 +106,12 @@ export async function redeemCard(
   if (typeof input.password !== "string" || input.password.length < 8) {
     return { ok: false, error: "PASSWORD_TOO_SHORT" };
   }
+
+  // 校验 username
+  const username = normalizeUsername(input.username);
+  const uErr = usernameError(username);
+  if (uErr) return { ok: false, error: "USERNAME_INVALID" };
+
   const parsed = parseDate(input.activatedAt);
   if (!parsed.ok) return { ok: false, error: "INVALID_DATE" };
 
@@ -107,6 +123,10 @@ export async function redeemCard(
   if (existingSim) {
     return { ok: false, error: "PHONE_TAKEN" };
   }
+
+  // 检查 username 唯一
+  const existing = await db.user.findUnique({ where: { username } });
+  if (existing) return { ok: false, error: "USERNAME_TAKEN" };
 
   // 哈希密码
   const passwordHash = await hashPassword(input.password);
@@ -120,19 +140,18 @@ export async function redeemCard(
     },
   });
 
-  // 创建 user（channel 占位，channelKey 留空，引导去 /me/settings 设置）
-  const lookupKey = phoneNumber.slice(-6);
+  // 创建 user(1:1 - simId 指向新 sim)
   const user = await db.user.create({
     data: {
+      username,
       simId: sim.id,
-      simLookupKey: lookupKey,
       channel: "serverchan",
       channelKey: "",
       passwordHash,
     },
   });
 
-  // 标记卡密已用（双保险：usedSimId unique 也卡住重复）
+  // 标记卡密已用(双保险:usedSimId unique 也卡住重复)
   await db.cardKey.update({
     where: { id: card.id },
     data: {

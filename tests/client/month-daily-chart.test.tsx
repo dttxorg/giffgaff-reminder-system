@@ -42,7 +42,7 @@ describe("<MonthDailyChart />", () => {
 
   it("aria-label 包含 '近 7 日每日推送数'", () => {
     render(<MonthDailyChart days={sampleDays} />);
-    expect(screen.getByLabelText("近 7 日每日推送数")).toBeInTheDocument();
+    expect(screen.getByLabelText(/近 7 日每日推送数/)).toBeInTheDocument();
   });
 
   it("count=0 的柱仍渲染(最小 1px 可见)", () => {

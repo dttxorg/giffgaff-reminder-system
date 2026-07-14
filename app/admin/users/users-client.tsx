@@ -9,8 +9,9 @@ import { LoadingButton } from "@/app/_components/loading-button";
 
 interface UserRow {
   id: number;
-  simPhone: string;
-  simLookupKey: string;
+  username: string;
+  /** 1:1 - 每个 user 最多 1 个 sim */
+  simPhone: string | null;
   channel: string;
   reminderCount: number;
   createdAt: string;
@@ -97,8 +98,8 @@ export function UsersClient({ users }: UsersClientProps) {
             <thead className="bg-slate-50 text-slate-600">
               <tr>
                 <th className="text-left px-3 py-2">ID</th>
+                <th className="text-left px-3 py-2">账号</th>
                 <th className="text-left px-3 py-2">绑定 sim</th>
-                <th className="text-left px-3 py-2 hidden md:table-cell">后 6 位</th>
                 <th className="text-left px-3 py-2 hidden md:table-cell">渠道</th>
                 <th className="text-left px-3 py-2 hidden md:table-cell">密码</th>
                 <th className="text-left px-3 py-2 hidden md:table-cell">提醒数</th>
@@ -120,8 +121,10 @@ export function UsersClient({ users }: UsersClientProps) {
                 users.map((u) => (
                   <tr key={u.id} className="border-t border-slate-100">
                     <td className="px-3 py-2 font-mono text-xs text-slate-500 hidden md:table-cell">{u.id}</td>
-                    <td className="px-3 py-2 font-mono">{u.simPhone}</td>
-                    <td className="px-3 py-2 font-mono text-slate-500 hidden md:table-cell">{u.simLookupKey}</td>
+                    <td className="px-3 py-2 font-mono text-slate-700">{u.username}</td>
+                    <td className="px-3 py-2 font-mono">
+                      {u.simPhone ?? <span className="text-slate-400">—</span>}
+                    </td>
                     <td className="px-3 py-2 hidden md:table-cell">{u.channel}</td>
                     <td className="px-3 py-2">
                       {u.hasPassword ? (

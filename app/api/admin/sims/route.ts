@@ -20,7 +20,8 @@ const BodySchema = z.object({
  *
  * 业务流：
  * 1. 创建 sim
- * 2. 创建 user（passwordHash 哈希初始密码，failedLoginCount=0）
+ * 2. 创建 user: username 直接 = sim.phoneNumber（管理员录的号，客户继续用手机号登录,无感迁移）
+ *    passwordHash 哈希初始密码
  * 3. 客户访问 /login → 输手机号 + 初始密码 → 进入 /me
  */
 export async function POST(req: Request) {
@@ -63,8 +64,10 @@ export async function POST(req: Request) {
       });
       await tx.user.create({
         data: {
+          // username 直接 = 手机号：客户继续用原手机号登录
+          // (跟迁移策略一致,管理员录的号也是老用户路径)
+          username: phone,
           simId: sim.id,
-          simLookupKey: phone.slice(-6),
           channel: "serverchan",
           channelKey: "",
           passwordHash,

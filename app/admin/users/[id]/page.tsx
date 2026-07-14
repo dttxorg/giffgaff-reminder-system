@@ -47,6 +47,27 @@ export default async function UserDetailPage({ params }: PageProps) {
     notFound();
   }
 
+  // 兜底:sim 已被管理员解绑 → 显式提示
+  if (!user.sim) {
+    return (
+      <div className="p-6 sm:p-8 max-w-3xl">
+        <div className="flex items-center justify-between mb-6">
+          <h1 className="text-2xl font-bold">
+            用户 <span className="font-mono">{user.username}</span>
+          </h1>
+          <Link href="/admin/users" className="text-sm text-slate-500 hover:text-slate-900">
+            ← 返回列表
+          </Link>
+        </div>
+        <div className="bg-amber-50 border border-amber-200 rounded-xl p-5">
+          <p className="text-sm text-amber-900">
+            该账号下没有 SIM 卡(可能已删除/未兑换)。
+          </p>
+        </div>
+      </div>
+    );
+  }
+
   // 派生:sim 信息 / day offset / 提醒窗口
   const sim = user.sim;
   const baseline = sim.lastPortedAt ?? sim.activatedAt;
@@ -56,8 +77,8 @@ export default async function UserDetailPage({ params }: PageProps) {
   // 给 <UsersClient> 的 row(让"重置密码"按钮能复用)
   const row = {
     id: user.id,
+    username: user.username,
     simPhone: sim.phoneNumber,
-    simLookupKey: user.simLookupKey,
     channel: user.channel,
     reminderCount: 0, // 不在详情页算,列表语义;详情页另算
     createdAt: user.createdAt.toISOString().replace("T", " ").slice(0, 19),
@@ -67,7 +88,9 @@ export default async function UserDetailPage({ params }: PageProps) {
   return (
     <div className="p-6 sm:p-8 max-w-3xl">
       <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold">用户 #{user.id}</h1>
+        <h1 className="text-2xl font-bold">
+          用户 <span className="font-mono">{user.username}</span>
+        </h1>
         <Link
           href="/admin/users"
           className="text-sm text-slate-500 hover:text-slate-900"
@@ -84,6 +107,10 @@ export default async function UserDetailPage({ params }: PageProps) {
             <div className="flex justify-between">
               <dt className="text-slate-500">用户 ID</dt>
               <dd className="font-mono text-slate-700">{user.id}</dd>
+            </div>
+            <div className="flex justify-between">
+              <dt className="text-slate-500">账号</dt>
+              <dd className="font-mono text-slate-700">{user.username}</dd>
             </div>
             <div className="flex justify-between">
               <dt className="text-slate-500">渠道</dt>
@@ -260,7 +287,8 @@ export default async function UserDetailPage({ params }: PageProps) {
       <div className="mt-6 bg-rose-50 border border-rose-200 rounded-xl p-5">
         <h2 className="text-sm font-semibold text-rose-900 mb-2">危险操作</h2>
         <p className="text-xs text-rose-700 mb-3">
-          删除用户是不可逆操作。sim 号码会保留,可被新用户兑换认领。
+          删除用户是不可逆操作。sim 号码会保留（user.simId → NULL,变成孤卡）,
+          可被新用户兑换认领。
         </p>
         <DeleteUserButton userId={user.id} reminderCount={reminderCount} />
       </div>

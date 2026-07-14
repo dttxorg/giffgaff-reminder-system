@@ -58,22 +58,28 @@ export function RedeemClient({ initialCode }: RedeemClientProps) {
     }
   }
 
-  async function doRedeem(
-    code: string,
-    phone: string,
-    date: string,
-    password: string
-  ) {
+  /**
+   * 兑换提交 - 每个卡密 = 1 个新 (user, sim) 配对(1:1)
+   * 必填:卡密 + 账号 + 密码 + 手机号 + 激活日期
+   */
+  async function doRedeem(args: {
+    code: string;
+    username: string;
+    password: string;
+    phone: string;
+    date: string;
+  }) {
     setPhase({ kind: "redeeming" });
     try {
       const resp = await fetch("/api/redeem", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          code,
-          phoneNumber: normalizePhone(phone),
-          activatedAt: date,
-          password,
+          code: args.code,
+          username: args.username,
+          password: args.password,
+          phoneNumber: normalizePhone(args.phone),
+          activatedAt: args.date,
         }),
       });
       const data = await resp.json();
@@ -82,6 +88,7 @@ export function RedeemClient({ initialCode }: RedeemClientProps) {
         return;
       }
       router.push(data.redirect || "/me");
+      router.refresh();
     } catch (e) {
       setPhase({
         kind: "error",
@@ -114,8 +121,8 @@ export function RedeemClient({ initialCode }: RedeemClientProps) {
       {phase.kind === "form" && (
         <FormPhase
           notes={phase.notes}
-          onSubmit={(phone, date, password) =>
-            doRedeem(phase.code, phone, date, password)
+          onSubmit={(username, password, phone, date) =>
+            doRedeem({ code: phase.code, username, password, phone, date })
           }
           onBack={() => setPhase({ kind: "input" })}
         />
@@ -175,7 +182,6 @@ function InputPhase({
       <button
         type="submit"
         disabled={!value.trim()}
-        // L4:disabled 时文字色也变浅,跟 login 按钮一致
         className="mt-5 w-full py-2.5 rounded-lg bg-indigo-600 text-white font-medium hover:bg-indigo-700 disabled:opacity-60 disabled:text-slate-300 transition-colors"
       >
         下一步
@@ -190,26 +196,38 @@ function FormPhase({
   onBack,
 }: {
   notes: string | null;
-  onSubmit: (phone: string, date: string, password: string) => void;
+  onSubmit: (username: string, password: string, phone: string, date: string) => void;
   onBack: () => void;
 }) {
   const [phone, setPhone] = useState("");
   const [date, setDate] = useState(() => todayLocalISODate());
+  // 账号:可以是手机号(继续用号码登录)或文字账号(3-20 位小写字母开头)
+  const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [passwordConfirm, setPasswordConfirm] = useState("");
 
   const validPhone = normalizePhone(phone).length >= 6;
   const validDate = /^\d{4}-\d{2}-\d{2}$/.test(date);
+
+  // 账号校验:归一化后(去空格/横线)再判断
+  // 允许两种: 6+ 位纯数字(手机号) 或 3-20 位 [a-z][a-z0-9_]
+  const usernameNorm = username.replace(/[\s-]/g, "").trim().toLowerCase();
+  const isPhoneLike = /^\d{6,15}$/.test(usernameNorm);
+  const isTextUsername = /^[a-z][a-z0-9_]{2,19}$/.test(usernameNorm);
+  const validUsername = isPhoneLike || isTextUsername;
+
   const validPassword = password.length >= 8;
   const passwordsMatch = password === passwordConfirm;
-  const canSubmit = validPhone && validDate && validPassword && passwordsMatch;
+
+  const canSubmit =
+    validPhone && validDate && validUsername && validPassword && passwordsMatch;
 
   return (
     <form
       onSubmit={(e) => {
         e.preventDefault();
         if (!canSubmit) return;
-        onSubmit(phone, date, password);
+        onSubmit(usernameNorm, password, phone, date);
       }}
       className="space-y-4"
     >
@@ -233,37 +251,37 @@ function FormPhase({
           </span>
         </div>
         <div className="text-xs text-emerald-700">
-          请填写您的 SIM 卡信息并设置登录密码完成绑定。
+          请填写您的 SIM 卡信息、设置账号和登录密码完成绑定。
           兑换成功后将自动登录,系统会引导您到设置页绑定推送渠道（Sever酱 / Bark 等）,
           <strong>绑定后才会真正开始接收保号提醒</strong>。
         </div>
       </div>
 
       {notes && (
-            <div className="p-3 rounded-lg bg-amber-50 border border-amber-200 text-sm">
-              <div className="flex items-center gap-1.5 text-amber-900 font-medium mb-0.5">
-                <svg
-                  width={14}
-                  height={14}
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth={2}
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  aria-hidden="true"
-                >
-                  <path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z" />
-                  <line x1="7" y1="7" x2="7.01" y2="7" />
-                </svg>
-                <span>卡密备注</span>
-              </div>
-              <div className="text-amber-800">{notes}</div>
-              <p className="text-xs text-amber-700 mt-1">
-                这条备注仅作识别,不会出现在您的账户信息里
-              </p>
-            </div>
-          )}
+        <div className="p-3 rounded-lg bg-amber-50 border border-amber-200 text-sm">
+          <div className="flex items-center gap-1.5 text-amber-900 font-medium mb-0.5">
+            <svg
+              width={14}
+              height={14}
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth={2}
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              aria-hidden="true"
+            >
+              <path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z" />
+              <line x1="7" y1="7" x2="7.01" y2="7" />
+            </svg>
+            <span>卡密备注</span>
+          </div>
+          <div className="text-amber-800">{notes}</div>
+          <p className="text-xs text-amber-700 mt-1">
+            这条备注仅作识别,不会出现在您的账户信息里
+          </p>
+        </div>
+      )}
 
       <div>
         <label className="block text-sm font-medium mb-1.5">
@@ -290,18 +308,37 @@ function FormPhase({
           required
           className="w-full px-3.5 py-2.5 rounded-lg border border-slate-300 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 outline-none"
         />
-        {/* R2:老用户补录历史日期时,默认是今天,容易直接提交默认值。
-            在用户改之前提示"当前默认:今天",改了之后才换成常规说明。 */}
         {date === todayLocalISODate() ? (
           <p className="text-xs text-amber-700 mt-1.5">
             <strong>当前默认是今天</strong>(如果您是老用户补录历史保号日期,
             请改成实际保号的那天)
           </p>
         ) : (
-        <p className="text-xs text-slate-500 mt-1.5">
-          从这天起算 170 天开始提醒您保号
-        </p>
+          <p className="text-xs text-slate-500 mt-1.5">
+            从这天起算 170 天开始提醒您保号
+          </p>
         )}
+      </div>
+
+      <div>
+        <label className="block text-sm font-medium mb-1.5">
+          设置登录账号
+        </label>
+        <input
+          type="text"
+          value={username}
+          onChange={(e) => setUsername(e.target.value)}
+          placeholder="手机号(如 07724215611)或自定义账号(如 alice_2024)"
+          autoComplete="username"
+          required
+          className="w-full px-3.5 py-2.5 rounded-lg border border-slate-300 font-mono focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 outline-none"
+        />
+        <p className="text-xs text-slate-500 mt-1.5">
+          支持两种格式:6+ 位纯数字(手机号)或 3-20 位小写字母开头(字母/数字/下划线)
+          {username && !validUsername && (
+            <span className="text-rose-600 ml-1">格式不正确</span>
+          )}
+        </p>
       </div>
 
       <div className="pt-2 border-t border-slate-100">

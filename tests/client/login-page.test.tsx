@@ -23,18 +23,18 @@ afterEach(() => {
   vi.clearAllMocks();
 });
 
+/** Round 224: 登录表单的 username 输入 placeholder(账号而非手机号) */
+const USERNAME_PLACEHOLDER = /alice_2024|3-20/;
+
 describe("<LoginPage />", () => {
   it("默认显示 '我有账号' tab + 登录表单", () => {
     render(<LoginPage />);
-    // 两个 tab 都存在
     expect(screen.getByRole("tab", { name: "我有账号" })).toBeInTheDocument();
     expect(screen.getByRole("tab", { name: /我有卡密/ })).toBeInTheDocument();
-    // 登录 tab 选中
     expect(screen.getByRole("tab", { name: "我有账号" })).toHaveAttribute(
       "aria-selected",
       "true"
     );
-    // 登录表单出现(密码框)
     expect(document.querySelector('input[type="password"]')).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "登录" })).toBeInTheDocument();
   });
@@ -48,29 +48,23 @@ describe("<LoginPage />", () => {
       "aria-selected",
       "true"
     );
-    // 标题切到 "兑换卡密"
     expect(screen.getByRole("heading", { name: "兑换卡密" })).toBeInTheDocument();
-    // 登录密码框消失
     expect(document.querySelector('input[type="password"]')).not.toBeInTheDocument();
-    // 兑换面板:有 "去兑换页" 链接
     const redeemLink = screen.getByRole("link", { name: /去兑换页/ });
     expect(redeemLink).toBeInTheDocument();
     expect(redeemLink).toHaveAttribute("href", "/redeem");
-    // 卡密示例
     expect(screen.getByText(/XXXX-XXXX-XXXX-XXXX/)).toBeInTheDocument();
   });
 
   it("切回 '我有账号' tab → 重新显示登录表单,保留输入", async () => {
     const user = userEvent.setup();
     render(<LoginPage />);
-    const simInput = screen.getByPlaceholderText(/07724/);
-    await user.type(simInput, "07724215611");
-    // 切走
+    // 找账号输入框(用 placeholder 匹配 "alice_2024")
+    const usernameInput = screen.getByPlaceholderText(USERNAME_PLACEHOLDER);
+    await user.type(usernameInput, "alice_2024");
     await user.click(screen.getByRole("tab", { name: /我有卡密/ }));
-    // 切回
     await user.click(screen.getByRole("tab", { name: "我有账号" }));
-    // 输入保留
-    expect((simInput as HTMLInputElement).value).toBe("07724215611");
+    expect((usernameInput as HTMLInputElement).value).toBe("alice_2024");
     expect(document.querySelector('input[type="password"]')).toBeInTheDocument();
   });
 
@@ -81,7 +75,7 @@ describe("<LoginPage />", () => {
       json: async () => ({ ok: true, redirect: "/me" }),
     });
     render(<LoginPage />);
-    await user.type(screen.getByPlaceholderText(/07724/), "07724215611");
+    await user.type(screen.getByPlaceholderText(USERNAME_PLACEHOLDER), "alice_2024");
     await user.type(document.querySelector('input[type="password"]')!, "secret123");
     await user.click(screen.getByRole("button", { name: "登录" }));
 
@@ -91,6 +85,10 @@ describe("<LoginPage />", () => {
         expect.objectContaining({ method: "POST" })
       )
     );
+    // 验证请求体里 username 已 lowercase + trim
+    const callBody = JSON.parse(mockFetch.mock.calls[0][1].body);
+    expect(callBody.username).toBe("alice_2024");
+    expect(callBody.password).toBe("secret123");
     expect(mockPush).toHaveBeenCalledWith("/me");
     expect(mockRefresh).toHaveBeenCalled();
   });
@@ -99,14 +97,14 @@ describe("<LoginPage />", () => {
     const user = userEvent.setup();
     mockFetch.mockResolvedValueOnce({
       ok: true,
-      json: async () => ({ ok: false, error: "密码错误" }),
+      json: async () => ({ ok: false, error: "账号或密码错误" }),
     });
     render(<LoginPage />);
-    await user.type(screen.getByPlaceholderText(/07724/), "07724215611");
+    await user.type(screen.getByPlaceholderText(USERNAME_PLACEHOLDER), "alice_2024");
     await user.type(document.querySelector('input[type="password"]')!, "wrong");
     await user.click(screen.getByRole("button", { name: "登录" }));
 
-    expect(await screen.findByText("密码错误")).toBeInTheDocument();
+    expect(await screen.findByText("账号或密码错误")).toBeInTheDocument();
     expect(mockPush).not.toHaveBeenCalled();
   });
 
@@ -114,17 +112,15 @@ describe("<LoginPage />", () => {
     const user = userEvent.setup();
     mockFetch.mockResolvedValueOnce({
       ok: true,
-      json: async () => ({ ok: false, error: "密码错误" }),
+      json: async () => ({ ok: false, error: "账号或密码错误" }),
     });
     render(<LoginPage />);
-    await user.type(screen.getByPlaceholderText(/07724/), "07724215611");
+    await user.type(screen.getByPlaceholderText(USERNAME_PLACEHOLDER), "alice_2024");
     await user.type(document.querySelector('input[type="password"]')!, "wrong");
     await user.click(screen.getByRole("button", { name: "登录" }));
-    expect(await screen.findByText("密码错误")).toBeInTheDocument();
-    // 切到兑换 tab
+    expect(await screen.findByText("账号或密码错误")).toBeInTheDocument();
     await user.click(screen.getByRole("tab", { name: /我有卡密/ }));
-    // 错误消失
-    expect(screen.queryByText("密码错误")).not.toBeInTheDocument();
+    expect(screen.queryByText("账号或密码错误")).not.toBeInTheDocument();
   });
 
   it("底部始终显示 '忘记密码' 提示,不依赖当前 tab", async () => {
@@ -137,20 +133,14 @@ describe("<LoginPage />", () => {
 
   it("提交中 → LoadingButton 显示 '登录中' 文本 + Spinner(aria-busy=true) + disabled", async () => {
     const user = userEvent.setup();
-    // 让 fetch 一直 pending,确保 loading 状态保持
     mockFetch.mockImplementation(
-      () =>
-        new Promise(() => {
-          /* never resolve */
-        })
+      () => new Promise(() => { /* never resolve */ })
     );
     render(<LoginPage />);
-    await user.type(screen.getByPlaceholderText(/07724/), "07724215611");
+    await user.type(screen.getByPlaceholderText(USERNAME_PLACEHOLDER), "alice_2024");
     await user.type(document.querySelector('input[type="password"]')!, "secret123");
     await user.click(screen.getByRole("button", { name: "登录" }));
 
-    // loading 态:LoadingButton 显示 loadingLabel "登录中"
-    // 用 getAllByText 找包含 '登录中' 的元素(Spinner sr-only label + 文本)
     const allBtns = screen.getAllByRole("button");
     const submitBtn = allBtns.find((b) => b.getAttribute("type") === "submit")!;
     expect(submitBtn).toBeDisabled();
@@ -166,13 +156,12 @@ describe("<LoginPage /> disabled 视觉(L4)", () => {
       () => new Promise(() => {})
     );
     render(<LoginPage />);
-    await user.type(screen.getByPlaceholderText(/07724/), "07724215611");
+    await user.type(screen.getByPlaceholderText(USERNAME_PLACEHOLDER), "alice_2024");
     await user.type(document.querySelector('input[type="password"]')!, "secret123");
     await user.click(screen.getByRole("button", { name: "登录" }));
 
     const allBtns = screen.getAllByRole("button");
     const submitBtn = allBtns.find((b) => b.getAttribute("type") === "submit")!;
-    // 加载时按钮被禁用,LoadingButton 用 disabled:bg-indigo-300 视觉变浅
     expect(submitBtn.className).toContain("disabled:bg-indigo-300");
     expect(submitBtn).toBeDisabled();
     expect(submitBtn).toHaveAttribute("aria-busy", "true");

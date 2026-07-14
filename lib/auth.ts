@@ -76,3 +76,49 @@ export function generateVerificationCode(): string {
 export function generateId(): string {
   return randomBytes(16).toString("hex");
 }
+// =============================================================================
+// Username 校验
+// =============================================================================
+// 规则(同时支持两种格式):
+//  1) 文字账号:3-20 位,首字符必须小写字母,后续 [a-z0-9_]   例: alice_2024
+//  2) 手机号账号:6-15 位纯数字                                例: 07724215611
+// 老用户(username = 手机号)走规则 2;新用户自选账号走规则 1。
+// 存库前 normalizeUsername 转小写 + 去首尾空白 + 去空格/横线(手机号归一化)
+const USERNAME_MIN = 3;
+const USERNAME_MAX = 20;
+const PHONE_MIN = 6;
+const PHONE_MAX = 15;
+
+export function normalizeUsername(input: string): string {
+  // 既支持 "alice_2024" 也支持 "07724 215611" / "07724-215611"
+  return input.replace(/[\s-]/g, "").trim().toLowerCase();
+}
+
+/** 判断输入"是不是纯数字"(手机号账号的判定) */
+function isAllDigits(s: string): boolean {
+  return /^\d+$/.test(s);
+}
+
+/** 校验账号是否合法(返回 true / false) */
+export function isValidUsername(input: string): boolean {
+  return usernameError(input) === null;
+}
+
+/** 返回 null = 合法,否则为人类可读错误信息 */
+export function usernameError(input: string): string | null {
+  if (!input) return "请输入账号";
+  const v = normalizeUsername(input);
+  if (v.length < USERNAME_MIN) return `账号至少 ${USERNAME_MIN} 位`;
+  if (v.length > USERNAME_MAX) return `账号不超过 ${USERNAME_MAX} 位`;
+
+  if (isAllDigits(v)) {
+    // 手机号账号
+    if (v.length < PHONE_MIN) return `手机号至少 ${PHONE_MIN} 位`;
+    if (v.length > PHONE_MAX) return `手机号不超过 ${PHONE_MAX} 位`;
+    return null;
+  }
+  // 文字账号
+  if (!/^[a-z]/.test(v)) return "账号必须以小写字母开头(或使用 6+ 位纯数字手机号)";
+  if (!/^[a-z0-9_]+$/.test(v)) return "账号只能包含小写字母、数字和下划线";
+  return null;
+}
