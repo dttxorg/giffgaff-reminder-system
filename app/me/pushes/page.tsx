@@ -21,6 +21,13 @@ export default async function MePushesPage({ searchParams }: PageProps) {
 
   const { status, from, to } = await searchParams;
 
+  // Round 198: 本月起止日期 (用于"本月"快捷链接)
+  // JS Date 0 日 = 上月最后一天,getUTCDate 拿到上月最后一天的号 = 本月总天数
+  const _monthEnd = new Date();
+  const monthStart = `${_monthEnd.getFullYear()}-${String(_monthEnd.getMonth() + 1).padStart(2, "0")}-01`;
+  const _monthLastDay = new Date(_monthEnd.getFullYear(), _monthEnd.getMonth() + 1, 0).getDate();
+  const monthEnd = `${_monthEnd.getFullYear()}-${String(_monthEnd.getMonth() + 1).padStart(2, "0")}-${String(_monthLastDay).padStart(2, "0")}`;
+
   const validStatus: "success" | "failed" | undefined =
     status === "success" || status === "failed" ? status : undefined;
 
@@ -92,6 +99,35 @@ export default async function MePushesPage({ searchParams }: PageProps) {
           </span>
         )}
       </p>
+
+      {/* Round 198: 日期范围快捷筛选链接 */}
+      <div className="flex gap-2 mb-3 text-xs flex-wrap">
+        <span className="text-slate-500 mr-1">日期:</span>
+        <Link
+          href="/me/pushes"
+          className={`px-2 py-1 rounded ${!from && !to ? "bg-indigo-600 text-white" : "bg-slate-100 text-slate-600 hover:bg-slate-200"}`}
+        >
+          全部
+        </Link>
+        <Link
+          href={`/me/pushes?from=${_monthEnd.getFullYear()}-${String(_monthEnd.getMonth() + 1).padStart(2, "0")}-${String(_monthEnd.getDate()).padStart(2, "0")}&to=${_monthEnd.getFullYear()}-${String(_monthEnd.getMonth() + 1).padStart(2, "0")}-${String(_monthEnd.getDate()).padStart(2, "0")}`}
+          className={`px-2 py-1 rounded ${from === `${_monthEnd.getFullYear()}-${String(_monthEnd.getMonth() + 1).padStart(2, "0")}-${String(_monthEnd.getDate()).padStart(2, "0")}` && to === from ? "bg-indigo-600 text-white" : "bg-slate-100 text-slate-600 hover:bg-slate-200"}`}
+        >
+          今天
+        </Link>
+        <Link
+          href={`/me/pushes?from=${monthStart}&to=${monthEnd}`}
+          className={`px-2 py-1 rounded ${from === monthStart && to === monthEnd ? "bg-indigo-600 text-white" : "bg-slate-100 text-slate-600 hover:bg-slate-200"}`}
+        >
+          本月
+        </Link>
+        <Link
+          href={`/me/pushes?status=${status || ""}`}
+          className={`px-2 py-1 rounded ${status ? "bg-slate-100 text-slate-600 hover:bg-slate-200" : "invisible"}`}
+        >
+          清除 status
+        </Link>
+      </div>
 
       {/* 过滤链接 */}
       <div className="flex gap-2 mb-4 text-xs">
