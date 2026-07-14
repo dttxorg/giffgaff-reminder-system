@@ -10,7 +10,7 @@ import { formatRelativeTime, formatUtcShanghaiDual } from "@/lib/date";
 import { groupRemindersByDay } from "@/lib/push-grouping";
 
 interface PageProps {
-  searchParams: Promise<{ status?: string; from?: string; to?: string }>;
+  searchParams: Promise<{ status?: string; from?: string; to?: string; simId?: string }>;
 }
 
 
@@ -19,7 +19,7 @@ export default async function MePushesPage({ searchParams }: PageProps) {
   const user = await getCurrentUser();
   if (!user) redirect("/login");
 
-  const { status, from, to } = await searchParams;
+  const { status, from, to, simId: simIdParam } = await searchParams;
 
   // Round 198 + 199: 日期范围快捷链接所需变量
   // 本月 (本月 1 号到本月最后一天,或今天)
@@ -82,7 +82,7 @@ export default async function MePushesPage({ searchParams }: PageProps) {
     sentAtRange.lt = lt;
   }
 
-  if (!user.sim) {
+  if (user.sims.length === 0) {
     return (
       <div className="max-w-2xl mx-auto px-4 py-8 sm:py-12 text-center">
         <p className="text-slate-600">该账号下没有 SIM 卡数据</p>
@@ -91,8 +91,16 @@ export default async function MePushesPage({ searchParams }: PageProps) {
     );
   }
 
+  // 多 sim 场景:?simId=X 只查该 sim;否则查账号下所有 sim
+  const ownedSimIds = user.sims.map((s) => s.id);
+  const requestedSimId = simIdParam ? Number(simIdParam) : null;
+  const filteredSimIds =
+    requestedSimId && ownedSimIds.includes(requestedSimId)
+      ? [requestedSimId]
+      : ownedSimIds;
+
   const where = {
-    simId: user.sim.id,
+    simId: { in: filteredSimIds },
     ...(validStatus ? { status: validStatus } : {}),
     ...(sentAtRange.gte || sentAtRange.lt ? { sentAt: sentAtRange } : {}),
   };

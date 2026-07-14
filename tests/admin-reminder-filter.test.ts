@@ -96,20 +96,19 @@ describe("buildReminderWhere — matchingSimIds (q 解析后)", () => {
 });
 
 describe("buildReminderWhere — channel", () => {
-  it("合法 channel → user.is.channel", () => {
+  // 1:N 模型下,channel 直接在 reminder 自身(快照),不再是 where.user.is.channel
+  it("合法 channel → reminder.channel 直接设", () => {
     const r = buildReminderWhere({ channel: "bark" });
-    expect(r.user).toEqual({ is: { channel: "bark" } });
+    expect(r.channel).toBe("bark");
   });
   it("4 个 channel 都能正常处理", () => {
     for (const ch of ["serverchan", "bark", "pushplus", "telegram"]) {
-      expect(buildReminderWhere({ channel: ch }).user).toEqual({
-        is: { channel: ch },
-      });
+      expect(buildReminderWhere({ channel: ch }).channel).toBe(ch);
     }
   });
-  it("非法 channel → 忽略(不设 user)", () => {
-    expect(buildReminderWhere({ channel: "wechat" }).user).toBeUndefined();
-    expect(buildReminderWhere({ channel: "" }).user).toBeUndefined();
+  it("非法 channel → 忽略(不设 channel)", () => {
+    expect(buildReminderWhere({ channel: "wechat" }).channel).toBeUndefined();
+    expect(buildReminderWhere({ channel: "" }).channel).toBeUndefined();
   });
 });
 
@@ -129,20 +128,20 @@ describe("buildReminderWhere — bound", () => {
 });
 
 describe("buildReminderWhere — channel + bound 组合", () => {
-  it("channel 已隐含 bound=yes(只设 channel 即可)", () => {
-    expect(buildReminderWhere({ channel: "bark" }).user).toEqual({
-      is: { channel: "bark" },
-    });
+  it("channel 与 bound=yes 同时设 → 两个都生效", () => {
+    const r = buildReminderWhere({ channel: "bark", bound: "yes" });
+    expect(r.channel).toBe("bark");
+    expect(r.user).toEqual({ isNot: null });
   });
   it("只设 bound=yes → user.isNot = null", () => {
     expect(buildReminderWhere({ bound: "yes" }).user).toEqual({ isNot: null });
   });
   it("channel 与 bound=no 语义矛盾(channel 必须有 user)→ 让 Prisma 自然返回空集", () => {
-    // { channel: "bark" } 要求 user 存在,而 { is: null } 要求 user 不存在。
-    // 实现选择: channel 优先(bound=no 被忽略)。这样语义最清晰。
-    expect(buildReminderWhere({ channel: "bark", bound: "no" }).user).toEqual({
-      is: { channel: "bark" },
-    });
+    // { channel: "bark" } 与 { user: { is: null } } 矛盾
+    // 实现选择: 两个都保留,Prisma 自然返回空集(AND 不满足)
+    const r = buildReminderWhere({ channel: "bark", bound: "no" });
+    expect(r.channel).toBe("bark");
+    expect(r.user).toEqual({ is: null });
   });
 });
 
@@ -154,7 +153,8 @@ describe("buildReminderWhere — 综合场景", () => {
       from: "2026-07-12",
       to: "2026-07-12",
     });
-    expect(r.user).toEqual({ is: { channel: "bark" } });
+    // 1:N - channel 在 reminder 自身
+    expect(r.channel).toBe("bark");
     expect(r.status).toBe("failed");
     const range = r.sentAt as { gte?: Date; lt?: Date } | undefined;
     expect(range?.gte).toEqual(new Date("2026-07-12T00:00:00Z"));

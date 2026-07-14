@@ -19,9 +19,9 @@ const LOCK_DURATION_MS = 15 * 60 * 1000; // 15 分钟
  * username + password 登录
  *
  * 安全设计：
- * - username 入库前 normalizeUsername (lowercase + trim)
- * - 错 5 次锁账号 15 分钟（DB 持久化，serverless 多实例安全）
- * - 旧 user（passwordHash = NULL）拒绝登录，提示联系管理员重置
+ * - username 入库前 normalizeUsername (lowercase + trim,去空格/横线)
+ * - 错 5 次锁账号 15 分钟(DB 持久化,serverless 多实例安全)
+ * - 旧 user(passwordHash = NULL)拒绝登录,提示联系管理员重置
  */
 export async function POST(req: Request) {
   let body: unknown;
@@ -43,36 +43,32 @@ export async function POST(req: Request) {
     return NextResponse.json({ ok: false, error: "账号不合法" }, { status: 400 });
   }
 
-  // 按 username 直接查 user(索引走 @@index([username]))
-  const user = await prisma.user.findUnique({ where: { username } });
+  const user = await prisma.user.findUnique({
+    where: { username },
+    include: { sims: { orderBy: { id: "asc" } } },
+  });
   if (!user) {
     return NextResponse.json(
-      { ok: false, error: "账号或密码错误" }, // 不暴露账号是否存在,统一错误信息
+      { ok: false, error: "账号或密码错误" },
       { status: 401 }
     );
   }
 
-  // 检查是否锁定
   if (user.lockedUntil && user.lockedUntil > new Date()) {
     const minutesLeft = Math.ceil((user.lockedUntil.getTime() - Date.now()) / 60000);
     return NextResponse.json(
-      { ok: false, error: `账号已锁定，请 ${minutesLeft} 分钟后再试` },
+      { ok: false, error: `账号已锁定,请 ${minutesLeft} 分钟后再试` },
       { status: 429 }
     );
   }
 
-  // 旧 user（passwordHash 为 null）：必须管理员在后台重置密码
   if (!user.passwordHash) {
     return NextResponse.json(
-      {
-        ok: false,
-        error: "账号未升级密码登录，请联系管理员在后台重置密码",
-      },
+      { ok: false, error: "账号未升级密码登录,请联系管理员在后台重置密码" },
       { status: 401 }
     );
   }
 
-  // 验证密码
   const ok = await verifyPassword(parsed.data.password, user.passwordHash);
   if (!ok) {
     const newCount = user.failedLoginCount + 1;
@@ -86,30 +82,28 @@ export async function POST(req: Request) {
     });
     if (shouldLock) {
       return NextResponse.json(
-        {
-          ok: false,
-          error: `密码错误次数过多，账号已锁定 ${LOCK_DURATION_MS / 60000} 分钟`,
-        },
+        { ok: false, error: `密码错误次数过多,账号已锁定 ${LOCK_DURATION_MS / 60000} 分钟` },
         { status: 429 }
       );
     }
     const remaining = MAX_FAILED_ATTEMPTS - newCount;
     return NextResponse.json(
-      { ok: false, error: `账号或密码错误，还可尝试 ${remaining} 次` },
+      { ok: false, error: `账号或密码错误,还可尝试 ${remaining} 次` },
       { status: 401 }
     );
   }
 
-  // 登录成功：清空失败计数
   await prisma.user.update({
     where: { id: user.id },
     data: { failedLoginCount: 0, lockedUntil: null },
   });
 
   await createUserSession(user.id);
+  // 任何一张 sim 还没设 channel 都提示去 /me/settings
+  const needSetupChannel = user.sims.some((s) => !s.channelKey);
   return NextResponse.json({
     ok: true,
     redirect: "/me",
-    needSetupChannel: !user.channelKey,
+    needSetupChannel,
   });
 }

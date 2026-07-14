@@ -1,10 +1,13 @@
-// 卡密兑换核心逻辑：事务 + 幂等
+// 卡密兑换核心逻辑:事务 + 幂等
 //
-// 客户拿到 unbound 卡密后,提交账号 + 密码 + 手机号 + 激活日期。
-// 每个卡密 = 1 个新 (user, sim) 配对(1:1)。
-// 想多张 SIM 卡提醒?用多个卡密,产生多个账号,各自登录。
+// 两类入口:
+//  1) 未登录(新用户):必填 username + password,创建新 user + sim,自动登录
+//  2) 已登录(追加卡):只需 card+phone+date,把新 sim 挂到当前 user 下
 //
-// 卡密本身就是"一次性激活凭证"，兑换后用 username + password 登录。
+// 渠道策略:
+//  - 新用户的首张 sim: channel/channelKey 留空,引导去 /me/settings 设置
+//  - 已登录用户追加 sim: 默认复制已有第一张 sim 的渠道(保证统一推送),
+//    也可以在 /me/settings 里改成不同渠道
 import { prisma } from "./db";
 import { normalizeCardCode } from "./card-key";
 import { hashPassword, normalizeUsername, usernameError } from "./auth";
@@ -14,9 +17,9 @@ export type RedeemInput = {
   /** 用户输入的卡密(已归一化为原始 16 字符) */
   rawCode: string;
   /** 客户自己想要的账号(老用户场景可填手机号,新用户可填自定义账号) */
-  username: string;
+  username?: string;
   /** 客户自己设置的登录密码(明文,函数内哈希) */
-  password: string;
+  password?: string;
   /** 客户自己的手机号 */
   phoneNumber: string;
   /** 客户自己的激活日期 (yyyy-MM-dd) */
@@ -28,26 +31,26 @@ export type RedeemResult =
       ok: true;
       userId: number;
       simId: number;
+      isNewUser: boolean;
     }
   | {
       ok: false;
       error:
-        | "INVALID_CODE" // 卡密格式错
-        | "NOT_FOUND" // 卡密不存在
-        | "EXPIRED" // 卡密过期
-        | "ALREADY_USED" // 卡密已兑换
-        | "INVALID_PHONE" // 手机号格式错
-        | "INVALID_DATE" // 日期格式错
-        | "PASSWORD_TOO_SHORT" // 密码太短
-        | "USERNAME_INVALID" // 账号格式错
-        | "USERNAME_TAKEN" // 账号已被占用
-        | "PHONE_TAKEN"; // 手机号已被绑定
+        | "INVALID_CODE"
+        | "NOT_FOUND"
+        | "EXPIRED"
+        | "ALREADY_USED"
+        | "INVALID_PHONE"
+        | "INVALID_DATE"
+        | "PASSWORD_REQUIRED"
+        | "PASSWORD_TOO_SHORT"
+        | "USERNAME_REQUIRED"
+        | "USERNAME_INVALID"
+        | "USERNAME_TAKEN"
+        | "USER_NOT_FOUND"
+        | "PHONE_TAKEN";
     };
 
-/**
- * 校验并解析 yyyy-MM-dd → Date (UTC 0:00)
- * (导出供测试,被 redeemCard 内部使用)
- */
 export function parseDate(input: string): { ok: true; date: Date } | { ok: false } {
   const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(input);
   if (!m) return { ok: false };
@@ -65,9 +68,6 @@ export function parseDate(input: string): { ok: true; date: Date } | { ok: false
   return { ok: true, date };
 }
 
-/**
- * 手机号:6-15 位数字
- */
 export function isValidPhone(input: string): boolean {
   return /^\d{6,15}$/.test(input);
 }
@@ -75,16 +75,13 @@ export function isValidPhone(input: string): boolean {
 /**
  * 兑换卡密(事务安全)
  *
- * 成功返回 { ok: true, userId, simId }
- * 失败返回 { ok: false, error }
- *
- * 业务规则:
- *  - 每个卡密 = 1 个新 (user, sim) 配对
- *  - username 必须唯一(老用户的手机号也算 username)
- *  - phoneNumber 必须未被绑定
+ * @param input          兑换输入
+ * @param currentUserId  已登录时传入 user.id(追加卡模式);未登录时传 undefined
+ * @param tx             可选事务 client
  */
 export async function redeemCard(
   input: RedeemInput,
+  currentUserId: number | undefined,
   tx?: Prisma.TransactionClient
 ): Promise<RedeemResult> {
   const db = tx ?? prisma;
@@ -104,13 +101,15 @@ export async function redeemCard(
     return { ok: false, error: "INVALID_PHONE" };
   }
   if (typeof input.password !== "string" || input.password.length < 8) {
+    if (currentUserId === undefined) {
+      // 新用户必须设密码
+      return { ok: false, error: "PASSWORD_REQUIRED" };
+    }
+    // 追加卡不需要密码
+  }
+  if (typeof input.password === "string" && input.password.length > 0 && input.password.length < 8) {
     return { ok: false, error: "PASSWORD_TOO_SHORT" };
   }
-
-  // 校验 username
-  const username = normalizeUsername(input.username);
-  const uErr = usernameError(username);
-  if (uErr) return { ok: false, error: "USERNAME_INVALID" };
 
   const parsed = parseDate(input.activatedAt);
   if (!parsed.ok) return { ok: false, error: "INVALID_DATE" };
@@ -124,12 +123,53 @@ export async function redeemCard(
     return { ok: false, error: "PHONE_TAKEN" };
   }
 
-  // 检查 username 唯一
-  const existing = await db.user.findUnique({ where: { username } });
-  if (existing) return { ok: false, error: "USERNAME_TAKEN" };
+  // 决定走哪条路径
+  let userId: number;
+  let isNewUser: boolean;
+  let defaultChannel: "serverchan" | "bark" | "pushplus" | "telegram" = "serverchan";
+  let defaultChannelKey = "";
 
-  // 哈希密码
-  const passwordHash = await hashPassword(input.password);
+  if (currentUserId === undefined) {
+    // 新用户流程:必须提供 username + password
+    if (!input.username) return { ok: false, error: "USERNAME_REQUIRED" };
+    const username = normalizeUsername(input.username);
+    const uErr = usernameError(username);
+    if (uErr) return { ok: false, error: "USERNAME_INVALID" };
+
+    if (typeof input.password !== "string" || input.password.length < 8) {
+      return { ok: false, error: "PASSWORD_TOO_SHORT" };
+    }
+
+    // 检查 username 唯一
+    const existing = await db.user.findUnique({ where: { username } });
+    if (existing) return { ok: false, error: "USERNAME_TAKEN" };
+
+    const passwordHash = await hashPassword(input.password);
+    const created = await db.user.create({
+      data: {
+        username,
+        passwordHash,
+      },
+    });
+    // 删掉占位字段(新 schema 上 User 没有 channel/channelKey)
+    userId = created.id;
+    isNewUser = true;
+  } else {
+    // 追加卡流程
+    const u = await db.user.findUnique({ where: { id: currentUserId } });
+    if (!u) return { ok: false, error: "USER_NOT_FOUND" };
+    userId = u.id;
+    isNewUser = false;
+    // 默认渠道: 复制该用户已有第一张 sim 的渠道(账号级统一推送的友好默认)
+    const firstSim = await db.sim.findFirst({
+      where: { userId: u.id },
+      orderBy: { id: "asc" },
+    });
+    if (firstSim) {
+      defaultChannel = firstSim.channel;
+      defaultChannelKey = firstSim.channelKey;
+    }
+  }
 
   // 创建 sim
   const sim = await db.sim.create({
@@ -137,21 +177,13 @@ export async function redeemCard(
       phoneNumber,
       activatedAt,
       status: "active",
+      channel: defaultChannel,
+      channelKey: defaultChannelKey,
+      userId,
     },
   });
 
-  // 创建 user(1:1 - simId 指向新 sim)
-  const user = await db.user.create({
-    data: {
-      username,
-      simId: sim.id,
-      channel: "serverchan",
-      channelKey: "",
-      passwordHash,
-    },
-  });
-
-  // 标记卡密已用(双保险:usedSimId unique 也卡住重复)
+  // 标记卡密已用
   await db.cardKey.update({
     where: { id: card.id },
     data: {
@@ -163,7 +195,8 @@ export async function redeemCard(
 
   return {
     ok: true,
-    userId: user.id,
+    userId,
     simId: sim.id,
+    isNewUser,
   };
 }

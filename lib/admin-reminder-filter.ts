@@ -90,14 +90,12 @@ export function buildReminderWhere(params: ReminderFilterParams): ReminderWhere 
   }
   if (range.gte || range.lt) where.sentAt = range;
 
-  // --- channel + bound (via user relation) ---
-  // Prisma 7 的 UserScalarRelationFilter.is/isNot 类型上不接受 null,
-  // 但运行时 Prisma 接受(参考 app/admin/sims/page.tsx 同款用法)。
-  // 用 unknown 双断言绕过类型检查,运行时行为正确。
+  // --- channel + bound (1:N 模型下,channel 在 reminder 自己) ---
   if (params.channel && isChannelValue(params.channel)) {
-    // 指定 channel 已隐含 bound=yes(user 必须存在才有 channel)
-    where.user = { is: { channel: params.channel } };
-  } else if (params.bound === "yes") {
+    // 直接按 reminder.channel 过滤
+    where.channel = params.channel;
+  }
+  if (params.bound === "yes") {
     where.user = { isNot: null } as unknown as Prisma.ReminderSentWhereInput["user"];
   } else if (params.bound === "no") {
     where.user = { is: null } as unknown as Prisma.ReminderSentWhereInput["user"];

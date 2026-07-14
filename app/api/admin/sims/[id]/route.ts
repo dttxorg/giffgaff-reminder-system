@@ -27,7 +27,7 @@ export async function GET(_req: Request, ctx: RouteContext) {
   const [sim, recentReminders] = await Promise.all([
     prisma.sim.findUnique({
       where: { id: simId },
-      include: { user: { select: { id: true, channel: true } } },
+      include: { user: { select: { id: true, username: true } } },
     }),
     prisma.reminderSent.findMany({
       where: { simId },
@@ -52,6 +52,9 @@ export async function GET(_req: Request, ctx: RouteContext) {
     activatedAt: sim.activatedAt.toISOString().slice(0, 10),
     lastPortedAt: sim.lastPortedAt?.toISOString().slice(0, 10) ?? null,
     status: sim.status,
+    // 1:N 模型下,渠道在 sim 本身(可独立设,不一定与 user.channel 一致)
+    channel: sim.channel,
+    channelKey: sim.channelKey,
     user: sim.user,
     recentReminders: recentReminders.map((r) => ({
       id: r.id,

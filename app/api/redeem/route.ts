@@ -1,18 +1,24 @@
 // POST /api/redeem
-// 卡密兑换。每个卡密 = 1 个新 (user, sim) 配对(1:1)。
-// 客户必须填: 卡密 + 账号 + 密码 + 手机号 + 激活日期。
-// 想多张 SIM?用多个卡密,产生多个独立账号,各自登录。
+// 卡密兑换。两类入口:
+//  1) 未登录:必须 username + password,创建新 user + sim,自动登录
+//  2) 已登录:追加卡(只要 card+phone+date),把新 sim 挂到当前 user
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/db";
 import { redeemCard } from "@/lib/redeem";
-import { createUserSession } from "@/lib/session";
+import { createUserSession, getCurrentUser } from "@/lib/session";
 import { normalizeUsername, usernameError } from "@/lib/auth";
 
-const BodySchema = z.object({
+const NewUserBodySchema = z.object({
   code: z.string().min(1, "请输入卡密"),
   username: z.string().min(1, "请输入账号"),
   password: z.string().min(8, "密码至少 8 位"),
+  phoneNumber: z.string().min(1, "请输入手机号"),
+  activatedAt: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "请输入有效日期"),
+});
+
+const AppendBodySchema = z.object({
+  code: z.string().min(1, "请输入卡密"),
   phoneNumber: z.string().min(1, "请输入手机号"),
   activatedAt: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "请输入有效日期"),
 });
@@ -24,9 +30,12 @@ const ERROR_MESSAGES: Record<string, string> = {
   ALREADY_USED: "卡密已被兑换,无法重复使用",
   INVALID_PHONE: "手机号格式不正确",
   INVALID_DATE: "激活日期格式不正确 (yyyy-MM-dd)",
+  PASSWORD_REQUIRED: "首次兑换必须设置登录密码",
   PASSWORD_TOO_SHORT: "密码至少 8 位",
-  USERNAME_INVALID: "账号格式不正确(3-20 位,小写字母开头;或 6+ 位纯数字手机号)",
+  USERNAME_REQUIRED: "首次兑换必须设置账号",
+  USERNAME_INVALID: "账号格式不正确(3-20 位小写字母开头;或 6+ 位纯数字手机号)",
   USERNAME_TAKEN: "该账号已被占用,请换一个",
+  USER_NOT_FOUND: "账号不存在,请重新登录",
   PHONE_TAKEN: "该手机号已被绑定,请联系管理员",
 };
 
@@ -37,7 +46,25 @@ export async function POST(req: Request) {
   } catch {
     return NextResponse.json({ ok: false, error: "请求体格式错误" }, { status: 400 });
   }
-  const parsed = BodySchema.safeParse(body);
+
+  // 检测登录态,决定走哪条 zod schema
+  const currentUser = await getCurrentUser();
+
+  if (currentUser) {
+    // 追加卡场景:不需 username/password
+    const parsed = AppendBodySchema.safeParse(body);
+    if (!parsed.success) {
+      const issue = parsed.error.issues[0];
+      return NextResponse.json(
+        { ok: false, error: issue?.message || "参数错误" },
+        { status: 400 }
+      );
+    }
+    return await runRedeem(parsed.data, currentUser.id);
+  }
+
+  // 未登录:必须带 username + password
+  const parsed = NewUserBodySchema.safeParse(body);
   if (!parsed.success) {
     const issue = parsed.error.issues[0];
     return NextResponse.json(
@@ -45,27 +72,32 @@ export async function POST(req: Request) {
       { status: 400 }
     );
   }
-
-  // 提前校验 username 格式
   const usernameNorm = normalizeUsername(parsed.data.username);
   const uErr = usernameError(usernameNorm);
   if (uErr) {
     return NextResponse.json({ ok: false, error: uErr }, { status: 400 });
   }
+  return await runRedeem({ ...parsed.data, username: usernameNorm }, undefined);
+}
 
+async function runRedeem(
+  data:
+    | { code: string; phoneNumber: string; activatedAt: string; password: string; username: string }
+    | { code: string; phoneNumber: string; activatedAt: string },
+  currentUserId: number | undefined
+) {
   let result;
   try {
     result = await prisma.$transaction(async (tx) => {
-      return redeemCard(
-        {
-          rawCode: parsed.data.code,
-          username: usernameNorm,
-          password: parsed.data.password,
-          phoneNumber: parsed.data.phoneNumber,
-          activatedAt: parsed.data.activatedAt,
-        },
-        tx
-      );
+      // 仅在 data 上有这些字段时才传入
+      const input: { rawCode: string; phoneNumber: string; activatedAt: string; password?: string; username?: string } = {
+        rawCode: data.code,
+        phoneNumber: data.phoneNumber,
+        activatedAt: data.activatedAt,
+      };
+      if ("password" in data) input.password = data.password;
+      if ("username" in data) input.username = data.username;
+      return redeemCard(input, currentUserId, tx);
     });
   } catch (e) {
     return NextResponse.json(
@@ -81,12 +113,16 @@ export async function POST(req: Request) {
     return NextResponse.json({ ok: false, error: msg }, { status });
   }
 
-  // 自动登录(新用户)
-  await createUserSession(result.userId);
+  // 新用户自动登录;已登录追加卡无需重登
+  if (result.isNewUser) {
+    await createUserSession(result.userId);
+  }
 
   return NextResponse.json({
     ok: true,
     redirect: "/me",
-    needSetupChannel: true,
+    isNewUser: result.isNewUser,
+    simId: result.simId,
+    needSetupChannel: result.isNewUser, // 新用户首张 sim 没设渠道,引导去 /me/settings
   });
 }

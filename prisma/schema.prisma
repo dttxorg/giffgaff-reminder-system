@@ -12,9 +12,9 @@ datasource db {
 }
 
 // 号码库（giffgaff sim 卡）
-// 一个 sim 绑定 1 个 user(可空 = 孤卡,管理员导入但未绑定用户)
-// 每个 user 对应 1 个 sim: 一个兑换码 = 一个 (user, sim) 配对
-// 想多张 SIM 卡提醒?用多个兑换码,产生多个账号
+// 一个 sim 隶属一个 user(可空 = 孤卡,管理员导入但用户未兑换)。
+// 同一个 user 可拥有多个 sim(一个账号管理多张 SIM 卡)。
+// 每张 sim 有独立的 channel/channelKey:账号可统一用同一渠道,也可分别设置。
 model Sim {
   id           Int       @id @default(autoincrement())
   phoneNumber  String    @unique // 完整号，如 07724215611（只存数字）
@@ -23,16 +23,22 @@ model Sim {
   activatedAt  DateTime // 激活日期（保号起算日）
   lastPortedAt DateTime? // 上次保号日期，NULL = 还没保过号
   status       SimStatus @default(active) // active / paused
+  // 每张 sim 独立的推送渠道(账号级可统一,也可各 sim 不同)
+  // 首次兑换时为空,引导去 /me/settings 设置
+  channel      Channel   @default(serverchan)
+  channelKey   String    @default("")
+  // 关联 user:1 个 user 可拥有 N 个 sim;sim 端是 FK,user 端是 sims Sim[]
+  // onDelete: SetNull - 删 user 时 sim 变孤卡(管理员可在后台看到/清理),不级联删号
+  userId       Int?
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt
 
-  // 1:1 反向关系:每个 sim 最多被 1 个 user 拥有
-  // User 是关系持有方(Sim 在 userId 上),这里只是 backref
-  user      User?         @relation
+  user      User?         @relation(fields: [userId], references: [id], onDelete: SetNull)
   reminders ReminderSent[]
 
   @@index([phoneNumber])
   @@index([activatedAt, lastPortedAt])
+  @@index([userId])
 }
 
 enum SimStatus {
@@ -40,29 +46,23 @@ enum SimStatus {
   paused
 }
 
-// 用户档案：一个 user 绑定 1 个 sim,登录用 username + password
-// 历史：之前是 User.simId 1:1 + User.simLookupKey(last 6 位) 模糊匹配登录。
-//       重构为 username 唯一账号 + 1:1 的 sim 关联。
-//       老用户迁移时 username 直接 = sim.phoneNumber,客户无感(继续用原手机号登录)。
-//       新用户可以选账号或继续用手机号作账号。
+// 用户档案:一个 user 拥有 1..N 个 sim,登录用 username + password
+// 老用户迁移时 username 直接 = sim.phoneNumber(无感),新用户可以自定义账号
+// 用户本身不存 channel/channelKey - 这些都在每张 sim 上(账号级统一 vs 各自不同)
 model User {
   id               Int       @id @default(autoincrement())
   // 登录账号：可以是手机号(老用户)或自定义账号(新用户)
-  // 唯一索引;case-sensitive 区分(老用户手机号是数字不涉及大小写)
   username         String    @unique
-  channel          Channel // serverchan / bark
-  channelKey       String // SendKey 或 Bark URL（明文存 V1）
   // 登录密码：scrypt 哈希（null = 旧用户未升级，需管理员重置）
   passwordHash     String?
-  // 1:1 - 一个账号对应 1 张 sim 卡
-  simId            Int?      @unique
   // 登录限流：连续失败 5 次锁 15 分钟
   failedLoginCount Int       @default(0)
   lockedUntil      DateTime?
   createdAt        DateTime  @default(now())
   updatedAt        DateTime  @updatedAt
 
-  sim       Sim?           @relation(fields: [simId], references: [id], onDelete: SetNull)
+  // 1:N - 一个账号下可挂多张 sim 卡
+  sims      Sim[]          @relation
   reminders ReminderSent[]
   sessions  UserSession[]
 
@@ -76,13 +76,16 @@ enum Channel {
   telegram
 }
 
-// 发送日志（幂等保证）
+// 发送日志(幂等保证 + 渠道快照便于重发)
 model ReminderSent {
   id           Int        @id @default(autoincrement())
   userId       Int
   simId        Int
   dayOffset    Int // 提醒那天的 day_offset（170/178/179/180）
   bucket       Int // 0-indexed bucket
+  // 渠道快照:发送时的 channel/channelKey,即使后来改了也不影响历史日志
+  channel      Channel
+  channelKey   String
   sentAt       DateTime   @default(now())
   status       SendStatus @default(success)
   errorMessage String?

@@ -22,16 +22,24 @@ type Phase =
 
 interface RedeemClientProps {
   initialCode: string;
+  isLoggedIn: boolean;
+  currentUsername?: string;
+  /** 账号下已有 sim 数(给用户提示"再添加 1 张"等) */
+  existingSimCount?: number;
 }
 
-export function RedeemClient({ initialCode }: RedeemClientProps) {
+export function RedeemClient({
+  initialCode,
+  isLoggedIn,
+  currentUsername,
+  existingSimCount = 0,
+}: RedeemClientProps) {
   const router = useRouter();
   const [phase, setPhase] = useState<Phase>(
     initialCode.trim() ? { kind: "previewing", code: initialCode.trim() } : { kind: "input" }
   );
   const [codeInput, setCodeInput] = useState(initialCode);
 
-  // 自动预览: 如果初始就带 code
   useEffect(() => {
     if (phase.kind === "previewing") {
       void doPreview(phase.code);
@@ -59,28 +67,33 @@ export function RedeemClient({ initialCode }: RedeemClientProps) {
   }
 
   /**
-   * 兑换提交 - 每个卡密 = 1 个新 (user, sim) 配对(1:1)
-   * 必填:卡密 + 账号 + 密码 + 手机号 + 激活日期
+   * 兑换提交。
+   * 已登录:只需 card+phone+date,挂到当前 user
+   * 未登录:加 username+password,创建新 user
    */
   async function doRedeem(args: {
     code: string;
-    username: string;
-    password: string;
     phone: string;
     date: string;
+    username?: string;
+    password?: string;
   }) {
     setPhase({ kind: "redeeming" });
     try {
+      const body: Record<string, string> = {
+        code: args.code,
+        phoneNumber: normalizePhone(args.phone),
+        activatedAt: args.date,
+      };
+      if (!isLoggedIn) {
+        if (!args.username || !args.password) return;
+        body.username = args.username.trim().toLowerCase();
+        body.password = args.password;
+      }
       const resp = await fetch("/api/redeem", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          code: args.code,
-          username: args.username,
-          password: args.password,
-          phoneNumber: normalizePhone(args.phone),
-          activatedAt: args.date,
-        }),
+        body: JSON.stringify(body),
       });
       const data = await resp.json();
       if (!data.ok) {
@@ -121,6 +134,9 @@ export function RedeemClient({ initialCode }: RedeemClientProps) {
       {phase.kind === "form" && (
         <FormPhase
           notes={phase.notes}
+          isLoggedIn={isLoggedIn}
+          currentUsername={currentUsername}
+          existingSimCount={existingSimCount}
           onSubmit={(username, password, phone, date) =>
             doRedeem({ code: phase.code, username, password, phone, date })
           }
@@ -131,7 +147,9 @@ export function RedeemClient({ initialCode }: RedeemClientProps) {
       {phase.kind === "redeeming" && (
         <div className="text-center py-10">
           <Spinner size={20} label="兑换中" />
-          <p className="text-sm text-slate-600 mt-3">正在创建您的账户...</p>
+          <p className="text-sm text-slate-600 mt-3">
+            {isLoggedIn ? "正在绑定新的 SIM 卡..." : "正在创建您的账户..."}
+          </p>
         </div>
       )}
 
@@ -192,16 +210,22 @@ function InputPhase({
 
 function FormPhase({
   notes,
+  isLoggedIn,
+  currentUsername,
+  existingSimCount,
   onSubmit,
   onBack,
 }: {
   notes: string | null;
+  isLoggedIn: boolean;
+  currentUsername?: string;
+  existingSimCount: number;
   onSubmit: (username: string, password: string, phone: string, date: string) => void;
   onBack: () => void;
 }) {
   const [phone, setPhone] = useState("");
   const [date, setDate] = useState(() => todayLocalISODate());
-  // 账号:可以是手机号(继续用号码登录)或文字账号(3-20 位小写字母开头)
+  // 新用户场景需要 username + password
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [passwordConfirm, setPasswordConfirm] = useState("");
@@ -209,8 +233,7 @@ function FormPhase({
   const validPhone = normalizePhone(phone).length >= 6;
   const validDate = /^\d{4}-\d{2}-\d{2}$/.test(date);
 
-  // 账号校验:归一化后(去空格/横线)再判断
-  // 允许两种: 6+ 位纯数字(手机号) 或 3-20 位 [a-z][a-z0-9_]
+  // username 校验(归一化后)
   const usernameNorm = username.replace(/[\s-]/g, "").trim().toLowerCase();
   const isPhoneLike = /^\d{6,15}$/.test(usernameNorm);
   const isTextUsername = /^[a-z][a-z0-9_]{2,19}$/.test(usernameNorm);
@@ -219,41 +242,68 @@ function FormPhase({
   const validPassword = password.length >= 8;
   const passwordsMatch = password === passwordConfirm;
 
-  const canSubmit =
-    validPhone && validDate && validUsername && validPassword && passwordsMatch;
+  const canSubmit = isLoggedIn
+    ? validPhone && validDate
+    : validPhone && validDate && validUsername && validPassword && passwordsMatch;
 
   return (
     <form
       onSubmit={(e) => {
         e.preventDefault();
         if (!canSubmit) return;
-        onSubmit(usernameNorm, password, phone, date);
+        if (isLoggedIn) {
+          onSubmit("", "", phone, date); // username/password 不用,但 onSubmit 签名统一
+        } else {
+          onSubmit(usernameNorm, password, phone, date);
+        }
       }}
       className="space-y-4"
     >
-      <div className="p-4 rounded-lg bg-emerald-50 border border-emerald-200">
-        <div className="text-sm font-medium text-emerald-900 mb-1">
-          <span className="inline-flex items-center gap-1.5">
-            <svg
-              width={16}
-              height={16}
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth={2.5}
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              aria-hidden="true"
-            >
-              <polyline points="20 6 9 17 4 12" />
-            </svg>
-            卡密有效
-          </span>
+      <div
+        className={`p-4 rounded-lg border ${
+          isLoggedIn
+            ? "bg-indigo-50 border-indigo-200"
+            : "bg-emerald-50 border-emerald-200"
+        }`}
+      >
+        <div
+          className={`text-sm font-medium mb-1 inline-flex items-center gap-1.5 ${
+            isLoggedIn ? "text-indigo-900" : "text-emerald-900"
+          }`}
+        >
+          <svg
+            width={16}
+            height={16}
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth={2.5}
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            aria-hidden="true"
+          >
+            <polyline points="20 6 9 17 4 12" />
+          </svg>
+          {isLoggedIn ? "卡密有效,绑定到当前账号" : "卡密有效"}
         </div>
-        <div className="text-xs text-emerald-700">
-          请填写您的 SIM 卡信息、设置账号和登录密码完成绑定。
-          兑换成功后将自动登录,系统会引导您到设置页绑定推送渠道（Sever酱 / Bark 等）,
-          <strong>绑定后才会真正开始接收保号提醒</strong>。
+        <div
+          className={`text-xs ${
+            isLoggedIn ? "text-indigo-800" : "text-emerald-700"
+          }`}
+        >
+          {isLoggedIn ? (
+            <>
+              绑定到账号 <strong className="font-mono">{currentUsername}</strong> 下,
+              这是第 <strong>{existingSimCount + 1}</strong> 张 SIM 卡。
+              {existingSimCount > 0 && " 渠道默认沿用首张卡的设置,可在「设置」里单独调整。"}
+            </>
+          ) : (
+            <>
+              请填写您的 SIM 卡信息、设置账号和登录密码完成绑定。
+              兑换成功后将自动登录,系统会引导您到设置页绑定推送渠道（Sever酱 / Bark 等）,
+              <strong>绑定后才会真正开始接收保号提醒</strong>。
+            </>
+          )}
         </div>
       </div>
 
@@ -320,98 +370,103 @@ function FormPhase({
         )}
       </div>
 
-      <div>
-        <label className="block text-sm font-medium mb-1.5">
-          设置登录账号
-        </label>
-        <input
-          type="text"
-          value={username}
-          onChange={(e) => setUsername(e.target.value)}
-          placeholder="手机号(如 07724215611)或自定义账号(如 alice_2024)"
-          autoComplete="username"
-          required
-          className="w-full px-3.5 py-2.5 rounded-lg border border-slate-300 font-mono focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 outline-none"
-        />
-        <p className="text-xs text-slate-500 mt-1.5">
-          支持两种格式:6+ 位纯数字(手机号)或 3-20 位小写字母开头(字母/数字/下划线)
-          {username && !validUsername && (
-            <span className="text-rose-600 ml-1">格式不正确</span>
-          )}
-        </p>
-      </div>
-
-      <div className="pt-2 border-t border-slate-100">
-        <label className="block text-sm font-medium mb-1.5">
-          设置登录密码
-        </label>
-        <PasswordInput
-          value={password}
-          onChange={setPassword}
-          placeholder="至少 8 位"
-          autoComplete="new-password"
-          required
-          minLength={8}
-          invalid={!!(password && password.length < 8)}
-        />
-        <div className="mt-2">
-          <PasswordInput
-            value={passwordConfirm}
-            onChange={setPasswordConfirm}
-            placeholder="再输一遍"
-            autoComplete="new-password"
-            required
-            minLength={8}
-            invalid={!!(passwordConfirm && !passwordsMatch)}
-          />
-        </div>
-        {password && password.length < 8 ? (
-          <p className="text-xs text-rose-600 mt-1.5">
-            密码至少 8 位（当前 {password.length} 位）
-          </p>
-        ) : (
-          <div className="mt-1.5 space-y-1">
-            <div className="flex items-center gap-2">
-              <div className="flex-1 h-1.5 rounded-full bg-slate-200 overflow-hidden">
-                <div
-                  role="progressbar"
-                  aria-label="密码强度"
-                  aria-valuenow={
-                    passwordStrength(password) === "weak"
-                      ? 33
-                      : passwordStrength(password) === "medium"
-                        ? 66
-                        : 100
-                  }
-                  aria-valuemin={0}
-                  aria-valuemax={100}
-                  className={`h-full transition-all ${
-                    STRENGTH_COLOR[passwordStrength(password)]
-                  }`}
-                  style={{
-                    width: `${
-                      passwordStrength(password) === "weak"
-                        ? 33
-                        : passwordStrength(password) === "medium"
-                          ? 66
-                          : 100
-                    }%`,
-                  }}
-                />
-              </div>
-              <span className="text-xs text-slate-600 w-4">
-                {STRENGTH_LABEL[passwordStrength(password)]}
-              </span>
-            </div>
-            <p className="text-xs text-slate-500">
-              请妥善保存,忘记后需联系管理员重置
+      {/* 新用户场景:需要 username + password */}
+      {!isLoggedIn && (
+        <>
+          <div>
+            <label className="block text-sm font-medium mb-1.5">
+              设置登录账号
+            </label>
+            <input
+              type="text"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              placeholder="手机号(如 07724215611)或自定义账号(如 alice_2024)"
+              autoComplete="username"
+              required
+              className="w-full px-3.5 py-2.5 rounded-lg border border-slate-300 font-mono focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 outline-none"
+            />
+            <p className="text-xs text-slate-500 mt-1.5">
+              支持两种格式:6+ 位纯数字(手机号)或 3-20 位小写字母开头(字母/数字/下划线)
+              {username && !validUsername && (
+                <span className="text-rose-600 ml-1">格式不正确</span>
+              )}
             </p>
           </div>
-        )}
-        {passwordConfirm && !passwordsMatch && (
-          <p className="text-xs text-rose-600 mt-1">两次密码不一致</p>
-        )}
-      </div>
+
+          <div className="pt-2 border-t border-slate-100">
+            <label className="block text-sm font-medium mb-1.5">
+              设置登录密码
+            </label>
+            <PasswordInput
+              value={password}
+              onChange={setPassword}
+              placeholder="至少 8 位"
+              autoComplete="new-password"
+              required
+              minLength={8}
+              invalid={!!(password && password.length < 8)}
+            />
+            <div className="mt-2">
+              <PasswordInput
+                value={passwordConfirm}
+                onChange={setPasswordConfirm}
+                placeholder="再输一遍"
+                autoComplete="new-password"
+                required
+                minLength={8}
+                invalid={!!(passwordConfirm && !passwordsMatch)}
+              />
+            </div>
+            {password && password.length < 8 ? (
+              <p className="text-xs text-rose-600 mt-1.5">
+                密码至少 8 位（当前 {password.length} 位）
+              </p>
+            ) : (
+              <div className="mt-1.5 space-y-1">
+                <div className="flex items-center gap-2">
+                  <div className="flex-1 h-1.5 rounded-full bg-slate-200 overflow-hidden">
+                    <div
+                      role="progressbar"
+                      aria-label="密码强度"
+                      aria-valuenow={
+                        passwordStrength(password) === "weak"
+                          ? 33
+                          : passwordStrength(password) === "medium"
+                            ? 66
+                            : 100
+                      }
+                      aria-valuemin={0}
+                      aria-valuemax={100}
+                      className={`h-full transition-all ${
+                        STRENGTH_COLOR[passwordStrength(password)]
+                      }`}
+                      style={{
+                        width: `${
+                          passwordStrength(password) === "weak"
+                            ? 33
+                            : passwordStrength(password) === "medium"
+                              ? 66
+                              : 100
+                        }%`,
+                      }}
+                    />
+                  </div>
+                  <span className="text-xs text-slate-600 w-4">
+                    {STRENGTH_LABEL[passwordStrength(password)]}
+                  </span>
+                </div>
+                <p className="text-xs text-slate-500">
+                  请妥善保存,忘记后需联系管理员重置
+                </p>
+              </div>
+            )}
+            {passwordConfirm && !passwordsMatch && (
+              <p className="text-xs text-rose-600 mt-1">两次密码不一致</p>
+            )}
+          </div>
+        </>
+      )}
 
       <div className="flex gap-2 pt-2">
         <button
@@ -419,7 +474,7 @@ function FormPhase({
           disabled={!canSubmit}
           className="flex-1 py-2.5 rounded-lg bg-indigo-600 text-white font-medium hover:bg-indigo-700 disabled:opacity-50 transition-colors"
         >
-          兑换并登录
+          {isLoggedIn ? "绑定到我的账号" : "兑换并登录"}
         </button>
         <button
           type="button"

@@ -97,7 +97,7 @@ export default async function SimsPage({ searchParams }: PageProps) {
       status: sim.status,
       dayOffset,
       inWindow: isInReminderWindow(dayOffset),
-      channel: sim.user?.channel ?? "",
+      channel: sim.channel,
       lastSentAt: last
         ? last.sentAt.toISOString().replace("T", " ").slice(0, 19)
         : null,

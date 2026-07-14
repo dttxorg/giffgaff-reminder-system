@@ -1,8 +1,7 @@
 // GET /api/admin/users/export?channel=&password=
 // 导出用户列表为 CSV
 //
-// CSV 列:用户ID, 账号(手机号或自定义名), 号码, 渠道, 是否设密码, 推送数, 注册时间
-// 与 /admin/users 页面 share 同样的 channel + password 筛选
+// CSV 列:用户ID, 账号(手机号或自定义名), 号码(多卡用|分隔), 渠道(去重用/分隔), 密码, 推送数, 注册时间
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { getAdminSession } from "@/lib/session";
@@ -24,7 +23,8 @@ function buildWhere(channel: string | null, password: string | null): Prisma.Use
     channel === "pushplus" ||
     channel === "telegram"
   ) {
-    where.channel = channel;
+    // 1:N 模型下,渠道在 sim 上
+    where.sims = { some: { channel } };
   }
   if (password === "yes") where.passwordHash = { not: null };
   if (password === "no") where.passwordHash = null;
@@ -41,25 +41,23 @@ export async function GET(req: Request) {
   const password = searchParams.get("password");
   const where = buildWhere(channel, password);
 
-  // 一次取出所有匹配的 user(无 take 限制 — 完整导出)
-  // 上限 10000 防 OOM,够大多数场景;分页可后续加
   const users = await prisma.user.findMany({
     where,
     orderBy: { id: "desc" },
     take: 10000,
     include: {
-      sim: { select: { phoneNumber: true } },
+      sims: { select: { phoneNumber: true, channel: true } },
       _count: { select: { reminders: true } },
     },
   });
 
-  const header = "用户ID,账号,号码,渠道,已设密码,推送数,注册时间(UTC)\n";
+  const header = "用户ID,账号,号码(多卡用|分隔),渠道(去重用/分隔),已设密码,推送数,注册时间(UTC)\n";
   const lines = users.map((u) =>
     [
       String(u.id),
       csvEscape(u.username),
-      csvEscape(u.sim?.phoneNumber ?? null),
-      u.channel,
+      csvEscape(u.sims.map((s) => s.phoneNumber).join("|")),
+      csvEscape(Array.from(new Set(u.sims.map((s) => s.channel))).join("/")),
       u.passwordHash ? "是" : "否",
       String(u._count.reminders),
       u.createdAt.toISOString().replace("T", " ").slice(0, 19),

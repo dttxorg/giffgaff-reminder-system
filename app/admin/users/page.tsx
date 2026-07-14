@@ -35,7 +35,8 @@ export default async function UsersPage({ searchParams }: PageProps) {
     channel === "pushplus" ||
     channel === "telegram"
   ) {
-    where.channel = channel;
+    // 1:N 模型下,渠道在 sim 上。查 sim.channel
+    where.sims = { some: { channel } };
   }
   if (password === "yes") where.passwordHash = { not: null };
   if (password === "no") where.passwordHash = null;
@@ -63,7 +64,7 @@ export default async function UsersPage({ searchParams }: PageProps) {
       orderBy: { id: "desc" },
       skip,
       take: PAGE_SIZE,
-      include: { sim: true, _count: { select: { reminders: true } } },
+      include: { sims: { orderBy: { id: "asc" } }, _count: { select: { reminders: true } } },
     }),
     prisma.user.count(),
     prisma.user.count({ where: { passwordHash: { not: null } } }),
@@ -74,8 +75,10 @@ export default async function UsersPage({ searchParams }: PageProps) {
   const rows = users.map((u) => ({
     id: u.id,
     username: u.username,
-    simPhone: u.sim?.phoneNumber ?? null,
-    channel: u.channel,
+    /** 1:N - 一个 user 可挂多张 sim,用数组存储 */
+    simPhones: u.sims.map((s) => s.phoneNumber),
+    /** 渠道汇总:账号下所有 sim 的渠道(去重) */
+    channels: Array.from(new Set(u.sims.map((s) => s.channel))),
     reminderCount: u._count.reminders,
     createdAt: u.createdAt.toISOString().replace("T", " ").slice(0, 19),
     hasPassword: !!u.passwordHash,

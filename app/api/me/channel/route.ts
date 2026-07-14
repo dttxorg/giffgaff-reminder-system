@@ -7,18 +7,22 @@ import { sendPush } from "@/lib/channels";
 const BodySchema = z.object({
   channel: z.enum(["serverchan", "bark", "pushplus", "telegram"]),
   channelKey: z.string().min(1, "请填写渠道 Key"),
-  /** 客户端先用 test-push 验证过，true 才允许保存 */
+  /** 客户端先用 test-push 验证过,true 才允许保存 */
   verified: z.boolean().optional().default(false),
+  /** 要更新哪张 sim 的渠道(多卡场景必传) */
+  simId: z.number().int().positive().optional(),
 });
 
 /**
  * POST /api/me/channel
- * 更新当前登录用户的通知渠道
+ * 更新某张 sim 的推送渠道(每张 sim 独立)
  *
- * 安全：要求前端先调 /api/auth/test-push 验证 key 配对成功后才能保存
- * （通过 verified=true 标记）。这样可以：
- * 1. 防止用户保存一个错误的 key 导致后续推送全部失败
- * 2. 节省一次 Sever酱/Bark 配额
+ * 1:N 模型下,每张 sim 有自己的 channel/channelKey。
+ * 账号下可以统一用同一渠道(每张都设相同的),
+ * 也可以各 sim 用不同渠道(分别设)。
+ *
+ * 安全:要求前端先调 /api/me/channel/test-push 验证 key,
+ * 避免保存错的 key 导致后续推送失败。
  */
 export async function POST(req: Request) {
   const user = await getCurrentUser();
@@ -37,9 +41,29 @@ export async function POST(req: Request) {
     return NextResponse.json({ ok: false, error: "参数错误" }, { status: 400 });
   }
 
-  const { channel, channelKey, verified } = parsed.data;
+  const { channel, channelKey, verified, simId: requestedSimId } = parsed.data;
 
-  // 如果没验证过 key，服务端再验证一次（双重保险）
+  // 找目标 sim:URL 传 simId 时校验所有权,否则用 sims[0]
+  const ownedSimIds = new Set(user.sims.map((s) => s.id));
+  const targetSimId =
+    requestedSimId !== undefined && ownedSimIds.has(requestedSimId)
+      ? requestedSimId
+      : user.sims[0]?.id;
+
+  if (!targetSimId) {
+    return NextResponse.json(
+      { ok: false, error: "您还没绑定任何 SIM 卡" },
+      { status: 400 }
+    );
+  }
+  if (requestedSimId !== undefined && !ownedSimIds.has(requestedSimId)) {
+    return NextResponse.json(
+      { ok: false, error: "无权修改该 SIM 卡的渠道" },
+      { status: 403 }
+    );
+  }
+
+  // 没验证过 key → 服务端再验证一次
   if (!verified) {
     const result = await sendPush(
       channel,
@@ -55,10 +79,10 @@ export async function POST(req: Request) {
     }
   }
 
-  await prisma.user.update({
-    where: { id: user.id },
+  await prisma.sim.update({
+    where: { id: targetSimId },
     data: { channel, channelKey },
   });
 
-  return NextResponse.json({ ok: true });
+  return NextResponse.json({ ok: true, simId: targetSimId });
 }

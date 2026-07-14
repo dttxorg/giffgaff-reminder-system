@@ -7,38 +7,53 @@ import { PushPreview } from "@/app/_components/push-preview";
 type Channel = "serverchan" | "bark" | "pushplus" | "telegram";
 
 interface PageProps {
-  searchParams: Promise<{ channel?: string }>;
+  searchParams: Promise<{ channel?: string; simId?: string }>;
 }
 
 function parseChannel(input: string | undefined): Channel {
-  // 只接受合法值;非法值时回退到 user.channel(由调用方传入,这里只兜底)
   if (input === "serverchan" || input === "bark" || input === "pushplus" || input === "telegram") {
     return input;
   }
   return "serverchan";
 }
 
+/**
+ * /me/settings 页面
+ *
+ * 处理账号级 + sim 级两类设置:
+ *  1) 账号级: 改密码
+ *  2) sim 级: 每张 sim 的 channel/channelKey + 激活日期
+ *     通过 ?simId=X 切换卡
+ */
 export default async function MeSettingsPage({ searchParams }: PageProps) {
   const user = await getCurrentUser();
   if (!user) redirect("/login");
-  if (!user.sim) {
+
+  const { channel: channelParam, simId: simIdParam } = await searchParams;
+  const sims = user.sims;
+  if (sims.length === 0) {
     return (
       <div className="max-w-md mx-auto px-4 py-8 sm:py-12 text-center">
-        <h1 className="text-2xl font-bold mb-2">账号 <span className="font-mono">{user.username}</span></h1>
-        <p className="text-slate-600">该账号下没有 SIM 卡数据</p>
-        <Link href="/me" className="text-indigo-600 hover:underline mt-3 inline-block">返回用户中心</Link>
+        <h1 className="text-2xl font-bold mb-2">设置</h1>
+        <p className="text-slate-600 mb-4">该账号还没绑定 SIM 卡</p>
+        <Link
+          href="/redeem"
+          className="inline-flex items-center px-4 py-2 rounded-lg bg-indigo-600 text-white text-sm font-medium hover:bg-indigo-700"
+        >
+          去兑换卡密 →
+        </Link>
       </div>
     );
   }
+  const selectedSim =
+    sims.find((s) => String(s.id) === simIdParam) ?? sims[0];
 
-  const { channel: channelParam } = await searchParams;
-  const isFirstTime = !user.channelKey;
-  // 如果 URL 带 ?channel=X,优先用它(用于帮助页 deep-link);
-  // 否则用 user.channel(老用户改渠道时保留上次选择)
+  // 默认 channel:优先用 URL(帮助页 deep-link),否则用当前 sim 的 channel
   const initialChannel = channelParam
     ? parseChannel(channelParam)
-    : parseChannel(user.channel);
-  const activatedAt = user.sim.activatedAt.toISOString().slice(0, 10);
+    : parseChannel(selectedSim.channel);
+  const isFirstTime = !selectedSim.channelKey;
+  const activatedAt = selectedSim.activatedAt.toISOString().slice(0, 10);
 
   return (
     <div className="max-w-md mx-auto px-4 py-8 sm:py-12">
@@ -47,16 +62,48 @@ export default async function MeSettingsPage({ searchParams }: PageProps) {
           ← 返回用户中心
         </Link>
       </div>
-      <h1 className="text-2xl font-bold mb-6">设置通知渠道</h1>
+      <h1 className="text-2xl font-bold mb-2">设置</h1>
+      <p className="text-sm text-slate-500 mb-6">
+        账号 <span className="font-mono text-slate-700">{user.username}</span>
+        {sims.length > 1 && ` · 当前编辑第 ${sims.indexOf(selectedSim) + 1} 张 SIM 卡`}
+      </p>
+
+      {/* 多卡切换(仅在 sims.length > 1 时显示) */}
+      {sims.length > 1 && (
+        <div className="mb-5 flex gap-2 overflow-x-auto pb-1">
+          {sims.map((s, idx) => (
+            <Link
+              key={s.id}
+              href={`/me/settings?simId=${s.id}`}
+              className={`shrink-0 px-3 py-1.5 rounded-lg text-sm border transition-colors ${
+                selectedSim.id === s.id
+                  ? "bg-indigo-600 text-white border-indigo-600"
+                  : "bg-white text-slate-700 border-slate-300 hover:bg-slate-50"
+              }`}
+            >
+              <span className="font-mono">**** {s.phoneNumber.slice(-4)}</span>
+              {idx === 0 && <span className="ml-1 text-xs opacity-75">(主)</span>}
+            </Link>
+          ))}
+        </div>
+      )}
+
+      <h2 className="text-lg font-semibold mb-3">
+        通知渠道 ({sims.length > 1 ? `第 ${sims.indexOf(selectedSim) + 1} 张` : "本卡"})
+      </h2>
+      <p className="text-xs text-slate-500 mb-3">
+        每张 SIM 卡可独立设置推送渠道。账号下所有卡用同一渠道(批量复制)
+        或各卡不同(独立设置)都支持 — 在下面表单里改当前卡的,其它卡不受影响。
+      </p>
       <MeSettingsClient
         initialChannel={initialChannel}
-        initialChannelKey={user.channelKey}
+        initialChannelKey={selectedSim.channelKey}
         isFirstTime={isFirstTime}
         activatedAt={activatedAt}
+        simId={selectedSim.id}
       />
 
-      {/* 推送样例预览:让用户在保存渠道前就能看到自己将收到的内容。
-          /me 已有同样的 preview,这里再加一份对称(用户主动查 settings 时也能看到)。 */}
+      {/* 推送样例预览:显示当前选中 sim 的样例推送 */}
       <details className="mt-6 bg-white rounded-xl shadow-sm border border-slate-200 p-6 group">
         <summary className="cursor-pointer list-none flex items-center justify-between">
           <span className="text-sm font-medium text-slate-700 inline-flex items-center gap-1.5">
@@ -83,16 +130,19 @@ export default async function MeSettingsPage({ searchParams }: PageProps) {
           折叠打开,看系统到日子会给您发什么。模板由管理员设置,改渠道不影响内容。
         </p>
         <PushPreview
-          phoneNumber={user.sim.phoneNumber}
+          phoneNumber={selectedSim.phoneNumber}
           days={Math.max(
             0,
             Math.floor(
-              (Date.now() - new Date(user.sim.lastPortedAt ?? user.sim.activatedAt).getTime()) /
+              (Date.now() -
+                new Date(
+                  selectedSim.lastPortedAt ?? selectedSim.activatedAt
+                ).getTime()) /
                 (1000 * 60 * 60 * 24)
             )
           )}
-          portToken={user.sim.portToken}
-          simIdFallback={user.sim.id}
+          portToken={selectedSim.portToken}
+          simIdFallback={selectedSim.id}
         />
       </details>
     </div>

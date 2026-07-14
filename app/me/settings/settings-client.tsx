@@ -16,6 +16,8 @@ interface MeSettingsClientProps {
   initialChannelKey: string;
   isFirstTime: boolean;
   activatedAt: string;
+  /** 当前选中的 sim id(多 sim 时通过 ?simId=X 切换) */
+  simId: number;
 }
 
 export function MeSettingsClient({
@@ -23,6 +25,7 @@ export function MeSettingsClient({
   initialChannelKey,
   isFirstTime,
   activatedAt: initialActivatedAt,
+  simId,
 }: MeSettingsClientProps) {
   const router = useRouter();
   const [channel, setChannel] = useState<Channel>(initialChannel);
@@ -178,7 +181,7 @@ export function MeSettingsClient({
       const resp = await fetch("/api/me/channel", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ channel, channelKey, verified: true }),
+        body: JSON.stringify({ channel, channelKey, verified: true, simId }),
       });
       const data = await resp.json();
       if (!data.ok) {
@@ -571,7 +574,7 @@ export function MeSettingsClient({
             会重新计算保号提醒节奏。如果之前填错了兑换时的激活日期,在这里修正。
             <strong className="text-rose-700">操作不可撤销</strong>,改完即生效。
           </p>
-          <ActivatedAtSection initialActivatedAt={initialActivatedAt} />
+          <ActivatedAtSection initialActivatedAt={initialActivatedAt} simId={simId} />
         </div>
       </details>
     </div>
@@ -580,8 +583,10 @@ export function MeSettingsClient({
 
 function ActivatedAtSection({
   initialActivatedAt,
+  simId,
 }: {
   initialActivatedAt: string;
+  simId: number;
 }) {
   const router = useRouter();
   const [editing, setEditing] = useState(false);
@@ -636,7 +641,7 @@ function ActivatedAtSection({
       const resp = await fetch("/api/me/sim", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ activatedAt: value }),
+        body: JSON.stringify({ activatedAt: value, simId }),
       });
       const data = await resp.json();
       if (!data.ok) {

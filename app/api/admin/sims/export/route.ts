@@ -48,7 +48,7 @@ export async function GET(req: Request) {
     orderBy: { id: "desc" },
     take: 5000,
     include: {
-      user: { select: { channel: true, channelKey: true } },
+      user: { select: { username: true } },
       reminders: {
         orderBy: { sentAt: "desc" },
         take: 1,
@@ -58,7 +58,7 @@ export async function GET(req: Request) {
   });
 
   const header =
-    "simId,号码,激活日期,上次保号,已激活天数,提醒窗口内,状态,渠道,已绑定用户,最后发送时间,最后状态,最后错误\n";
+    "simId,号码,激活日期,上次保号,已激活天数,提醒窗口内,状态,渠道(sim),绑定账号,最后发送时间,最后状态,最后错误\n";
   const lines = sims.map((s) => {
     const baseline = s.lastPortedAt ?? s.activatedAt;
     const days = dayOffsetFromBaseline(baseline);
@@ -72,8 +72,9 @@ export async function GET(req: Request) {
       String(days),
       inWindow,
       s.status,
-      csvEscape(s.user?.channel ?? ""),
-      s.user ? "是" : "否",
+      // 1:N - 渠道在 sim 自己(可独立设)
+      csvEscape(s.channel),
+      s.user ? csvEscape(s.user.username) : "",
       last
         ? last.sentAt.toISOString().replace("T", " ").slice(0, 19)
         : "",

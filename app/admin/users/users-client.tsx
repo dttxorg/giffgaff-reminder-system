@@ -10,9 +10,10 @@ import { LoadingButton } from "@/app/_components/loading-button";
 interface UserRow {
   id: number;
   username: string;
-  /** 1:1 - 每个 user 最多 1 个 sim */
-  simPhone: string | null;
-  channel: string;
+  /** 1:N - 一个 user 可挂多张 sim */
+  simPhones: string[];
+  /** 该 user 下所有 sim 的渠道(去重) */
+  channels: string[];
   reminderCount: number;
   createdAt: string;
   hasPassword: boolean;
@@ -123,9 +124,21 @@ export function UsersClient({ users }: UsersClientProps) {
                     <td className="px-3 py-2 font-mono text-xs text-slate-500 hidden md:table-cell">{u.id}</td>
                     <td className="px-3 py-2 font-mono text-slate-700">{u.username}</td>
                     <td className="px-3 py-2 font-mono">
-                      {u.simPhone ?? <span className="text-slate-400">—</span>}
+                      {u.simPhones.length === 0 ? (
+                        <span className="text-slate-400">—</span>
+                      ) : u.simPhones.length === 1 ? (
+                        u.simPhones[0]
+                      ) : (
+                        <span className="inline-flex flex-col gap-0.5">
+                          {u.simPhones.map((p, i) => (
+                            <span key={p}>{p}{i === 0 ? <span className="ml-1 text-[10px] text-indigo-600">(主)</span> : null}</span>
+                          ))}
+                        </span>
+                      )}
                     </td>
-                    <td className="px-3 py-2 hidden md:table-cell">{u.channel}</td>
+                    <td className="px-3 py-2 hidden md:table-cell">
+                      {u.channels.length === 0 ? "—" : u.channels.join(" / ")}
+                    </td>
                     <td className="px-3 py-2">
                       {u.hasPassword ? (
                         <span className="text-emerald-700 text-xs inline-flex items-center gap-0.5">

@@ -12,9 +12,13 @@ interface RouteContext {
 
 /**
  * POST /api/admin/reminders/[id]/resend
- * 手动重发某条失败(也可重发成功)的提醒,使用原 sim 的当前激活/保号日期 + 绑定的推送渠道。
+ * 手动重发某条失败(也可重发成功)的提醒。
+ *
+ * 渠道使用 reminder 当时的快照(channel/channelKey)— 即使 sim 后来改了渠道,
+ * 重发也保持原渠道(便于复现问题)。也可用 sim 当前的渠道重发,目前用快照。
+ *
  * - 鉴权: 管理员 session
- * - 行为: 用 reminder 当时的 dayOffset 渲染模板,推给 sim.user;成功后更新原 log 的 status/errorMessage
+ * - 行为: 用 reminder 当时的 dayOffset 渲染模板,推送;更新原 log
  */
 export async function POST(_req: Request, ctx: RouteContext) {
   if (!(await getAdminSession())) {
@@ -28,29 +32,22 @@ export async function POST(_req: Request, ctx: RouteContext) {
 
   const reminder = await prisma.reminderSent.findUnique({
     where: { id: reminderId },
-    include: { sim: { include: { user: true } } },
+    include: { sim: true },
   });
   if (!reminder) {
     return NextResponse.json({ ok: false, error: "记录不存在" }, { status: 404 });
   }
 
-  const user = reminder.sim.user;
-  if (!user) {
+  // 渠道使用 reminder 当时的快照(便于复现当时的推送问题)
+  if (!reminder.channelKey) {
     return NextResponse.json(
-      { ok: false, error: "该 sim 未绑定用户,无法推送" },
-      { status: 400 }
-    );
-  }
-  if (!user.channelKey) {
-    return NextResponse.json(
-      { ok: false, error: "用户未配置推送渠道 key" },
+      { ok: false, error: "该提醒快照无渠道 key(可能是早期数据)" },
       { status: 400 }
     );
   }
 
   const baseline = reminder.sim.lastPortedAt ?? reminder.sim.activatedAt;
   const days = dayOffsetFromBaseline(baseline);
-  // 重发的链接用 sim 当前的 portToken(不可枚举);老 sim lazy-backfill
   const baseUrl = process.env.PUBLIC_BASE_URL || "http://localhost:3000";
   let url: string;
   if (reminder.sim.portToken) {
@@ -68,7 +65,7 @@ export async function POST(_req: Request, ctx: RouteContext) {
     port_url: url,
   });
 
-  const result = await sendPush(user.channel, user.channelKey, title, body);
+  const result = await sendPush(reminder.channel, reminder.channelKey, title, body);
   await prisma.reminderSent.update({
     where: { id: reminderId },
     data: {

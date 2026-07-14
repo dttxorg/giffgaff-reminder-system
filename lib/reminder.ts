@@ -22,6 +22,9 @@ interface RunOptions {
 
 /**
  * 执行一次提醒扫描
+ *
+ * 渠道从每张 sim 自己的 channel/channelKey 拿(1:N 模型)
+ * ReminderSent 写时快照 channel/channelKey,即使后来改了也不影响历史日志
  */
 export async function runReminderScan(opts: RunOptions): Promise<ReminderRunResult> {
   const now = opts.now ?? new Date();
@@ -30,9 +33,10 @@ export async function runReminderScan(opts: RunOptions): Promise<ReminderRunResu
   const hourOfDay = shanghaiParts(now).hour;
   const result: ReminderRunResult = { processed: 0, sent: 0, skipped: 0, failed: 0, details: [] };
 
-  // 1. 取所有 active sim + 绑定 user
+  // 1. 取所有 active sim(必须挂到 user,user 至少要登录过才有效)
+  // 渠道是 sim 自己的,不需要 join user.channel
   const sims = await prisma.sim.findMany({
-    where: { status: "active", user: { isNot: null } },
+    where: { status: "active", userId: { not: null } },
     include: { user: true },
   });
 
@@ -41,7 +45,6 @@ export async function runReminderScan(opts: RunOptions): Promise<ReminderRunResu
   const template = setting?.value || DEFAULT_TEMPLATE;
 
   for (const sim of sims) {
-    if (!sim.user) continue;
     result.processed++;
 
     // 3. 计算 dayOffset
@@ -69,7 +72,6 @@ export async function runReminderScan(opts: RunOptions): Promise<ReminderRunResu
       url = portUrl(opts.baseUrl, sim.portToken);
     } else {
       const token = await ensureSimPortToken(sim.id);
-      // 即使 backfill 失败也用 id 生成 URL(老推送仍能工作),不阻塞推送
       url = token ? portUrl(opts.baseUrl, token) : portUrl(opts.baseUrl, sim.id);
     }
     const phoneDisplay = `**** ${sim.phoneNumber.slice(-4)}`;
@@ -86,18 +88,20 @@ export async function runReminderScan(opts: RunOptions): Promise<ReminderRunResu
       continue;
     }
 
-    // 7. 推送
-    const channel = sim.user.channel as ChannelType;
-    const sendResult = await sendPush(channel, sim.user.channelKey, title, body);
+    // 7. 推送 — 渠道从 sim 自己拿
+    const channel = sim.channel as ChannelType;
+    const sendResult = await sendPush(channel, sim.channelKey, title, body);
 
-    // 8. 写日志（无论成功失败）
+    // 8. 写日志（无论成功失败,带 channel 快照）
     try {
       await prisma.reminderSent.create({
         data: {
           simId: sim.id,
-          userId: sim.user.id,
+          userId: sim.userId!,
           dayOffset,
           bucket: plan.bucket,
+          channel,
+          channelKey: sim.channelKey,
           status: sendResult.ok ? "success" : "failed",
           errorMessage: sendResult.errorMessage,
         },

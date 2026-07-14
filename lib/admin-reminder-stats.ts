@@ -37,7 +37,7 @@ export async function getTodayChannelStats(
     where: { sentAt: { gte: todayStartUTC } },
     select: {
       status: true,
-      user: { select: { channel: true } },
+      channel: true,
     },
   });
 
@@ -46,7 +46,7 @@ export async function getTodayChannelStats(
     map.set(ch, { channel: ch, total: 0, success: 0, failed: 0 });
   }
   for (const r of reminders) {
-    const stat = map.get(r.user.channel);
+    const stat = map.get(r.channel);
     if (!stat) continue; // 防御:未知 channel 跳过
     stat.total++;
     if (r.status === "success") stat.success++;
@@ -465,7 +465,7 @@ export async function getChannelStatsLast7Days(): Promise<Channel7DayStat[]> {
   const since = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
   const reminders = await prisma.reminderSent.findMany({
     where: { sentAt: { gte: since } },
-    select: { status: true, user: { select: { channel: true } } },
+    select: { status: true, channel: true },
   });
 
   const map = new Map<Channel, Channel7DayStat>();
@@ -473,7 +473,7 @@ export async function getChannelStatsLast7Days(): Promise<Channel7DayStat[]> {
     map.set(ch, { channel: ch, total: 0, success: 0, failed: 0, failRate: 0 });
   }
   for (const r of reminders) {
-    const stat = map.get(r.user.channel);
+    const stat = map.get(r.channel);
     if (!stat) continue;
     stat.total++;
     if (r.status === "success") stat.success++;
@@ -493,7 +493,7 @@ export async function getChannelStatsLast90Days(): Promise<Channel7DayStat[]> {
   const since = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000);
   const reminders = await prisma.reminderSent.findMany({
     where: { sentAt: { gte: since } },
-    select: { status: true, user: { select: { channel: true } } },
+    select: { status: true, channel: true },
   });
 
   const map = new Map<Channel, Channel7DayStat>();
@@ -501,7 +501,7 @@ export async function getChannelStatsLast90Days(): Promise<Channel7DayStat[]> {
     map.set(ch, { channel: ch, total: 0, success: 0, failed: 0, failRate: 0 });
   }
   for (const r of reminders) {
-    const stat = map.get(r.user.channel);
+    const stat = map.get(r.channel);
     if (!stat) continue;
     stat.total++;
     if (r.status === "success") stat.success++;

@@ -79,7 +79,8 @@ export default async function AdminDashboard() {
     prisma.sim.count({ where: { status: "active" } }),
     prisma.sim.count({ where: { status: "paused" } }),
     prisma.user.count(),
-    prisma.user.count({ where: { channelKey: { not: "" } } }),
+    // 1:N - 渠道在 sim 上,数 sim.channelKey 非空的数量
+    prisma.sim.count({ where: { channelKey: { not: "" } } }),
     prisma.reminderSent.count({
       where: { sentAt: { gte: todayStartUTC } },
     }),
