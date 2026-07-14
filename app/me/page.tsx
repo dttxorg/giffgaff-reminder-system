@@ -532,6 +532,12 @@ export default async function MePage() {
                         (还差 {thisMonthExpected - thisMonthCount} 次)
                       </span>
                     )}
+                    {thisMonthExpected > thisMonthCount && todayCount > 0 && (
+                      /* Round 213: '今日 X / 预期 Y' 显示 (今日实际 / 本月预期) */
+                      <span className="ml-1 text-slate-500" title={`本月预期 ${thisMonthExpected} 次, 今日已推 ${todayCount} 次`}>
+                        (今日 {todayCount} / 预期 {thisMonthExpected})
+                      </span>
+                    )}
                     {thisMonthFailedCount > 0 && (
                       /* Round 184: '(失败 N)' 加点击跳转 /me/pushes 本月失败 */
                       <Link
