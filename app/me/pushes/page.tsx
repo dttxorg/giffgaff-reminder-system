@@ -55,6 +55,10 @@ export default async function MePushesPage({ searchParams }: PageProps) {
   const _90daysAgoDate = new Date(_monthEnd);
   _90daysAgoDate.setDate(_90daysAgoDate.getDate() - 90);
   const _90daysAgo = `${_90daysAgoDate.getFullYear()}-${String(_90daysAgoDate.getMonth() + 1).padStart(2, "0")}-${String(_90daysAgoDate.getDate()).padStart(2, "0")}`;
+  // Round 205: 近 3 个月 (90 天,够覆盖一个完整保号周期)
+  const _3monthsAgoDate = new Date(_monthEnd);
+  _3monthsAgoDate.setDate(_3monthsAgoDate.getDate() - 90);
+  const _3monthsAgo = `${_3monthsAgoDate.getFullYear()}-${String(_3monthsAgoDate.getMonth() + 1).padStart(2, "0")}-${String(_3monthsAgoDate.getDate()).padStart(2, "0")}`;
 
   const validStatus: "success" | "failed" | undefined =
     status === "success" || status === "failed" ? status : undefined;
@@ -190,6 +194,13 @@ export default async function MePushesPage({ searchParams }: PageProps) {
           className={`px-2 py-1 rounded ${from === _90daysAgo ? "bg-indigo-600 text-white" : "bg-slate-100 text-slate-600 hover:bg-slate-200"}`}
         >
           近 90 日
+        </Link>
+        {/* Round 205: 近 3 个月 (90 天,够覆盖一个完整保号周期) */}
+        <Link
+          href={`/me/pushes?from=${_3monthsAgo}&to=${_monthEnd.getFullYear()}-${String(_monthEnd.getMonth() + 1).padStart(2, "0")}-${String(_monthEnd.getDate()).padStart(2, "0")}`}
+          className={`px-2 py-1 rounded ${from === _3monthsAgo ? "bg-indigo-600 text-white" : "bg-slate-100 text-slate-600 hover:bg-slate-200"}`}
+        >
+          近 3 个月
         </Link>
         <Link
           href={`/me/pushes?status=${status || ""}`}

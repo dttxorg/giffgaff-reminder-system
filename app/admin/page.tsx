@@ -9,8 +9,6 @@ import { Last90DaysSends } from "./_components/last-90-days-sends";
 import { AdminStat } from "./_components/admin-stat";
 import { TodayChannelStats } from "./_components/today-channel-stats";
 import { Last7DaysChannelStats } from "./_components/last-7-days-channel-stats";
-import { ActiveSimStats } from "./_components/active-sim-stats";
-import { PausedSimStats } from "./_components/paused-sim-stats";
 import { SimStatusBreakdown } from "./_components/sim-status-breakdown";
 import { InWindowSims } from "./_components/in-window-sims";
 import { TodayFailingSims } from "./_components/today-failing-sims";
