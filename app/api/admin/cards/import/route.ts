@@ -12,7 +12,7 @@
 //   - 一次性最多导入 1000 张(超过报错)
 //   - 重复(已在 DB 里)自动跳过,不算错误
 //   - 格式错误 / 长度错 / 字符错 → 进 errors[]
-//   - 用事务批量 INSERT,失败回滚
+//   - 用唯一索引 + skipDuplicates 一次批量 INSERT
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/db";
@@ -85,36 +85,28 @@ export async function POST(req: Request) {
     });
   }
 
-  // 查 DB 中已存在的(批量 IN 查询)
-  const existing = await prisma.cardKey.findMany({
-    where: { code: { in: normalized } },
-    select: { code: true },
-  });
-  const existingSet = new Set(existing.map((e) => e.code));
-  const toImport = normalized.filter((c) => !existingSet.has(c));
-  const skipped = normalized.length - toImport.length;
-
-  // 批量 insert(用 createMany 跳过重复,虽然已经过滤过)
-  if (toImport.length > 0) {
-    try {
-      await prisma.cardKey.createMany({
-        data: toImport.map((code) => ({
-          code,
-          notes: parsed.data.notes || null,
-        })),
-        skipDuplicates: true, // 兜底
-      });
-    } catch (e) {
-      return NextResponse.json(
-        { ok: false, error: e instanceof Error ? e.message : "导入失败" },
-        { status: 500 }
-      );
-    }
+  let imported: number;
+  try {
+    const result = await prisma.cardKey.createMany({
+      data: normalized.map((code) => ({
+        code,
+        notes: parsed.data.notes || null,
+      })),
+      // CardKey.code 唯一索引在同一条 INSERT 内完成重复判断，避免先查后写。
+      skipDuplicates: true,
+    });
+    imported = result.count;
+  } catch (e) {
+    return NextResponse.json(
+      { ok: false, error: e instanceof Error ? e.message : "导入失败" },
+      { status: 500 }
+    );
   }
+  const skipped = normalized.length - imported;
 
   return NextResponse.json({
     ok: true,
-    imported: toImport.length,
+    imported,
     skipped,
     errors,
   });
