@@ -5,14 +5,17 @@ import {
   summarizeAdminSendTrends,
 } from "./admin-dashboard-trends";
 import {
+  EMPTY_ADMIN_REMINDER_SNAPSHOT,
   getAdminDashboardReminderSnapshot,
   summarizeAdminReminderSnapshot,
 } from "./admin-dashboard-reminder-snapshot";
 import {
+  EMPTY_ADMIN_USER_SNAPSHOT,
   getAdminDashboardUserSnapshot,
   summarizeAdminUserSnapshot,
 } from "./admin-dashboard-user-snapshot";
 import {
+  EMPTY_ADMIN_SIM_SNAPSHOT,
   getAdminDashboardSimSnapshot,
   summarizeAdminSimSnapshot,
 } from "./admin-dashboard-sim-snapshot";
@@ -276,32 +279,70 @@ export function summarizeAdminDashboard(
   };
 }
 
+async function loadDashboardSection<T>(
+  section: string,
+  load: () => Promise<T>,
+  fallback: T
+): Promise<T> {
+  try {
+    return await load();
+  } catch (error) {
+    console.error(`[admin-dashboard] ${section} failed`, error);
+    return fallback;
+  }
+}
+
 /** 鉴权完成后固定只等待一轮；90 天日志在数据库内聚合后返回。 */
 export async function getAdminDashboardData(now: Date) {
-  const [simSnapshot, userSnapshot, reminderSnapshot, recent] = await Promise.all([
-    getAdminDashboardSimSnapshot(now),
-    getAdminDashboardUserSnapshot(now),
-    getAdminDashboardReminderSnapshot(now),
-    prisma.reminderSent.findMany({
-      take: 10,
-      orderBy: { sentAt: "desc" },
-      select: {
-        id: true,
-        sentAt: true,
-        simId: true,
-        dayOffset: true,
-        bucket: true,
-        status: true,
-        errorMessage: true,
-        sim: { select: { phoneNumber: true } },
-      },
-    }),
+  const [simData, userData, reminderData, recent] = await Promise.all([
+    loadDashboardSection(
+      "sim snapshot",
+      async () => summarizeAdminSimSnapshot(
+        await getAdminDashboardSimSnapshot(now),
+        now
+      ),
+      summarizeAdminSimSnapshot(EMPTY_ADMIN_SIM_SNAPSHOT, now)
+    ),
+    loadDashboardSection(
+      "user snapshot",
+      async () => summarizeAdminUserSnapshot(
+        await getAdminDashboardUserSnapshot(now),
+        now
+      ),
+      summarizeAdminUserSnapshot(EMPTY_ADMIN_USER_SNAPSHOT, now)
+    ),
+    loadDashboardSection(
+      "reminder snapshot",
+      async () => summarizeAdminReminderSnapshot(
+        await getAdminDashboardReminderSnapshot(now),
+        now
+      ),
+      summarizeAdminReminderSnapshot(EMPTY_ADMIN_REMINDER_SNAPSHOT, now)
+    ),
+    loadDashboardSection(
+      "recent reminders",
+      () => prisma.reminderSent.findMany({
+        take: 10,
+        orderBy: { sentAt: "desc" },
+        select: {
+          id: true,
+          sentAt: true,
+          simId: true,
+          dayOffset: true,
+          bucket: true,
+          status: true,
+          errorMessage: true,
+          sim: { select: { phoneNumber: true } },
+        },
+      }),
+      []
+    ),
   ]);
 
   return {
-    ...summarizeAdminSimSnapshot(simSnapshot, now),
-    ...summarizeAdminUserSnapshot(userSnapshot, now),
-    ...summarizeAdminReminderSnapshot(reminderSnapshot, now),
+    ...simData,
+    ...userData,
+    ...reminderData,
     recent,
   };
 }

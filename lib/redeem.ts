@@ -11,6 +11,7 @@
 import { prisma } from "./db";
 import { normalizeCardCode } from "./card-key";
 import { hashPassword, normalizeUsername, usernameError } from "./auth";
+import { parseISOCalendarDate } from "./date";
 import type { Prisma } from "./generated/prisma/client";
 
 export type RedeemInput = {
@@ -52,19 +53,8 @@ export type RedeemResult =
     };
 
 export function parseDate(input: string): { ok: true; date: Date } | { ok: false } {
-  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(input);
-  if (!m) return { ok: false };
-  const [y, mo, d] = [Number(m[1]), Number(m[2]), Number(m[3])];
-  if (mo < 1 || mo > 12 || d < 1 || d > 31) return { ok: false };
-  const date = new Date(Date.UTC(y, mo - 1, d));
-  if (Number.isNaN(date.getTime())) return { ok: false };
-  if (
-    date.getUTCFullYear() !== y ||
-    date.getUTCMonth() !== mo - 1 ||
-    date.getUTCDate() !== d
-  ) {
-    return { ok: false };
-  }
+  const date = parseISOCalendarDate(input);
+  if (!date) return { ok: false };
   return { ok: true, date };
 }
 

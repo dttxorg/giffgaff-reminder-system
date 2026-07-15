@@ -9,7 +9,7 @@ export interface AdminDashboardUserSnapshot {
   dailyCounts: number[];
 }
 
-const EMPTY_USER_SNAPSHOT: AdminDashboardUserSnapshot = {
+export const EMPTY_ADMIN_USER_SNAPSHOT: AdminDashboardUserSnapshot = {
   totalCount: 0,
   dailyCounts: [0, 0, 0, 0, 0, 0, 0],
 };
@@ -57,7 +57,7 @@ export async function getAdminDashboardUserSnapshot(
     FROM "User"
   `;
 
-  return snapshot ?? EMPTY_USER_SNAPSHOT;
+  return snapshot ?? EMPTY_ADMIN_USER_SNAPSHOT;
 }
 
 /** 还原页面原有的用户总数与近 7 日新增趋势形状。 */

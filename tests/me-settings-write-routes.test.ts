@@ -122,6 +122,46 @@ describe("用户设置写接口", () => {
     });
   });
 
+  it("北京时间午夜后的本地今天可作为激活日期", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-07-15T16:30:00.000Z"));
+    mocks.updateCurrentUserSimActivatedAt.mockResolvedValue({
+      authenticated: true,
+      hasSims: true,
+      sim: { id: 23, portToken: null },
+    });
+
+    try {
+      const response = await changeActivatedAt(
+        jsonRequest("/api/me/sim", "PATCH", {
+          simId: 23,
+          activatedAt: "2026-07-16",
+        })
+      );
+
+      expect(response.status).toBe(200);
+      expect(mocks.updateCurrentUserSimActivatedAt).toHaveBeenCalledWith(
+        "session-id",
+        23,
+        new Date("2026-07-16T00:00:00.000Z")
+      );
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("无效日历日期不会进入 SIM 写入", async () => {
+    const response = await changeActivatedAt(
+      jsonRequest("/api/me/sim", "PATCH", {
+        simId: 23,
+        activatedAt: "2026-02-30",
+      })
+    );
+
+    expect(response.status).toBe(400);
+    expect(mocks.updateCurrentUserSimActivatedAt).not.toHaveBeenCalled();
+  });
+
   it("修改他人 SIM 日期仍返回 403", async () => {
     mocks.updateCurrentUserSimActivatedAt.mockResolvedValue({
       authenticated: true,

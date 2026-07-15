@@ -114,4 +114,33 @@ describe("admin-dashboard-data", () => {
     expect(dbMocks.reminderFindMany).toHaveBeenCalledOnce();
     expect(dbMocks.queryRaw).toHaveBeenCalledTimes(3);
   });
+
+  it("任一数据区查询失败时记录具名日志并返回可渲染的降级数据", async () => {
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    dbMocks.queryRaw.mockRejectedValue(new Error("database unavailable"));
+    dbMocks.reminderFindMany.mockRejectedValue(new Error("recent unavailable"));
+
+    try {
+      const result = await getAdminDashboardData(now);
+
+      expect(result).toMatchObject({
+        simCount: 0,
+        userCount: 0,
+        todaySent: 0,
+        recent: [],
+      });
+      expect(result.last90DaysSends).toHaveLength(90);
+      expect(errorSpy).toHaveBeenCalledTimes(4);
+      expect(errorSpy.mock.calls.map(([message]) => message)).toEqual(
+        expect.arrayContaining([
+          "[admin-dashboard] sim snapshot failed",
+          "[admin-dashboard] user snapshot failed",
+          "[admin-dashboard] reminder snapshot failed",
+          "[admin-dashboard] recent reminders failed",
+        ])
+      );
+    } finally {
+      errorSpy.mockRestore();
+    }
+  });
 });

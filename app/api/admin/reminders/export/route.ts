@@ -21,6 +21,7 @@ function buildWhere(params: URLSearchParams) {
   const value = (key: string) => params.get(key) || undefined;
   return buildReminderWhere({
     simId: value("simId"),
+    userId: value("userId"),
     q: value("q"),
     status: value("status"),
     from: value("from"),

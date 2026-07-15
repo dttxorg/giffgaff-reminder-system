@@ -8,6 +8,7 @@
 // Round 128: 加 channel + bound 过滤(便于排查"哪个渠道最近失败多")
 import type { Prisma } from "./generated/prisma/client";
 import { normalizePhone } from "./phone";
+import { parsePositiveIntParam } from "./route-params";
 
 const VALID_CHANNELS = ["serverchan", "bark", "pushplus", "telegram"] as const;
 export type ChannelValue = (typeof VALID_CHANNELS)[number];
@@ -22,6 +23,8 @@ export type ReminderWhere = Prisma.ReminderSentWhereInput;
 export interface ReminderFilterParams {
   /** 数字 simId;非法值静默忽略 */
   simId?: string;
+  /** 数字 userId;非法值静默忽略 */
+  userId?: string;
   /** "success" / "failed";其他值忽略 */
   status?: string;
   /** yyyy-MM-dd;非法格式忽略 */
@@ -57,8 +60,13 @@ export function buildReminderWhere(params: ReminderFilterParams): ReminderWhere 
 
   // --- simId + 手机号关系过滤 ---
   // 用正则确保"全数字"而不是 parseInt 的前缀宽松匹配(parseInt("12abc") → 12)
-  if (params.simId && /^\d+$/.test(params.simId)) {
-    where.simId = parseInt(params.simId, 10);
+  if (params.simId) {
+    const simId = parsePositiveIntParam(params.simId);
+    if (simId !== null) where.simId = simId;
+  }
+  if (params.userId) {
+    const userId = parsePositiveIntParam(params.userId);
+    if (userId !== null) where.userId = userId;
   }
 
   if (params.q) {
@@ -107,6 +115,7 @@ export function buildReminderWhere(params: ReminderFilterParams): ReminderWhere 
  */
 export function hasAnyReminderFilter(params: {
   simId?: string;
+  userId?: string;
   q?: string;
   status?: string;
   channel?: string;
@@ -114,5 +123,14 @@ export function hasAnyReminderFilter(params: {
   from?: string;
   to?: string;
 }): boolean {
-  return !!(params.simId || params.q || params.status || params.channel || params.bound || params.from || params.to);
+  return !!(
+    params.simId ||
+    params.userId ||
+    params.q ||
+    params.status ||
+    params.channel ||
+    params.bound ||
+    params.from ||
+    params.to
+  );
 }

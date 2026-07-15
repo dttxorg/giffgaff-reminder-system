@@ -5,6 +5,7 @@ import { sendPush } from "@/lib/channels";
 import { DEFAULT_TEMPLATE, portUrl, renderTemplate } from "@/lib/template";
 import { ensureSimPortToken } from "@/lib/port-token-db";
 import { dayOffsetFromBaseline } from "@/lib/bucket";
+import { parsePositiveIntParam } from "@/lib/route-params";
 
 interface RouteContext {
   params: Promise<{ id: string }>;
@@ -25,8 +26,8 @@ export async function POST(_req: Request, ctx: RouteContext) {
     return NextResponse.json({ ok: false, error: "未授权" }, { status: 401 });
   }
   const { id } = await ctx.params;
-  const reminderId = parseInt(id, 10);
-  if (!Number.isFinite(reminderId)) {
+  const reminderId = parsePositiveIntParam(id);
+  if (reminderId === null) {
     return NextResponse.json({ ok: false, error: "id 无效" }, { status: 400 });
   }
 

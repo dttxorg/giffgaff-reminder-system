@@ -47,7 +47,7 @@ export interface AdminDashboardReminderSnapshot {
   sims: AdminDashboardSimCount[];
 }
 
-const EMPTY_SNAPSHOT: AdminDashboardReminderSnapshot = {
+export const EMPTY_ADMIN_REMINDER_SNAPSHOT: AdminDashboardReminderSnapshot = {
   daily: [],
   channels: [],
   sims: [],
@@ -146,7 +146,7 @@ export async function getAdminDashboardReminderSnapshot(
       ) AS "sims"
   `;
 
-  return snapshot ?? EMPTY_SNAPSHOT;
+  return snapshot ?? EMPTY_ADMIN_REMINDER_SNAPSHOT;
 }
 
 function sum(

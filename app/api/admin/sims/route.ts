@@ -4,6 +4,7 @@ import { prisma } from "@/lib/db";
 import { getAdminSession } from "@/lib/session";
 import { hashPassword } from "@/lib/auth";
 import { generatePortToken } from "@/lib/port-token";
+import { parseISOCalendarDate } from "@/lib/date";
 
 const BodySchema = z.object({
   phoneNumber: z.string().min(6),
@@ -37,8 +38,10 @@ export async function POST(req: Request) {
     return NextResponse.json({ ok: false, error: "参数错误" }, { status: 400 });
   }
   const phone = parsed.data.phoneNumber.replace(/\D/g, "");
-  const [y, m, d] = parsed.data.activatedAt.split("-").map(Number);
-  const activatedAt = new Date(Date.UTC(y, m - 1, d));
+  const activatedAt = parseISOCalendarDate(parsed.data.activatedAt);
+  if (!activatedAt) {
+    return NextResponse.json({ ok: false, error: "激活日期无效" }, { status: 400 });
+  }
 
   try {
     const existing = await prisma.sim.findUnique({ where: { phoneNumber: phone } });

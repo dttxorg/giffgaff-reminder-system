@@ -4,6 +4,7 @@ import { prisma } from "@/lib/db";
 import { getCurrentUserId, getCurrentUserSessionId } from "@/lib/session";
 import { invalidatePublicSimCache } from "@/lib/public-sim-cache";
 import { updateCurrentUserSimActivatedAt } from "@/lib/user-sim-writes";
+import { parseISOCalendarDate, todayShanghaiISODate } from "@/lib/date";
 
 const BodySchema = z.object({
   activatedAt: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "日期格式 YYYY-MM-DD"),
@@ -40,14 +41,13 @@ export async function PATCH(req: Request) {
     );
   }
 
-  const [y, m, d] = parsed.data.activatedAt.split("-").map(Number);
-  const newActivated = new Date(Date.UTC(y, m - 1, d));
+  const newActivated = parseISOCalendarDate(parsed.data.activatedAt);
+  if (!newActivated) {
+    return NextResponse.json({ ok: false, error: "激活日期无效" }, { status: 400 });
+  }
 
-  const today = new Date();
-  const todayUTC = new Date(
-    Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate())
-  );
-  if (newActivated > todayUTC) {
+  const todayShanghai = parseISOCalendarDate(todayShanghaiISODate())!;
+  if (newActivated > todayShanghai) {
     return NextResponse.json(
       { ok: false, error: "激活日期不能晚于今天" },
       { status: 400 }

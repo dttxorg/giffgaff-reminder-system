@@ -7,6 +7,7 @@ import { formatPhoneForDisplay } from "@/lib/phone";
 import { formatRelativeTime } from "@/lib/date";
 import { UsersClient } from "../users-client";
 import { DeleteUserButton } from "./delete-user-button";
+import { parsePositiveIntParam } from "@/lib/route-params";
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -15,8 +16,8 @@ interface PageProps {
 export default async function UserDetailPage({ params }: PageProps) {
   await requireAdmin();
   const { id } = await params;
-  const userId = parseInt(id, 10);
-  if (!Number.isFinite(userId) || userId <= 0) {
+  const userId = parsePositiveIntParam(id);
+  if (userId === null) {
     notFound();
   }
 

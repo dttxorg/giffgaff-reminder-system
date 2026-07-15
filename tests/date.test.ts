@@ -1,5 +1,9 @@
 import { describe, it, expect } from "vitest";
-import { todayLocalISODate } from "../lib/date";
+import {
+  parseISOCalendarDate,
+  todayLocalISODate,
+  todayShanghaiISODate,
+} from "../lib/date";
 
 describe("todayLocalISODate", () => {
   it("返回本地时区今天的 yyyy-MM-dd 格式", () => {
@@ -48,6 +52,23 @@ describe("todayLocalISODate", () => {
     } finally {
       Date.prototype.getTimezoneOffset = originalGetTimezoneOffset;
     }
+  });
+});
+
+describe("服务端业务日期", () => {
+  it("北京时间午夜后仍返回上海当天而不是 UTC 前一天", () => {
+    expect(todayShanghaiISODate(new Date("2026-07-15T16:30:00.000Z"))).toBe(
+      "2026-07-16"
+    );
+  });
+
+  it("严格拒绝会被 Date 自动进位的日历日期", () => {
+    expect(parseISOCalendarDate("2026-02-29")).toBeNull();
+    expect(parseISOCalendarDate("2026-04-31")).toBeNull();
+    expect(parseISOCalendarDate("2026-13-01")).toBeNull();
+    expect(parseISOCalendarDate("2024-02-29")).toEqual(
+      new Date("2024-02-29T00:00:00.000Z")
+    );
   });
 });
 

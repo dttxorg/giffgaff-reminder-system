@@ -235,7 +235,7 @@ export function ImportCardClient() {
         <ul className="mt-2 text-xs text-slate-600 space-y-1 ml-4 list-disc">
           <li>每行一个卡密（最常用）</li>
           <li>用空格 / 逗号 / 分号 / 竖线 / Tab 分隔</li>
-          <li>JSON 数组格式: <code className="font-mono">["AAA-AAA-AAA-AAA", ...]</code></li>
+          <li>JSON 数组格式: <code className="font-mono">{`["AAA-AAA-AAA-AAA", ...]`}</code></li>
           <li>带不带 <code className="font-mono">-</code> 横线都可以（自动归一化）</li>
           <li>大小写不敏感（自动转大写）</li>
           <li>已存在的卡密自动跳过,不报错</li>

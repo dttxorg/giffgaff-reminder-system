@@ -4,6 +4,8 @@ import { prisma } from "@/lib/db";
 import { getAdminSession } from "@/lib/session";
 import { invalidatePublicSimCache } from "@/lib/public-sim-cache";
 import { getAdminSimDetail } from "@/lib/admin-sim-detail";
+import { parseISOCalendarDate } from "@/lib/date";
+import { parsePositiveIntParam } from "@/lib/route-params";
 
 interface RouteContext {
   params: Promise<{ id: string }>;
@@ -21,8 +23,8 @@ export async function GET(_req: Request, ctx: RouteContext) {
     return NextResponse.json({ ok: false, error: "未授权" }, { status: 401 });
   }
   const { id } = await ctx.params;
-  const simId = parseInt(id, 10);
-  if (!Number.isFinite(simId)) {
+  const simId = parsePositiveIntParam(id);
+  if (simId === null) {
     return NextResponse.json({ ok: false, error: "id 无效" }, { status: 400 });
   }
   const sim = await getAdminSimDetail(simId);
@@ -37,8 +39,8 @@ export async function PATCH(req: Request, ctx: RouteContext) {
     return NextResponse.json({ ok: false, error: "未授权" }, { status: 401 });
   }
   const { id } = await ctx.params;
-  const simId = parseInt(id, 10);
-  if (!Number.isFinite(simId)) {
+  const simId = parsePositiveIntParam(id);
+  if (simId === null) {
     return NextResponse.json({ ok: false, error: "id 无效" }, { status: 400 });
   }
 
@@ -60,46 +62,43 @@ export async function PATCH(req: Request, ctx: RouteContext) {
     status?: "active" | "paused";
   } = {};
   if (parsed.data.phoneNumber) data.phoneNumber = parsed.data.phoneNumber.replace(/\D/g, "");
-  // 校验 lastPortedAt >= activatedAt:两个字段必须协同(保号不可能早于激活)。
-  // 先看请求里的 activatedAt,否则用数据库里现有的。
   const existingSim = await prisma.sim.findUnique({ where: { id: simId } });
   if (!existingSim) {
     return NextResponse.json({ ok: false, error: "sim 不存在" }, { status: 404 });
   }
   if (parsed.data.activatedAt) {
-    const [y, m, d] = parsed.data.activatedAt.split("-").map(Number);
-    data.activatedAt = new Date(Date.UTC(y, m - 1, d));
+    const activatedAt = parseISOCalendarDate(parsed.data.activatedAt);
+    if (!activatedAt) {
+      return NextResponse.json({ ok: false, error: "激活日期无效" }, { status: 400 });
+    }
+    data.activatedAt = activatedAt;
   }
   if (parsed.data.lastPortedAt !== undefined) {
     if (parsed.data.lastPortedAt === null) {
       data.lastPortedAt = null;
     } else {
-      const [y, m, d] = parsed.data.lastPortedAt.split("-").map(Number);
-      const newLastPortedAt = new Date(Date.UTC(y, m - 1, d));
-      const effectiveActivatedAt = data.activatedAt ?? existingSim.activatedAt;
-      if (newLastPortedAt < effectiveActivatedAt) {
-        return NextResponse.json(
-          { ok: false, error: "上次保号日期不能早于激活日期" },
-          { status: 400 }
-        );
+      const lastPortedAt = parseISOCalendarDate(parsed.data.lastPortedAt);
+      if (!lastPortedAt) {
+        return NextResponse.json({ ok: false, error: "上次保号日期无效" }, { status: 400 });
       }
-      data.lastPortedAt = newLastPortedAt;
+      data.lastPortedAt = lastPortedAt;
     }
   }
   if (parsed.data.status) data.status = parsed.data.status;
 
+  const effectiveActivatedAt = data.activatedAt ?? existingSim.activatedAt;
+  const effectiveLastPortedAt =
+    data.lastPortedAt === undefined
+      ? existingSim.lastPortedAt
+      : data.lastPortedAt;
+  if (effectiveLastPortedAt && effectiveLastPortedAt < effectiveActivatedAt) {
+    return NextResponse.json(
+      { ok: false, error: "上次保号日期不能早于激活日期" },
+      { status: 400 }
+    );
+  }
+
   try {
-    // 即使 activatedAt 没变,也要保证 lastPortedAt >= activatedAt(防止旧数据被污染)
-    if (
-      data.lastPortedAt !== undefined &&
-      data.lastPortedAt !== null &&
-      data.lastPortedAt < existingSim.activatedAt
-    ) {
-      return NextResponse.json(
-        { ok: false, error: "上次保号日期不能早于现有激活日期" },
-        { status: 400 }
-      );
-    }
     const updated = await prisma.sim.update({ where: { id: simId }, data });
     invalidatePublicSimCache(updated);
     return NextResponse.json({ ok: true, sim: updated });
@@ -116,8 +115,8 @@ export async function DELETE(_req: Request, ctx: RouteContext) {
     return NextResponse.json({ ok: false, error: "未授权" }, { status: 401 });
   }
   const { id } = await ctx.params;
-  const simId = parseInt(id, 10);
-  if (!Number.isFinite(simId)) {
+  const simId = parsePositiveIntParam(id);
+  if (simId === null) {
     return NextResponse.json({ ok: false, error: "id 无效" }, { status: 400 });
   }
   try {

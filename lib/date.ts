@@ -16,6 +16,31 @@ export function todayLocalISODate(now: Date = new Date()): string {
   return d.toISOString().slice(0, 10);
 }
 
+/** 返回 Asia/Shanghai 自然日的 yyyy-MM-dd，供服务端业务日期校验使用。 */
+export function todayShanghaiISODate(now: Date = new Date()): string {
+  return new Date(now.getTime() + 8 * 60 * 60 * 1000)
+    .toISOString()
+    .slice(0, 10);
+}
+
+/** 严格解析 yyyy-MM-dd；拒绝 2 月 30 日等会被 Date 自动进位的日期。 */
+export function parseISOCalendarDate(input: string): Date | null {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(input);
+  if (!match) return null;
+  const year = Number(match[1]);
+  const month = Number(match[2]);
+  const day = Number(match[3]);
+  const date = new Date(Date.UTC(year, month - 1, day));
+  if (
+    date.getUTCFullYear() !== year ||
+    date.getUTCMonth() !== month - 1 ||
+    date.getUTCDate() !== day
+  ) {
+    return null;
+  }
+  return date;
+}
+
 /**
  * 相对时间格式化 — 把 Date 转成 "3 分钟前" / "2 小时前" / "5 天前" 等。
  *

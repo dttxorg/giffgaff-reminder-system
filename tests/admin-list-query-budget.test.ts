@@ -6,6 +6,10 @@ describe("后台列表查询预算", () => {
   const users = fs.readFileSync("app/admin/users/page.tsx", "utf8");
   const cards = fs.readFileSync("app/admin/cards/page.tsx", "utf8");
   const reminders = fs.readFileSync("app/admin/reminders/page.tsx", "utf8");
+  const reminderExport = fs.readFileSync(
+    "app/api/admin/reminders/export/route.ts",
+    "utf8"
+  );
   const userDetail = fs.readFileSync("app/admin/users/[id]/page.tsx", "utf8");
   const userClient = fs.readFileSync("app/admin/users/users-client.tsx", "utf8");
   const simTable = fs.readFileSync(
@@ -57,6 +61,14 @@ describe("后台列表查询预算", () => {
       "sim: { select: { phoneNumber: true } }"
     );
     expect(reminders).toContain("prefetch={false}");
+  });
+
+  it("用户详情钻取筛选会贯穿列表、分页和导出", () => {
+    expect(reminders).toContain("userId?: string");
+    expect(reminders).toContain("userId={userId}");
+    expect(reminders).toContain('exportQS.set("userId", userId)');
+    expect(reminders).toContain("simId, userId, q, status, channel, bound");
+    expect(reminderExport).toContain('userId: value("userId")');
   });
 
   it("高密度用户与号码列表不批量预取详情", () => {

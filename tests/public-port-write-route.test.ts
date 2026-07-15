@@ -85,4 +85,25 @@ describe("POST /api/p/[simId]/port", () => {
     expect(response.status).toBe(400);
     expect(mocks.updatePublicSimPortDate).not.toHaveBeenCalled();
   });
+
+  it("北京时间午夜后的本地今天不会被当成未来日期", async () => {
+    vi.setSystemTime(new Date("2026-07-15T16:30:00.000Z"));
+    const sim = { id: 42, portToken: "abc123def456ghi789jkl012mno345pq" };
+    mocks.updatePublicSimPortDate.mockResolvedValueOnce({ found: true, sim });
+
+    const response = await POST(request("2026-07-16"), context);
+
+    expect(response.status).toBe(200);
+    expect(mocks.updatePublicSimPortDate).toHaveBeenCalledWith(
+      sim.portToken,
+      new Date("2026-07-16T00:00:00.000Z")
+    );
+  });
+
+  it("无效日历日期在访问数据库前被拒绝", async () => {
+    const response = await POST(request("2026-02-30"), context);
+
+    expect(response.status).toBe(400);
+    expect(mocks.updatePublicSimPortDate).not.toHaveBeenCalled();
+  });
 });

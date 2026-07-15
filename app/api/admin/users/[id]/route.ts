@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { getAdminSession } from "@/lib/session";
+import { parsePositiveIntParam } from "@/lib/route-params";
 
 interface RouteContext {
   params: Promise<{ id: string }>;
@@ -19,8 +20,8 @@ export async function DELETE(_req: Request, ctx: RouteContext) {
     return NextResponse.json({ ok: false, error: "未授权" }, { status: 401 });
   }
   const { id } = await ctx.params;
-  const userId = parseInt(id, 10);
-  if (!Number.isInteger(userId) || userId <= 0) {
+  const userId = parsePositiveIntParam(id);
+  if (userId === null) {
     return NextResponse.json({ ok: false, error: "用户 ID 无效" }, { status: 400 });
   }
   try {

@@ -122,12 +122,8 @@ describe("<PushSummaryCard />", () => {
   });
 
   it("失败数为 0 → slate(不警示)", () => {
-    const { container } = render(
+    render(
       <PushSummaryCard totalShown={50} successCount={50} failedCount={0} />
-    );
-    // 失败 stat block 应该是 slate 底色
-    const failedBlock = Array.from(container.querySelectorAll("div")).find(
-      (d) => d.textContent === "0" && d.previousElementSibling?.textContent === "失败"
     );
     // Just check failed 数字 0 is displayed
     expect(screen.getByText("失败")).toBeInTheDocument();

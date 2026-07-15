@@ -28,7 +28,7 @@ export interface AdminDashboardSimSnapshot {
   inWindowSims: AdminDashboardInWindowSim[];
 }
 
-const EMPTY_SIM_SNAPSHOT: AdminDashboardSimSnapshot = {
+export const EMPTY_ADMIN_SIM_SNAPSHOT: AdminDashboardSimSnapshot = {
   totalCount: 0,
   activeCount: 0,
   pausedCount: 0,
@@ -186,7 +186,7 @@ export async function getAdminDashboardSimSnapshot(
     FROM totals
   `;
 
-  return snapshot ?? EMPTY_SIM_SNAPSHOT;
+  return snapshot ?? EMPTY_ADMIN_SIM_SNAPSHOT;
 }
 
 /** 把紧凑快照还原成页面原有的 SIM 指标形状。 */

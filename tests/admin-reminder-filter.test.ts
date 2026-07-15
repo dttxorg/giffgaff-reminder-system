@@ -32,6 +32,22 @@ describe("buildReminderWhere — simId", () => {
   it("非法 simId(混合) → 忽略", () => {
     expect(buildReminderWhere({ simId: "12abc" })).toEqual({});
   });
+  it("零和超大 simId → 忽略", () => {
+    expect(buildReminderWhere({ simId: "0" })).toEqual({});
+    expect(buildReminderWhere({ simId: "999999999999999999999" })).toEqual({});
+  });
+});
+
+describe("buildReminderWhere — userId", () => {
+  it("合法 userId 直接过滤提醒归属", () => {
+    expect(buildReminderWhere({ userId: "42" })).toEqual({ userId: 42 });
+  });
+
+  it("混合、零和超大 userId 被忽略", () => {
+    expect(buildReminderWhere({ userId: "12abc" })).toEqual({});
+    expect(buildReminderWhere({ userId: "0" })).toEqual({});
+    expect(buildReminderWhere({ userId: "999999999999999999999" })).toEqual({});
+  });
 });
 
 describe("buildReminderWhere — status", () => {
@@ -183,6 +199,7 @@ describe("hasAnyReminderFilter", () => {
   });
   it("任意单个维度非空 → true", () => {
     expect(hasAnyReminderFilter({ simId: "1" })).toBe(true);
+    expect(hasAnyReminderFilter({ userId: "1" })).toBe(true);
     expect(hasAnyReminderFilter({ q: "abc" })).toBe(true);
     expect(hasAnyReminderFilter({ status: "failed" })).toBe(true);
     expect(hasAnyReminderFilter({ channel: "bark" })).toBe(true);

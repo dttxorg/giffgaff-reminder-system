@@ -3,6 +3,7 @@ import { z } from "zod";
 import { prisma } from "@/lib/db";
 import { getAdminSession } from "@/lib/session";
 import { hashPassword } from "@/lib/auth";
+import { parsePositiveIntParam } from "@/lib/route-params";
 
 const BodySchema = z.object({
   newPassword: z.string().min(8, "新密码至少 8 位"),
@@ -22,8 +23,8 @@ export async function POST(
     return NextResponse.json({ ok: false, error: "未授权" }, { status: 401 });
   }
   const { id } = await ctx.params;
-  const userId = parseInt(id, 10);
-  if (!Number.isInteger(userId) || userId <= 0) {
+  const userId = parsePositiveIntParam(id);
+  if (userId === null) {
     return NextResponse.json({ ok: false, error: "用户 ID 无效" }, { status: 400 });
   }
 

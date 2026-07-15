@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { invalidatePublicSimCache } from "@/lib/public-sim-cache";
 import { updatePublicSimPortDate } from "@/lib/public-port-write";
+import { parseISOCalendarDate, todayShanghaiISODate } from "@/lib/date";
 
 const BodySchema = z.object({
   portedAt: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "日期格式 YYYY-MM-DD"),
@@ -33,13 +34,13 @@ export async function POST(req: Request, ctx: RouteContext) {
     return NextResponse.json({ ok: false, error: "参数错误" }, { status: 400 });
   }
 
-  // 解析 portedAt（按 UTC 0 点）
-  const [y, m, d] = parsed.data.portedAt.split("-").map(Number);
-  const portedAt = new Date(Date.UTC(y, m - 1, d));
+  const portedAt = parseISOCalendarDate(parsed.data.portedAt);
+  if (!portedAt) {
+    return NextResponse.json({ ok: false, error: "保号日期无效" }, { status: 400 });
+  }
 
-  const today = new Date();
-  const todayUTC = new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate()));
-  if (portedAt > todayUTC) {
+  const todayShanghai = parseISOCalendarDate(todayShanghaiISODate())!;
+  if (portedAt > todayShanghai) {
     return NextResponse.json({ ok: false, error: "保号日期不能晚于今天" }, { status: 400 });
   }
 

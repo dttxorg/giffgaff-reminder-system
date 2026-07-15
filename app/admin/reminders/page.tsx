@@ -14,6 +14,7 @@ import { getAdminReminderLogSummary } from "@/lib/admin-reminder-log-summary";
 interface PageProps {
   searchParams: Promise<{
     simId?: string;
+    userId?: string;
     q?: string;
     status?: string;
     /** ISO 日期 (yyyy-MM-dd),按 sentAt 区间过滤 */
@@ -32,7 +33,8 @@ const PAGE_SIZE = 20;
 
 export default async function RemindersPage({ searchParams }: PageProps) {
   await requireAdmin();
-  const { simId, q, status, from, to, channel, bound, page } = await searchParams;
+  const { simId, userId, q, status, from, to, channel, bound, page } =
+    await searchParams;
 
   // 分页:page 默认 1,parseInt 失败也 fallback 到 1
   const currentPage = Math.max(1, parseInt(page || "1", 10) || 1);
@@ -41,6 +43,7 @@ export default async function RemindersPage({ searchParams }: PageProps) {
   // 手机号直接通过 reminder → sim 关系过滤,不再先查 SIM ID 形成数据库瀑布。
   const where = buildReminderWhere({
     simId,
+    userId,
     q,
     status,
     from,
@@ -55,6 +58,7 @@ export default async function RemindersPage({ searchParams }: PageProps) {
   const todayStartUTC = new Date(Date.UTC(sp.year, sp.month - 1, sp.day));
   const hasAnyFilter = hasAnyReminderFilter({
     simId,
+    userId,
     q,
     status,
     channel,
@@ -92,6 +96,7 @@ export default async function RemindersPage({ searchParams }: PageProps) {
 
   const exportQS = new URLSearchParams();
   if (simId) exportQS.set("simId", simId);
+  if (userId) exportQS.set("userId", userId);
   if (q) exportQS.set("q", q);
   if (status) exportQS.set("status", status);
   if (channel) exportQS.set("channel", channel);
@@ -126,6 +131,7 @@ export default async function RemindersPage({ searchParams }: PageProps) {
 
       <SearchForm
         simId={simId}
+        userId={userId}
         q={q}
         status={status}
         channel={channel}
@@ -232,7 +238,7 @@ export default async function RemindersPage({ searchParams }: PageProps) {
         basePath="/admin/reminders"
         searchParams={
           new URLSearchParams(
-            Object.entries({ simId, q, status, from, to })
+            Object.entries({ simId, userId, q, status, channel, bound, from, to })
               .filter(([, v]) => v != null)
               .map(([k, v]) => [k, String(v)])
           )
@@ -244,6 +250,7 @@ export default async function RemindersPage({ searchParams }: PageProps) {
 
 function SearchForm({
   simId,
+  userId,
   q,
   status,
   channel,
@@ -252,6 +259,7 @@ function SearchForm({
   to,
 }: {
   simId?: string;
+  userId?: string;
   q?: string;
   status?: string;
   channel?: string;
@@ -259,9 +267,12 @@ function SearchForm({
   from?: string;
   to?: string;
 }) {
-  const hasFilter = !!(simId || q || status || channel || bound || from || to);
+  const hasFilter = !!(
+    simId || userId || q || status || channel || bound || from || to
+  );
   return (
     <AutoSubmitForm className="mb-4 flex gap-2 flex-wrap items-center">
+      {userId && <input type="hidden" name="userId" value={userId} />}
       <input
         name="simId"
         defaultValue={simId}

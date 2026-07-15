@@ -29,7 +29,6 @@ beforeEach(() => {
 
 describe("<MeSettingsClient /> Sever酱 内联引导", () => {
   it("选中 Sever酱 → 显示 3 步指引,主链接指向 sct.ftqq.com", async () => {
-    const user = userEvent.setup();
     render(
       <MeSettingsClient
         initialChannel="serverchan"
