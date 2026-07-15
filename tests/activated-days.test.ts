@@ -79,13 +79,30 @@ describe("formatActivatedDays — /me '已激活 N 天' 显示", () => {
     });
   });
 
-  describe("防御", () => {
-    it("-5 (理论上不会出现)→ 归零,显示'今天'", () => {
+  describe("防御:负 dayOffset(理论上不会出现,API 阻止)", () => {
+    it("-1 → 明天激活(防御)", () => {
+      expect(formatActivatedDays(-1)).toEqual({
+        text: "明天激活",
+        showFreshBadge: false,
+        mode: "normal",
+      });
+    });
+    it("-2 → 后天激活(防御)", () => {
+      expect(formatActivatedDays(-2)).toEqual({
+        text: "后天激活",
+        showFreshBadge: false,
+        mode: "normal",
+      });
+    });
+    it("-5 → 归零显示'今天'", () => {
       expect(formatActivatedDays(-5)).toEqual({
         text: "今天",
         showFreshBadge: true,
         mode: "fresh",
       });
+    });
+    it("-100 → 归零", () => {
+      expect(formatActivatedDays(-100).text).toBe("今天");
     });
   });
 

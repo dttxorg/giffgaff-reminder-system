@@ -23,7 +23,12 @@ export type ActivatedDaysDisplay = {
  * 业务用例:/me "已激活 N 天" 主数字
  */
 export function formatActivatedDays(dayOffset: number): ActivatedDaysDisplay {
-  if (dayOffset < 0) dayOffset = 0; // 防御
+  // 防御:用户填了未来激活日期(理论上 API 阻止,UI 也限定不能晚于今天)
+  // 但 dayOffset 计算走本地时区,边缘情况可能产生 -1/-2
+  // 先处理这两个明确边界,再把更小的负数归零
+  if (dayOffset === -1) return { text: "明天激活", showFreshBadge: false, mode: "normal" };
+  if (dayOffset === -2) return { text: "后天激活", showFreshBadge: false, mode: "normal" };
+  if (dayOffset < -2) dayOffset = 0; // 极端防御:归零
 
   if (dayOffset === 0) return { text: "今天", showFreshBadge: true, mode: "fresh" };
   if (dayOffset === 1) return { text: "昨天", showFreshBadge: true, mode: "fresh" };
