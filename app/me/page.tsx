@@ -7,6 +7,7 @@ import { PortCountdownHero } from "./_components/port-countdown-hero";
 import { PortOverdueBanner } from "./_components/port-overdue-banner";
 import { ActionBar } from "./_components/action-bar";
 import { UserHeader } from "./_components/user-header";
+import { EmptySims } from "./_components/empty-sims";
 
 interface PageProps {
   searchParams: Promise<{ simId?: string }>;
@@ -31,18 +32,8 @@ export default async function MePage({ searchParams }: PageProps) {
       {/* Round 221: 顶部用户卡片(头像 + 用户名 + SIM 卡数 + 在线状态) */}
       <UserHeader username={user.username} simCount={simCount} />
 
-      {/* 0 张卡:提示去兑换 */}
-      {simCount === 0 && (
-        <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 text-center">
-          <p className="text-slate-700 mb-3">您的账号还没绑定任何 SIM 卡</p>
-          <Link
-            href="/redeem"
-            className="inline-flex items-center px-4 py-2 rounded-lg bg-indigo-600 text-white text-sm font-medium hover:bg-indigo-700"
-          >
-            去兑换卡密 →
-          </Link>
-        </div>
-      )}
+      {/* Round 222: 0 张卡的友好空状态 */}
+      {simCount === 0 && <EmptySims />}
 
       {/* 多卡场景:顶部 tabs 切换(单卡不显示 tabs,直接渲染) */}
       {simCount > 1 && activeSim && (
