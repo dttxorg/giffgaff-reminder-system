@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useState, type FormEvent } from "react";
+import { useState, useTransition, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { Spinner } from "@/app/_components/skip-to-content";
 
@@ -23,10 +23,12 @@ export function ActionBar({ activeSimId }: ActionBarProps) {
   const router = useRouter();
   const [loggingOut, setLoggingOut] = useState(false);
   const [logoutError, setLogoutError] = useState(false);
+  const [isNavigating, startNavigation] = useTransition();
+  const logoutPending = loggingOut || isNavigating;
 
   const handleLogout = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (loggingOut) return;
+    if (logoutPending) return;
 
     setLogoutError(false);
     setLoggingOut(true);
@@ -36,8 +38,7 @@ export function ActionBar({ activeSimId }: ActionBarProps) {
         setLogoutError(true);
         return;
       }
-      router.push("/");
-      router.refresh();
+      startNavigation(() => router.push("/"));
     } catch {
       setLogoutError(true);
     } finally {
@@ -120,12 +121,12 @@ export function ActionBar({ activeSimId }: ActionBarProps) {
         <form onSubmit={handleLogout}>
           <button
             type="submit"
-            disabled={loggingOut}
-            aria-busy={loggingOut}
+            disabled={logoutPending}
+            aria-busy={logoutPending}
             className="inline-flex min-h-[36px] items-center gap-1.5 rounded-full px-3.5 py-2 text-sm text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-700 disabled:cursor-wait disabled:text-slate-400"
             title="退出登录"
           >
-            {loggingOut ? (
+            {logoutPending ? (
               <Spinner size={14} className="text-slate-400" label="退出中" />
             ) : (
               <svg
@@ -144,7 +145,7 @@ export function ActionBar({ activeSimId }: ActionBarProps) {
                 <line x1="21" y1="12" x2="9" y2="12" />
               </svg>
             )}
-            {loggingOut ? "退出中" : "退出"}
+            {logoutPending ? "退出中" : "退出"}
           </button>
         </form>
       </nav>

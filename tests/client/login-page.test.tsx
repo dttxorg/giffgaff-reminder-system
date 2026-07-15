@@ -90,7 +90,7 @@ describe("<LoginPage />", () => {
     expect(callBody.username).toBe("alice_2024");
     expect(callBody.password).toBe("secret123");
     expect(mockPush).toHaveBeenCalledWith("/me");
-    expect(mockRefresh).toHaveBeenCalled();
+    expect(mockRefresh).not.toHaveBeenCalled();
   });
 
   it("登录失败 → 显示后端错误信息", async () => {

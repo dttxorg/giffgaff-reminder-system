@@ -65,7 +65,7 @@ describe("<ActionBar />", () => {
 
     expect(fetchMock).toHaveBeenCalledWith("/api/auth/logout", { method: "POST" });
     expect(mockPush).toHaveBeenCalledWith("/");
-    expect(mockRefresh).toHaveBeenCalledTimes(1);
+    expect(mockRefresh).not.toHaveBeenCalled();
   });
 
   it("有 nav landmark 包装(无障碍)", () => {

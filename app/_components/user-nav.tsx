@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, type FormEvent } from "react";
+import { useEffect, useState, useTransition, type FormEvent } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 
@@ -14,7 +14,9 @@ export function UserNav() {
   const isProtectedUserPage = pathname === "/me" || pathname.startsWith("/me/");
   const [sessionAuthenticated, setSessionAuthenticated] = useState(false);
   const [loggingOut, setLoggingOut] = useState(false);
+  const [isNavigating, startNavigation] = useTransition();
   const authenticated = isProtectedUserPage || sessionAuthenticated;
+  const logoutPending = loggingOut || isNavigating;
 
   useEffect(() => {
     // /me 本身已经经过服务端鉴权，不再水合后重复查一次 Session。
@@ -43,14 +45,13 @@ export function UserNav() {
 
   const handleLogout = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (loggingOut) return;
+    if (logoutPending) return;
     setLoggingOut(true);
     try {
       const response = await fetch("/api/auth/logout", { method: "POST" });
       if (!response.ok) return;
       setSessionAuthenticated(false);
-      router.push("/");
-      router.refresh();
+      startNavigation(() => router.push("/"));
     } finally {
       setLoggingOut(false);
     }
@@ -68,11 +69,11 @@ export function UserNav() {
         <form onSubmit={handleLogout}>
           <button
             type="submit"
-            disabled={loggingOut}
-            aria-busy={loggingOut}
+            disabled={logoutPending}
+            aria-busy={logoutPending}
             className="rounded-md px-3 py-1.5 text-slate-600 transition-colors hover:bg-slate-100 disabled:text-slate-400"
           >
-            {loggingOut ? "退出中" : "退出"}
+            {logoutPending ? "退出中" : "退出"}
           </button>
         </form>
       </div>

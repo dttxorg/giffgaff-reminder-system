@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useTransition } from "react";
 import { PasswordInput } from "@/app/_components/password-input";
 import { LoadingButton } from "@/app/_components/loading-button";
 import { useRouter } from "next/navigation";
@@ -15,6 +15,7 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [isNavigating, startNavigation] = useTransition();
 
   const switchMode = (next: Mode) => {
     setError(null);
@@ -37,8 +38,7 @@ export default function LoginPage() {
         return;
       }
       // 如果用户还没设 channel,先去 /me 让它引导到 /me/settings
-      router.push(data.redirect || "/me");
-      router.refresh();
+      startNavigation(() => router.push(data.redirect || "/me"));
     } catch (err) {
       setError(err instanceof Error ? err.message : "网络错误");
     } finally {
@@ -115,7 +115,7 @@ export default function LoginPage() {
             password={password}
             setPassword={setPassword}
             error={error}
-            loading={loading}
+            loading={loading || isNavigating}
             onSubmit={onSubmit}
           />
         ) : (

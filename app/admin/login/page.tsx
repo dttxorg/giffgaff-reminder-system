@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { LoadingButton } from "@/app/_components/loading-button";
@@ -11,6 +11,7 @@ export default function AdminLoginPage() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [isNavigating, startNavigation] = useTransition();
 
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -27,8 +28,7 @@ export default function AdminLoginPage() {
         setError(data.error || "登录失败");
         return;
       }
-      router.push(data.redirect || "/admin");
-      router.refresh();
+      startNavigation(() => router.push(data.redirect || "/admin"));
     } catch (err) {
       setError(err instanceof Error ? err.message : "网络错误");
     } finally {
@@ -86,7 +86,7 @@ export default function AdminLoginPage() {
           </div>
           <LoadingButton
             type="submit"
-            loading={loading}
+            loading={loading || isNavigating}
             loadingLabel="登录中"
             label="登录"
             tone="primary"

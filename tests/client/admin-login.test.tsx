@@ -57,7 +57,7 @@ describe("<AdminLoginPage />", () => {
       expect.objectContaining({ method: "POST" })
     );
     expect(mockPush).toHaveBeenCalledWith("/admin");
-    expect(mockRefresh).toHaveBeenCalled();
+    expect(mockRefresh).not.toHaveBeenCalled();
   });
 
   it("登录失败 → 显示后端错误", async () => {

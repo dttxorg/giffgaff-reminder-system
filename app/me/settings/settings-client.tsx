@@ -28,9 +28,13 @@ export function MeSettingsClient({
   activatedAt: initialActivatedAt,
   simId,
 }: MeSettingsClientProps) {
-  const router = useRouter();
   const [channel, setChannel] = useState<Channel>(initialChannel);
   const [channelKey, setChannelKey] = useState(initialChannelKey);
+  const [savedConfig, setSavedConfig] = useState({
+    channel: initialChannel,
+    channelKey: initialChannelKey,
+  });
+  const [configured, setConfigured] = useState(!isFirstTime);
   const [testStatus, setTestStatus] = useState<TestStatus>("idle");
   const [testMessage, setTestMessage] = useState<string | null>(null);
   const [cooldown, setCooldown] = useState(0);
@@ -38,6 +42,37 @@ export function MeSettingsClient({
   const [saveStatus, setSaveStatus] = useState<SaveStatus>("idle");
   const [saveMessage, setSaveMessage] = useState<string | null>(null);
   const cooldownTimer = useRef<ReturnType<typeof setInterval> | null>(null);
+  const hasUnsavedChanges =
+    channel !== savedConfig.channel || channelKey !== savedConfig.channelKey;
+
+  const resetSaveFeedback = () => {
+    setSaveStatus("idle");
+    setSaveMessage(null);
+  };
+
+  const selectChannel = (nextChannel: Channel) => {
+    setChannel(nextChannel);
+    setVerified(
+      nextChannel === savedConfig.channel &&
+        channelKey === savedConfig.channelKey
+    );
+    setTestStatus("idle");
+    setTestMessage(null);
+    resetSaveFeedback();
+  };
+
+  const updateChannelKey = (nextChannelKey: string) => {
+    setChannelKey(nextChannelKey);
+    setVerified(
+      channel === savedConfig.channel &&
+        nextChannelKey === savedConfig.channelKey
+    );
+    if (testStatus !== "idle") {
+      setTestStatus("idle");
+      setTestMessage(null);
+    }
+    resetSaveFeedback();
+  };
 
   useEffect(() => {
     return () => {
@@ -191,8 +226,9 @@ export function MeSettingsClient({
         return;
       }
       setSaveStatus("success");
-      setSaveMessage("已保存");
-      setTimeout(() => router.push("/me"), 800);
+      setSaveMessage("已保存，设置已立即生效");
+      setSavedConfig({ channel, channelKey });
+      setConfigured(true);
     } catch (err) {
       setSaveStatus("error");
       setSaveMessage(err instanceof Error ? err.message : "网络错误");
@@ -214,7 +250,7 @@ export function MeSettingsClient({
 
   return (
     <div>
-      {isFirstTime && (
+      {!configured && (
         <div className="mb-4 p-4 rounded-lg bg-amber-50 border border-amber-200 text-amber-900 text-sm">
           <strong>首次设置</strong>:请填写您的通知渠道,系统会在 Giffgaff 保号日前
           170-180 天自动推送提醒给您。
@@ -293,45 +329,25 @@ export function MeSettingsClient({
             <div className="grid grid-cols-2 gap-2">
               <ChannelOption
                 selected={channel === "serverchan"}
-                onChange={() => {
-                  setChannel("serverchan");
-                  setVerified(false);
-                  setTestStatus("idle");
-                  setTestMessage(null);
-                }}
+                onChange={() => selectChannel("serverchan")}
                 title="Sever酱"
                 desc="微信公众号"
               />
               <ChannelOption
                 selected={channel === "bark"}
-                onChange={() => {
-                  setChannel("bark");
-                  setVerified(false);
-                  setTestStatus("idle");
-                  setTestMessage(null);
-                }}
+                onChange={() => selectChannel("bark")}
                 title="Bark"
                 desc="iOS App"
               />
               <ChannelOption
                 selected={channel === "pushplus"}
-                onChange={() => {
-                  setChannel("pushplus");
-                  setVerified(false);
-                  setTestStatus("idle");
-                  setTestMessage(null);
-                }}
+                onChange={() => selectChannel("pushplus")}
                 title="pushplus"
                 desc="微信公众号"
               />
               <ChannelOption
                 selected={channel === "telegram"}
-                onChange={() => {
-                  setChannel("telegram");
-                  setVerified(false);
-                  setTestStatus("idle");
-                  setTestMessage(null);
-                }}
+                onChange={() => selectChannel("telegram")}
                 title="Telegram"
                 desc="机器人推送"
               />
@@ -417,14 +433,7 @@ export function MeSettingsClient({
             <input
               type="text"
               value={channelKey}
-              onChange={(e) => {
-                setChannelKey(e.target.value);
-                setVerified(false);
-                if (testStatus !== "idle") {
-                  setTestStatus("idle");
-                  setTestMessage(null);
-                }
-              }}
+              onChange={(e) => updateChannelKey(e.target.value)}
               placeholder={
                 channel === "serverchan"
                   ? "SCT2xxxxxxxx"
@@ -514,6 +523,8 @@ export function MeSettingsClient({
 
         {saveMessage && (
           <div
+            role={saveStatus === "success" ? "status" : "alert"}
+            aria-live="polite"
             className={`mt-4 p-3 rounded-lg text-sm ${
               saveStatus === "success"
                 ? "bg-emerald-50 border border-emerald-200 text-emerald-700"
@@ -529,8 +540,9 @@ export function MeSettingsClient({
             onClick={onSave}
             loading={saveStatus === "saving"}
             loadingLabel="保存中"
-            label="保存"
+            label={!configured || hasUnsavedChanges ? "保存" : "已保存"}
             tone="primary"
+            disabled={!hasUnsavedChanges}
             className="px-5 py-2.5 text-sm"
           />
           {!verified && !saveMessage && (
