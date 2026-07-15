@@ -49,7 +49,6 @@ export function DeleteUserButton({ userId, reminderCount }: DeleteUserButtonProp
       }
       // 删完跳回列表
       router.push("/admin/users");
-      router.refresh();
     } catch (e) {
       setError(e instanceof Error ? e.message : "网络错误");
     } finally {

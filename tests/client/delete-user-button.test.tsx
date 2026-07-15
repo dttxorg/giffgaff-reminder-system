@@ -63,7 +63,7 @@ describe("<DeleteUserButton />", () => {
     // 但实际上 button disabled 时 userEvent.click 不会触发 onClick,所以这里只测按钮 disabled 状态
   });
 
-  it("输入正确 ID → 按钮可点,点击后调 fetch 并跳转", async () => {
+  it("输入正确 ID → 请求成功后只跳转一次,不追加刷新", async () => {
     const user = userEvent.setup();
     mockFetch.mockResolvedValueOnce({
       ok: true,
@@ -83,7 +83,7 @@ describe("<DeleteUserButton />", () => {
       })
     );
     expect(mockPush).toHaveBeenCalledWith("/admin/users");
-    expect(mockRefresh).toHaveBeenCalled();
+    expect(mockRefresh).not.toHaveBeenCalled();
   });
 
   it("API 返回 ok:false → 显示错误,不跳转", async () => {

@@ -105,7 +105,6 @@ export function RedeemClient({
         return;
       }
       router.push(data.redirect || "/me");
-      router.refresh();
     } catch (e) {
       setPhase({
         kind: "error",
