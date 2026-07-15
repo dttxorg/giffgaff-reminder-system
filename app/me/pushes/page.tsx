@@ -4,14 +4,14 @@
 
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { getCurrentUserPushHistoryContext } from "@/lib/session";
+import { getCurrentUserSessionId } from "@/lib/session";
 import { formatRelativeTime, formatUtcShanghaiDual } from "@/lib/date";
 import { groupRemindersByDay } from "@/lib/push-grouping";
 import {
   getPushHistoryWeekStart,
   summarizePushHistoryWeekCounts,
 } from "@/lib/push-history-stats";
-import { getPushHistorySnapshot } from "@/lib/push-history-data";
+import { getPushHistoryPageData } from "@/lib/push-history-data";
 import { PushSummaryCard } from "../_components/push-summary-card";
 import { PushFrequencyStrip } from "../_components/push-frequency-strip";
 import { EmptyPushes } from "../_components/empty-pushes";
@@ -24,10 +24,12 @@ interface PageProps {
 
 
 export default async function MePushesPage({ searchParams }: PageProps) {
-  const user = await getCurrentUserPushHistoryContext();
-  if (!user) redirect("/login");
-
-  const { status, from, to, simId: simIdParam } = await searchParams;
+  const [sessionId, params] = await Promise.all([
+    getCurrentUserSessionId(),
+    searchParams,
+  ]);
+  if (!sessionId) redirect("/login");
+  const { status, from, to, simId: simIdParam } = params;
 
   // Round 198 + 199: 日期范围快捷链接所需变量
   // 本月 (本月 1 号到本月最后一天,或今天)
@@ -87,7 +89,22 @@ export default async function MePushesPage({ searchParams }: PageProps) {
     sentAtRange.lt = lt;
   }
 
-  if (user.sims.length === 0) {
+  const parsedSimId = simIdParam ? Number(simIdParam) : null;
+  const requestedSimId =
+    Number.isInteger(parsedSimId) && parsedSimId !== null && parsedSimId > 0
+      ? parsedSimId
+      : null;
+  const weekStart = getPushHistoryWeekStart(_monthEnd);
+  const data = await getPushHistoryPageData({
+    sessionId,
+    requestedSimId,
+    status: validStatus,
+    sentAtRange,
+    weekStart,
+  });
+  if (!data) redirect("/login");
+
+  if (data.sims.length === 0) {
     return (
       <div className="max-w-2xl mx-auto px-4 py-8 sm:py-12 text-center">
         <p className="text-slate-600">该账号下没有 SIM 卡数据</p>
@@ -96,25 +113,10 @@ export default async function MePushesPage({ searchParams }: PageProps) {
     );
   }
 
-  // 多 sim 场景:?simId=X 只查该 sim;否则查账号下所有 sim
-  const ownedSimIds = user.sims.map((s) => s.id);
-  const requestedSimId = simIdParam ? Number(simIdParam) : null;
-  const filteredSimIds =
-    requestedSimId && ownedSimIds.includes(requestedSimId)
-      ? [requestedSimId]
-      : ownedSimIds;
-
   const chartSim =
-    user.sims.find((sim) => sim.id === requestedSimId) ?? user.sims[0];
+    data.sims.find((sim) => sim.id === requestedSimId) ?? data.sims[0];
   const chartBaseline = chartSim.lastPortedAt ?? chartSim.activatedAt;
-  const weekStart = getPushHistoryWeekStart(_monthEnd);
-
-  const { reminders, last7DayCounts } = await getPushHistorySnapshot({
-    simIds: filteredSimIds,
-    status: validStatus,
-    sentAtRange,
-    weekStart,
-  });
+  const { reminders, last7DayCounts } = data;
 
   const successCount = reminders.filter((r) => r.status === "success").length;
   const failedCount = reminders.filter((r) => r.status === "failed").length;

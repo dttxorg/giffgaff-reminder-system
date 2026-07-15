@@ -19,13 +19,33 @@ interface PushHistorySnapshotRow {
   last7DayCounts: PushHistoryDailyCount[];
 }
 
+interface PushHistorySimSnapshot {
+  id: number;
+  activatedAt: Date | string;
+  lastPortedAt: Date | string | null;
+}
+
+interface PushHistoryPageRow extends PushHistorySnapshotRow {
+  expiresAt: Date | string | null;
+  sims: PushHistorySimSnapshot[];
+}
+
 export interface PushHistorySnapshot {
   reminders: ReminderForGroup[];
   last7DayCounts: PushHistoryDailyCount[];
 }
 
+export interface PushHistoryPageData extends PushHistorySnapshot {
+  sims: Array<{
+    id: number;
+    activatedAt: Date;
+    lastPortedAt: Date | null;
+  }>;
+}
+
 interface PushHistoryQuery {
-  simIds: number[];
+  sessionId: string;
+  requestedSimId: number | null;
   status?: ReminderStatus;
   sentAtRange: { gte?: Date; lt?: Date };
   weekStart: Date;
@@ -51,19 +71,18 @@ export function normalizePushHistorySnapshot(
 }
 
 /**
- * 一次数据库调用同时返回筛选后的历史列表与近 7 日紧凑计数。
- * 列表最多 200 行，图表最多 7 行，不再回传图表所用的逐条日志。
+ * 一次数据库调用同时校验 Session，并返回 SIM 摘要、历史列表与近 7 日计数。
+ * 列表最多 200 行，图表最多 7 行；无效 simId 自动回退账号下全部 SIM。
  */
-export async function getPushHistorySnapshot({
-  simIds,
+export async function getPushHistoryPageData({
+  sessionId,
+  requestedSimId,
   status,
   sentAtRange,
   weekStart,
-}: PushHistoryQuery): Promise<PushHistorySnapshot> {
-  if (simIds.length === 0) return { reminders: [], last7DayCounts: [] };
-
+}: PushHistoryQuery): Promise<PushHistoryPageData | null> {
   const listFilters: Prisma.Sql[] = [
-    Prisma.sql`"simId" IN (${Prisma.join(simIds)})`,
+    Prisma.sql`"simId" IN (SELECT "id" FROM eligible_sims)`,
   ];
   if (status) {
     listFilters.push(Prisma.sql`"status" = ${status}::"SendStatus"`);
@@ -76,8 +95,39 @@ export async function getPushHistorySnapshot({
   }
   const weekEnd = new Date(weekStart.getTime() + 7 * DAY_MS);
 
-  const [snapshot] = await prisma.$queryRaw<PushHistorySnapshotRow[]>`
-    WITH list_rows AS (
+  const [snapshot] = await prisma.$queryRaw<PushHistoryPageRow[]>`
+    WITH current_session AS (
+      SELECT
+        session."expiresAt",
+        session."userId"
+      FROM "UserSession" session
+      WHERE session."id" = ${sessionId}
+    ),
+    owned_sims AS (
+      SELECT
+        sim."id",
+        sim."activatedAt",
+        sim."lastPortedAt"
+      FROM "Sim" sim
+      INNER JOIN current_session current
+        ON current."userId" = sim."userId"
+    ),
+    requested_selection AS (
+      SELECT EXISTS(
+        SELECT 1
+        FROM owned_sims
+        WHERE "id" = ${requestedSimId}::int
+      ) AS "isOwned"
+    ),
+    eligible_sims AS (
+      SELECT owned."id"
+      FROM owned_sims owned
+      CROSS JOIN requested_selection requested
+      WHERE ${requestedSimId}::int IS NULL
+        OR NOT requested."isOwned"
+        OR owned."id" = ${requestedSimId}::int
+    ),
+    list_rows AS (
       SELECT
         "id",
         "sentAt",
@@ -96,12 +146,19 @@ export async function getPushHistorySnapshot({
           AS "dayIndex",
         COUNT(*)::int AS "count"
       FROM "ReminderSent"
-      WHERE "simId" IN (${Prisma.join(simIds)})
+      WHERE "simId" IN (SELECT "id" FROM eligible_sims)
         AND "sentAt" >= ${weekStart}
         AND "sentAt" < ${weekEnd}
       GROUP BY 1
     )
     SELECT
+      (SELECT current."expiresAt" FROM current_session current LIMIT 1)
+        AS "expiresAt",
+      COALESCE(
+        (SELECT jsonb_agg(sim_row ORDER BY sim_row."id")
+          FROM owned_sims sim_row),
+        '[]'::jsonb
+      ) AS "sims",
       COALESCE(
         (SELECT jsonb_agg(list_row ORDER BY list_row."sentAt" DESC)
           FROM list_rows list_row),
@@ -114,5 +171,28 @@ export async function getPushHistorySnapshot({
       ) AS "last7DayCounts"
   `;
 
-  return normalizePushHistorySnapshot(snapshot);
+  if (!snapshot?.expiresAt) return null;
+  const expiresAt =
+    snapshot.expiresAt instanceof Date
+      ? snapshot.expiresAt
+      : new Date(snapshot.expiresAt);
+  if (expiresAt < new Date()) {
+    await prisma.userSession.delete({ where: { id: sessionId } }).catch(() => {});
+    return null;
+  }
+
+  return {
+    sims: snapshot.sims.map((sim) => ({
+      id: sim.id,
+      activatedAt:
+        sim.activatedAt instanceof Date
+          ? sim.activatedAt
+          : new Date(sim.activatedAt),
+      lastPortedAt:
+        sim.lastPortedAt === null || sim.lastPortedAt instanceof Date
+          ? sim.lastPortedAt
+          : new Date(sim.lastPortedAt),
+    })),
+    ...normalizePushHistorySnapshot(snapshot),
+  };
 }

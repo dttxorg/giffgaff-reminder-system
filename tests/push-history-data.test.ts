@@ -7,7 +7,7 @@ vi.mock("../lib/db", () => ({
 }));
 
 import {
-  getPushHistorySnapshot,
+  getPushHistoryPageData,
   normalizePushHistorySnapshot,
 } from "../lib/push-history-data";
 
@@ -33,13 +33,25 @@ describe("push history data snapshot", () => {
     expect(result.last7DayCounts).toEqual([{ dayIndex: 6, count: 1 }]);
   });
 
-  it("筛选列表与周计数固定为一次数据库调用", async () => {
+  it("Session、SIM 摘要、筛选列表与周计数固定为一次数据库调用", async () => {
     dbMocks.queryRaw.mockResolvedValueOnce([
-      { reminders: [], last7DayCounts: [{ dayIndex: 6, count: 2 }] },
+      {
+        expiresAt: new Date("2099-07-22T00:00:00.000Z"),
+        sims: [
+          {
+            id: 2,
+            activatedAt: "2026-01-01T00:00:00.000Z",
+            lastPortedAt: null,
+          },
+        ],
+        reminders: [],
+        last7DayCounts: [{ dayIndex: 6, count: 2 }],
+      },
     ]);
 
-    const result = await getPushHistorySnapshot({
-      simIds: [2, 7],
+    const result = await getPushHistoryPageData({
+      sessionId: "session-1",
+      requestedSimId: 2,
       status: "failed",
       sentAtRange: {
         gte: new Date("2026-07-01T00:00:00.000Z"),
@@ -49,17 +61,28 @@ describe("push history data snapshot", () => {
     });
 
     expect(dbMocks.queryRaw).toHaveBeenCalledOnce();
-    expect(result.last7DayCounts[0].count).toBe(2);
+    expect(result?.last7DayCounts[0].count).toBe(2);
+    expect(result?.sims[0].activatedAt).toBeInstanceOf(Date);
   });
 
-  it("空 SIM 集合不访问数据库", async () => {
-    const result = await getPushHistorySnapshot({
-      simIds: [],
+  it("无效 Session 返回 null", async () => {
+    dbMocks.queryRaw.mockResolvedValueOnce([
+      {
+        expiresAt: null,
+        sims: [],
+        reminders: [],
+        last7DayCounts: [],
+      },
+    ]);
+
+    const result = await getPushHistoryPageData({
+      sessionId: "missing-session",
+      requestedSimId: null,
       sentAtRange: {},
       weekStart: new Date("2026-07-08T16:00:00.000Z"),
     });
 
-    expect(dbMocks.queryRaw).not.toHaveBeenCalled();
-    expect(result).toEqual({ reminders: [], last7DayCounts: [] });
+    expect(dbMocks.queryRaw).toHaveBeenCalledOnce();
+    expect(result).toBeNull();
   });
 });

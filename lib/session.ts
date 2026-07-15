@@ -253,47 +253,6 @@ export const getCurrentUserId = cache(async (): Promise<number | null> => {
   return session.userId;
 });
 
-export interface CurrentUserPushHistoryContext {
-  sims: Array<{
-    id: number;
-    activatedAt: Date;
-    lastPortedAt: Date | null;
-  }>;
-}
-
-/** 推送历史页的最小账号上下文，不读取号码、公开 token 或渠道密钥。 */
-export const getCurrentUserPushHistoryContext = cache(
-  async (): Promise<CurrentUserPushHistoryContext | null> => {
-    const jar = await cookies();
-    const sid = jar.get(USER_COOKIE)?.value;
-    if (!sid) return null;
-    const session = await prisma.userSession.findUnique({
-      where: { id: sid },
-      select: {
-        expiresAt: true,
-        user: {
-          select: {
-            sims: {
-              orderBy: { id: "asc" },
-              select: {
-                id: true,
-                activatedAt: true,
-                lastPortedAt: true,
-              },
-            },
-          },
-        },
-      },
-    });
-    if (!session) return null;
-    if (session.expiresAt < new Date()) {
-      await prisma.userSession.delete({ where: { id: sid } }).catch(() => {});
-      return null;
-    }
-    return session.user;
-  }
-);
-
 interface CurrentUserSettingsRow {
   expiresAt: Date;
   username: string;

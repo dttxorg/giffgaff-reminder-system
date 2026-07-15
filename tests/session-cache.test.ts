@@ -41,12 +41,6 @@ describe("session helpers are wrapped in React cache()", () => {
     expect(src).toMatch(/getCurrentUserId\s*=\s*cache\s*\(\s*async\s*\(/);
   });
 
-  it("推送历史最小 session 上下文也使用 cache() 包裹", () => {
-    expect(src).toMatch(
-      /getCurrentUserPushHistoryContext\s*=\s*cache\s*\(\s*async\s*\(/
-    );
-  });
-
   it("设置页最小 session 上下文也使用 cache() 包裹", () => {
     expect(src).toMatch(
       /getCurrentUserSettingsContext\s*=\s*cache\s*\(\s*async\s*\(/
