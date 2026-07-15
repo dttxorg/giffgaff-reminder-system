@@ -8,7 +8,9 @@ import { getCurrentUser } from "@/lib/session";
 import { prisma } from "@/lib/db";
 import { formatRelativeTime, formatUtcShanghaiDual } from "@/lib/date";
 import { groupRemindersByDay } from "@/lib/push-grouping";
+import { shanghaiParts } from "@/lib/bucket";
 import { PushSummaryCard } from "../_components/push-summary-card";
+import { PushFrequencyStrip } from "../_components/push-frequency-strip";
 
 interface PageProps {
   searchParams: Promise<{ status?: string; from?: string; to?: string; simId?: string }>;
@@ -71,6 +73,10 @@ export default async function MePushesPage({ searchParams }: PageProps) {
   const validStatus: "success" | "failed" | undefined =
     status === "success" || status === "failed" ? status : undefined;
 
+  // Round 223: 当天 0 点(用于 7 日频率图的分日计算)
+  const _nowSp = shanghaiParts(_monthEnd);
+  const todayStartUTC = new Date(Date.UTC(_nowSp.year, _nowSp.month - 1, _nowSp.day));
+
   // Round 176: from/to 日期范围过滤 (yyyy-MM-dd 格式)
   // from 包含 00:00:00 UTC, to +1 天 排除 (跟 /admin/reminders 一致)
   const sentAtRange: { gte?: Date; lt?: Date } = {};
@@ -116,6 +122,37 @@ export default async function MePushesPage({ searchParams }: PageProps) {
   const failedCount = reminders.filter((r) => r.status === "failed").length;
   const totalShown = reminders.length;
 
+  // Round 223: 近 7 日每日推送数(给频率迷你图用)
+  // 取按 groupRemindersByDay 后的 groups 倒推,或直接 groupBy sentAt
+  // 简化:复用 groupRemindersByDay 的"按日分组"思路,单 sim 时也按 base date 着色
+  const last7Days = await Promise.all(
+    Array.from({ length: 7 }, async (_, i) => {
+      const dayStart = new Date(todayStartUTC.getTime() - (6 - i) * 24 * 60 * 60 * 1000);
+      const dayEnd = new Date(dayStart.getTime() + 24 * 60 * 60 * 1000);
+      const dayCount = await prisma.reminderSent.count({
+        where: {
+          simId: { in: filteredSimIds },
+          sentAt: { gte: dayStart, lt: dayEnd },
+        },
+      });
+      // 算当天 dayOffset(基于主 sim 的 baseline)
+      const baseline = user.sims[0]?.lastPortedAt ?? user.sims[0]?.activatedAt;
+      let dayOffset = 0;
+      if (baseline) {
+        const dayStartSp = shanghaiParts(dayStart);
+        const baseSp = shanghaiParts(baseline);
+        const baselineDay = Date.UTC(baseSp.year, baseSp.month - 1, baseSp.day);
+        const nowDay = Date.UTC(dayStartSp.year, dayStartSp.month - 1, dayStartSp.day);
+        dayOffset = Math.floor((nowDay - baselineDay) / (1000 * 60 * 60 * 24));
+      }
+      return {
+        date: new Date(dayStart.getTime() + 12 * 60 * 60 * 1000), // +12h 防时区抖动
+        count: dayCount,
+        dayOffset,
+      };
+    })
+  );
+
   // Round 175: 按日分组(用 lib/push-grouping 纯函数,可测)
   const groups = groupRemindersByDay(reminders);
 
@@ -138,6 +175,9 @@ export default async function MePushesPage({ searchParams }: PageProps) {
         failedCount={failedCount}
         activeSimId={requestedSimId}
       />
+
+      {/* Round 223: 近 7 日推送频率迷你图 */}
+      {totalShown > 0 && <PushFrequencyStrip data={last7Days} />}
       <p className="text-sm text-slate-500 mb-6">
         共 {totalShown} 条 ·{" "}
         <strong className="text-emerald-700">{successCount}</strong> 成功 ·{" "}
