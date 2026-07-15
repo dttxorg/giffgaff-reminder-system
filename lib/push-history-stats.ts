@@ -10,6 +10,11 @@ export interface PushHistoryDaySummary {
   dayOffset: number;
 }
 
+export interface PushHistoryDailyCount {
+  dayIndex: number;
+  count: number;
+}
+
 const HOUR_MS = 60 * 60 * 1000;
 const DAY_MS = 24 * HOUR_MS;
 const SHANGHAI_OFFSET_MS = 8 * HOUR_MS;
@@ -32,7 +37,6 @@ export function summarizePushHistoryWeek(
   baseline: Date,
   now: Date
 ): PushHistoryDaySummary[] {
-  const todayStart = shanghaiTodayStart(now);
   const weekStart = getPushHistoryWeekStart(now);
   const counts = Array.from({ length: 7 }, () => 0);
 
@@ -41,6 +45,27 @@ export function summarizePushHistoryWeek(
       (reminder.sentAt.getTime() - weekStart.getTime()) / DAY_MS
     );
     if (dayIndex >= 0 && dayIndex <= 6) counts[dayIndex] += 1;
+  }
+
+  return summarizePushHistoryWeekCounts(
+    counts.map((count, dayIndex) => ({ dayIndex, count })),
+    baseline,
+    now
+  );
+}
+
+/** 从数据库返回的最多 7 个日计数生成图表数据。 */
+export function summarizePushHistoryWeekCounts(
+  dailyCounts: PushHistoryDailyCount[],
+  baseline: Date,
+  now: Date
+): PushHistoryDaySummary[] {
+  const todayStart = shanghaiTodayStart(now);
+  const counts = Array.from({ length: 7 }, () => 0);
+  for (const row of dailyCounts) {
+    if (row.dayIndex >= 0 && row.dayIndex <= 6) {
+      counts[row.dayIndex] = row.count;
+    }
   }
 
   return counts.map((count, index) => {

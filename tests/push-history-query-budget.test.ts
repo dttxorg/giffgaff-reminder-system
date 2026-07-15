@@ -3,6 +3,7 @@ import fs from "node:fs";
 
 describe("推送历史查询载荷预算", () => {
   const page = fs.readFileSync("app/me/pushes/page.tsx", "utf8");
+  const data = fs.readFileSync("lib/push-history-data.ts", "utf8");
   const session = fs.readFileSync("lib/session.ts", "utf8");
   const helperStart = session.indexOf(
     "export const getCurrentUserPushHistoryContext"
@@ -25,14 +26,17 @@ describe("推送历史查询载荷预算", () => {
     expect(helper).not.toContain("username");
   });
 
-  it("历史列表只读取渲染和分组所需的六个字段", () => {
-    const listQueryStart = page.indexOf("prisma.reminderSent.findMany({");
-    const weeklyQueryStart = page.indexOf(
-      "prisma.reminderSent.findMany({",
-      listQueryStart + 1
-    );
-    const listQuery = page.slice(listQueryStart, weeklyQueryStart);
+  it("历史列表与周图表合并为一次有界快照查询", () => {
+    expect(page).toContain("getPushHistorySnapshot({");
+    expect(page).not.toContain("prisma.");
+    expect(data.match(/prisma\.\$queryRaw/g)).toHaveLength(1);
+    expect(data).toContain("LIMIT 200");
+    expect(data).toContain("GROUP BY 1");
+    expect(data).toContain('AS "last7DayCounts"');
+    expect(data).not.toContain("reminderSent.findMany");
+  });
 
+  it("历史列表快照只读取渲染和分组所需的六个字段", () => {
     for (const field of [
       "id",
       "sentAt",
@@ -41,11 +45,10 @@ describe("推送历史查询载荷预算", () => {
       "bucket",
       "errorMessage",
     ]) {
-      expect(listQuery).toContain(`${field}: true`);
+      expect(data).toContain(`"${field}"`);
     }
-    expect(listQuery).not.toContain("channelKey");
-    expect(listQuery).not.toContain("channel: true");
-    expect(listQuery).not.toContain("userId: true");
-    expect(listQuery).not.toContain("simId: true");
+    expect(data).not.toContain("channelKey");
+    expect(data).not.toContain('"channel"');
+    expect(data).not.toContain('"userId"');
   });
 });

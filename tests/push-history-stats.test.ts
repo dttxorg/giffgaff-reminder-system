@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   getPushHistoryWeekStart,
   summarizePushHistoryWeek,
+  summarizePushHistoryWeekCounts,
 } from "../lib/push-history-stats";
 
 const now = new Date("2026-07-15T04:00:00.000Z"); // 上海时间 7 月 15 日 12:00
@@ -29,6 +30,23 @@ describe("push-history-stats", () => {
     expect(result.at(-2)?.count).toBe(1);
     expect(result.at(-1)?.count).toBe(2);
     expect(result.at(-1)?.date.toISOString()).toBe("2026-07-15T04:00:00.000Z");
+    expect(result.at(-1)?.dayOffset).toBe(195);
+  });
+
+  it("数据库日计数可直接补齐为 7 天图表", () => {
+    const result = summarizePushHistoryWeekCounts(
+      [
+        { dayIndex: 5, count: 1 },
+        { dayIndex: 6, count: 2 },
+      ],
+      baseline,
+      now
+    );
+
+    expect(result).toHaveLength(7);
+    expect(result.at(-3)?.count).toBe(0);
+    expect(result.at(-2)?.count).toBe(1);
+    expect(result.at(-1)?.count).toBe(2);
     expect(result.at(-1)?.dayOffset).toBe(195);
   });
 });

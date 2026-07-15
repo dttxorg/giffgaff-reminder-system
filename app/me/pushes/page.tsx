@@ -5,13 +5,13 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getCurrentUserPushHistoryContext } from "@/lib/session";
-import { prisma } from "@/lib/db";
 import { formatRelativeTime, formatUtcShanghaiDual } from "@/lib/date";
 import { groupRemindersByDay } from "@/lib/push-grouping";
 import {
   getPushHistoryWeekStart,
-  summarizePushHistoryWeek,
+  summarizePushHistoryWeekCounts,
 } from "@/lib/push-history-stats";
+import { getPushHistorySnapshot } from "@/lib/push-history-data";
 import { PushSummaryCard } from "../_components/push-summary-card";
 import { PushFrequencyStrip } from "../_components/push-frequency-strip";
 import { EmptyPushes } from "../_components/empty-pushes";
@@ -104,48 +104,24 @@ export default async function MePushesPage({ searchParams }: PageProps) {
       ? [requestedSimId]
       : ownedSimIds;
 
-  const where = {
-    simId: { in: filteredSimIds },
-    ...(validStatus ? { status: validStatus } : {}),
-    ...(sentAtRange.gte || sentAtRange.lt ? { sentAt: sentAtRange } : {}),
-  };
-
   const chartSim =
     user.sims.find((sim) => sim.id === requestedSimId) ?? user.sims[0];
   const chartBaseline = chartSim.lastPortedAt ?? chartSim.activatedAt;
   const weekStart = getPushHistoryWeekStart(_monthEnd);
 
-  // 列表与近 7 日轻量记录并行加载：从原来的 8 次查询、2 轮等待降为 2 次查询、1 轮等待。
-  const [reminders, last7DayReminders] = await Promise.all([
-    prisma.reminderSent.findMany({
-      where,
-      select: {
-        id: true,
-        sentAt: true,
-        status: true,
-        dayOffset: true,
-        bucket: true,
-        errorMessage: true,
-      },
-      orderBy: { sentAt: "desc" },
-      take: 200,
-    }),
-    prisma.reminderSent.findMany({
-      where: {
-        simId: { in: filteredSimIds },
-        sentAt: { gte: weekStart },
-      },
-      select: { sentAt: true },
-      orderBy: { sentAt: "asc" },
-    }),
-  ]);
+  const { reminders, last7DayCounts } = await getPushHistorySnapshot({
+    simIds: filteredSimIds,
+    status: validStatus,
+    sentAtRange,
+    weekStart,
+  });
 
   const successCount = reminders.filter((r) => r.status === "success").length;
   const failedCount = reminders.filter((r) => r.status === "failed").length;
   const totalShown = reminders.length;
 
-  const last7Days = summarizePushHistoryWeek(
-    last7DayReminders,
+  const last7Days = summarizePushHistoryWeekCounts(
+    last7DayCounts,
     chartBaseline,
     _monthEnd
   );
