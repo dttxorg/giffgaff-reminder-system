@@ -3,6 +3,7 @@ import { z } from "zod";
 import { prisma } from "@/lib/db";
 import { getAdminSession } from "@/lib/session";
 import { generatePortToken } from "@/lib/port-token";
+import { invalidatePublicSimCache } from "@/lib/public-sim-cache";
 
 const BodySchema = z.object({
   csv: z.string().min(1),
@@ -12,6 +13,40 @@ interface ImportResult {
   inserted: number;
   updated: number;
   errors: string[];
+}
+
+interface ParsedRow {
+  lineNo: number;
+  phone: string;
+  activatedAt: Date;
+}
+
+interface PhonePlan {
+  phone: string;
+  rows: ParsedRow[];
+  activatedAt: Date;
+}
+
+const WRITE_CONCURRENCY = 6;
+
+async function mapWithConcurrency<T, R>(
+  items: T[],
+  concurrency: number,
+  worker: (item: T) => Promise<R>
+): Promise<R[]> {
+  const results = new Array<R>(items.length);
+  let nextIndex = 0;
+  const workers = Array.from(
+    { length: Math.min(concurrency, items.length) },
+    async () => {
+      while (nextIndex < items.length) {
+        const index = nextIndex++;
+        results[index] = await worker(items[index]);
+      }
+    }
+  );
+  await Promise.all(workers);
+  return results;
 }
 
 /**
@@ -36,6 +71,7 @@ export async function POST(req: Request) {
 
   const result: ImportResult = { inserted: 0, updated: 0, errors: [] };
   const lines = parsed.data.csv.split(/\r?\n/);
+  const validRows: ParsedRow[] = [];
   let lineNo = 0;
   for (const raw of lines) {
     lineNo++;
@@ -61,34 +97,120 @@ export async function POST(req: Request) {
     }
     const [y, m, d] = dateRaw.split("-").map(Number);
     const activatedAt = new Date(Date.UTC(y, m - 1, d));
-    if (Number.isNaN(activatedAt.getTime())) {
+    if (
+      Number.isNaN(activatedAt.getTime()) ||
+      activatedAt.getUTCFullYear() !== y ||
+      activatedAt.getUTCMonth() !== m - 1 ||
+      activatedAt.getUTCDate() !== d
+    ) {
       result.errors.push(`第 ${lineNo} 行: 日期无效 (${dateRaw})`);
       continue;
     }
 
-    try {
-      const existing = await prisma.sim.findUnique({ where: { phoneNumber: phone } });
-      if (existing) {
+    validRows.push({ lineNo, phone, activatedAt });
+  }
+
+  if (validRows.length === 0) {
+    return NextResponse.json({ ok: true, ...result });
+  }
+
+  const rowsByPhone = new Map<string, ParsedRow[]>();
+  for (const row of validRows) {
+    const rows = rowsByPhone.get(row.phone) ?? [];
+    rows.push(row);
+    rowsByPhone.set(row.phone, rows);
+  }
+
+  const plans: PhonePlan[] = Array.from(rowsByPhone, ([phone, rows]) => ({
+    phone,
+    rows,
+    activatedAt: rows[rows.length - 1].activatedAt,
+  }));
+
+  let existingSims: Array<{ id: number; phoneNumber: string; portToken: string | null }>;
+  try {
+    existingSims = await prisma.sim.findMany({
+      where: { phoneNumber: { in: plans.map((plan) => plan.phone) } },
+      select: { id: true, phoneNumber: true, portToken: true },
+    });
+  } catch (error) {
+    const detail = error instanceof Error ? error.message : String(error);
+    for (const row of validRows) {
+      result.errors.push(`第 ${row.lineNo} 行: 数据库错误 (${detail})`);
+    }
+    return NextResponse.json({ ok: true, ...result });
+  }
+
+  const existingByPhone = new Map(
+    existingSims.map((sim) => [sim.phoneNumber, sim])
+  );
+  const createPlans = plans.filter((plan) => !existingByPhone.has(plan.phone));
+  const updatePlans = plans.filter((plan) => existingByPhone.has(plan.phone));
+
+  const createTask = createPlans.length
+    ? prisma.sim
+        .createMany({
+          data: createPlans.map((plan) => ({
+            phoneNumber: plan.phone,
+            portToken: generatePortToken(),
+            activatedAt: plan.activatedAt,
+          })),
+        })
+        .then(() => null)
+        .catch((error: unknown) =>
+          error instanceof Error ? error.message : String(error)
+        )
+    : Promise.resolve<string | null>(null);
+
+  const updateTask = mapWithConcurrency(
+    updatePlans,
+    WRITE_CONCURRENCY,
+    async (plan) => {
+      const existing = existingByPhone.get(plan.phone)!;
+      try {
         await prisma.sim.update({
           where: { id: existing.id },
-          data: { activatedAt },
+          data: { activatedAt: plan.activatedAt },
+          select: { id: true },
         });
-        result.updated++;
-      } else {
-        await prisma.sim.create({
-          data: {
-            phoneNumber: phone,
-            portToken: generatePortToken(),
-            activatedAt,
-          },
-        });
-        result.inserted++;
+        invalidatePublicSimCache(existing);
+        return { plan, error: null as string | null };
+      } catch (error) {
+        return {
+          plan,
+          error: error instanceof Error ? error.message : String(error),
+        };
       }
-    } catch (e) {
-      result.errors.push(
-        `第 ${lineNo} 行: 数据库错误 (${e instanceof Error ? e.message : String(e)})`
-      );
     }
+  );
+
+  const [createError, updateOutcomes] = await Promise.all([
+    createTask,
+    updateTask,
+  ]);
+
+  for (const plan of createPlans) {
+    if (createError) {
+      for (const row of plan.rows) {
+        result.errors.push(`第 ${row.lineNo} 行: 数据库错误 (${createError})`);
+      }
+      continue;
+    }
+    result.inserted += 1;
+    // 同一 CSV 内重复的新号码：首行等价于插入，后续行等价于更新。
+    result.updated += plan.rows.length - 1;
+  }
+
+  for (const outcome of updateOutcomes) {
+    if (outcome.error) {
+      for (const row of outcome.plan.rows) {
+        result.errors.push(
+          `第 ${row.lineNo} 行: 数据库错误 (${outcome.error})`
+        );
+      }
+      continue;
+    }
+    result.updated += outcome.plan.rows.length;
   }
 
   return NextResponse.json({ ok: true, ...result });
