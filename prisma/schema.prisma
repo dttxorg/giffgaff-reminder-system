@@ -94,6 +94,8 @@ model ReminderSent {
   sim  Sim  @relation(fields: [simId], references: [id], onDelete: Cascade)
 
   @@unique([simId, dayOffset, bucket]) // 同号同日同 bucket 唯一 → 幂等
+  @@index([simId, sentAt])
+  @@index([userId, sentAt])
   @@index([sentAt])
 }
 
