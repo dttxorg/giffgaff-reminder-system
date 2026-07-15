@@ -64,19 +64,20 @@ export async function POST(req: Request) {
   }
 
   const count = parsed.data.count;
-  // 一次拿足够多原始码，批量去重
+  // 多生成少量候选，数据库里即使已有极小概率碰撞也能补足请求数量。
   const codes = new Set<string>();
-  const attempts = count * 2 + 10;
-  for (let i = 0; i < attempts && codes.size < count; i++) {
+  const candidateTarget = count + Math.min(20, count);
+  const attempts = candidateTarget * 2 + 10;
+  for (let i = 0; i < attempts && codes.size < candidateTarget; i++) {
     codes.add(normalizeCardCode(generateCardCode()));
   }
-  if (codes.size < count) {
+  if (codes.size < candidateTarget) {
     return NextResponse.json(
       { ok: false, error: "生成卡密失败,请重试" },
       { status: 500 }
     );
   }
-  const codeList = Array.from(codes).slice(0, count);
+  const codeList = Array.from(codes);
 
   // 检查库内已有（防御性，正常不会冲突）
   const existing = await prisma.cardKey.findMany({
@@ -84,23 +85,29 @@ export async function POST(req: Request) {
     select: { code: true },
   });
   const existingSet = new Set(existing.map((e) => e.code));
-  const finalCodes = codeList.filter((c) => !existingSet.has(c));
+  const finalCodes = codeList.filter((c) => !existingSet.has(c)).slice(0, count);
 
-  // createMany 在 PG unique 冲突时整体失败 → 改用循环 create
-  const created = [];
-  for (const code of finalCodes) {
-    try {
-      const c = await prisma.cardKey.create({
-        data: {
-          code,
-          notes: parsed.data.notes,
-        },
-      });
-      created.push(c);
-    } catch {
-      // unique 冲突静默跳过（极端情况）
-    }
+  if (finalCodes.length < count) {
+    return NextResponse.json(
+      { ok: false, error: "可用卡密数量不足,请重试" },
+      { status: 500 }
+    );
   }
 
-  return NextResponse.json({ ok: true, cards: created });
+  // PostgreSQL 支持 createManyAndReturn + skipDuplicates：一次写入并返回真正落库的码。
+  const created = await prisma.cardKey.createManyAndReturn({
+    data: finalCodes.map((code) => ({
+      code,
+      notes: parsed.data.notes,
+    })),
+    skipDuplicates: true,
+    select: { code: true },
+  });
+
+  return NextResponse.json({
+    ok: true,
+    cards: created,
+    requestedCount: count,
+    createdCount: created.length,
+  });
 }

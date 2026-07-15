@@ -7,16 +7,20 @@ import { LoadingButton } from "@/app/_components/loading-button";
 
 export function NewCardClient() {
   const router = useRouter();
-  const [count, setCount] = useState(10);
+  const [countInput, setCountInput] = useState("10");
   const [notes, setNotes] = useState("");
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [created, setCreated] = useState<string[] | null>(null);
+  const [requestedCount, setRequestedCount] = useState<number | null>(null);
   const [copied, setCopied] = useState(false);
+  const count = Number(countInput);
+  const validCount = Number.isInteger(count) && count >= 1 && count <= 500;
 
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!validCount) return;
     setError(null);
     setLoading(true);
     setCreated(null);
@@ -31,7 +35,13 @@ export function NewCardClient() {
         setError(data.error || "生成失败");
         return;
       }
-      setCreated(data.cards.map((c: { code: string }) => formatCardCode(c.code)));
+      const codes = data.cards.map((c: { code: string }) => formatCardCode(c.code));
+      if (codes.length === 0) {
+        setError("本次没有生成可用卡密，请重试");
+        return;
+      }
+      setRequestedCount(data.requestedCount ?? count);
+      setCreated(codes);
     } catch (e) {
       setError(e instanceof Error ? e.message : "网络错误");
     } finally {
@@ -40,10 +50,19 @@ export function NewCardClient() {
   };
 
   if (created && created.length > 0) {
+    const partial = requestedCount !== null && created.length < requestedCount;
     return (
       <div className="space-y-4">
-        <div className="p-4 rounded-lg bg-emerald-50 border border-emerald-200">
-          <div className="font-medium text-emerald-900 mb-1 inline-flex items-center gap-1">
+        <div
+          className={`rounded-lg border p-4 ${
+            partial
+              ? "border-amber-200 bg-amber-50"
+              : "border-emerald-200 bg-emerald-50"
+          }`}
+          role="status"
+          aria-live="polite"
+        >
+          <div className={`mb-1 inline-flex items-center gap-1 font-medium ${partial ? "text-amber-950" : "text-emerald-900"}`}>
             <svg
               width={16}
               height={16}
@@ -57,16 +76,20 @@ export function NewCardClient() {
             >
               <polyline points="20 6 9 17 4 12" />
             </svg>
-            已生成 {created.length} 张卡密
+            {partial
+              ? `已生成 ${created.length} / ${requestedCount} 张卡密`
+              : `已生成 ${created.length} 张卡密`}
           </div>
-          <div className="text-sm text-emerald-700">
-            请妥善保存,关闭页面后无法再次查看完整卡密
+          <div className={`text-sm ${partial ? "text-amber-800" : "text-emerald-700"}`}>
+            {partial
+              ? "极少数随机码发生并发冲突，已跳过；可再生成缺少的数量。"
+              : "请妥善保存,关闭页面后无法再次查看完整卡密"}
           </div>
         </div>
         <div className="bg-white rounded-lg border border-slate-200 p-4 max-h-96 overflow-y-auto">
           <div className="space-y-1.5 font-mono text-sm">
-            {created.map((code, i) => (
-              <div key={i} className="text-indigo-700 tracking-wider">
+            {created.map((code) => (
+              <div key={code} className="text-indigo-700 tracking-wider">
                 {code}
               </div>
             ))}
@@ -135,7 +158,8 @@ export function NewCardClient() {
             type="button"
             onClick={() => {
               setCreated(null);
-              setCount(10);
+              setRequestedCount(null);
+              setCountInput("10");
               setNotes("");
             }}
             className="px-4 py-2 rounded-lg text-slate-600 hover:bg-slate-100 text-sm"
@@ -153,41 +177,64 @@ export function NewCardClient() {
       className="bg-white rounded-xl border border-slate-200 p-6 space-y-4"
     >
       {error && (
-        <div className="p-3 rounded-lg bg-rose-50 border border-rose-200 text-rose-700 text-sm">
+        <div className="rounded-lg border border-rose-200 bg-rose-50 p-3 text-sm text-rose-700" role="alert">
           {error}
         </div>
       )}
 
       <div>
-        <label className="block text-sm font-medium mb-1.5">生成数量</label>
+        <label htmlFor="card-generation-count" className="block text-sm font-medium mb-1.5">
+          生成数量
+        </label>
         <input
+          id="card-generation-count"
           type="number"
-          value={count}
-          onChange={(e) => setCount(Math.max(1, Math.min(500, Number(e.target.value) || 1)))}
+          value={countInput}
+          onChange={(e) => setCountInput(e.target.value)}
+          onBlur={() => {
+            if (!countInput.trim() || !Number.isFinite(count)) {
+              setCountInput("1");
+              return;
+            }
+            setCountInput(String(Math.max(1, Math.min(500, Math.trunc(count)))));
+          }}
           min={1}
           max={500}
           required
+          disabled={loading}
           className="w-full px-3.5 py-2.5 rounded-lg border border-slate-300 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 outline-none"
         />
         <p className="text-xs text-slate-500 mt-1.5">最多 500 张/批</p>
       </div>
 
       <div>
-        <label className="block text-sm font-medium mb-1.5">
+        <label htmlFor="card-generation-notes" className="block text-sm font-medium mb-1.5">
           备注 <span className="text-slate-400 font-normal">(可选)</span>
         </label>
         <input
+          id="card-generation-notes"
           type="text"
           value={notes}
           onChange={(e) => setNotes(e.target.value)}
           placeholder="如：第一批 / 给某分销商 / 双十一活动"
           maxLength={100}
+          disabled={loading}
           className="w-full px-3.5 py-2.5 rounded-lg border border-slate-300 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 outline-none"
         />
         <p className="text-xs text-slate-500 mt-1.5">
           批次或来源标识,可在卡密列表搜索。例:【2026-01-微信群】【线下活动3月】
         </p>
       </div>
+
+      {loading && (
+        <div
+          className="rounded-lg border border-indigo-200 bg-indigo-50 px-3 py-2.5 text-sm text-indigo-900"
+          role="status"
+          aria-live="polite"
+        >
+          正在生成并写入 {count} 张卡密，请勿重复提交…
+        </div>
+      )}
 
       <div className="flex gap-2">
         <LoadingButton
@@ -196,12 +243,14 @@ export function NewCardClient() {
           loadingLabel="生成中"
           label="生成"
           tone="primary"
-          className="px-4 py-2 text-sm"
+          disabled={!validCount}
+          className="min-h-11 px-4 py-2 text-sm"
         />
         <button
           type="button"
           onClick={() => router.push("/admin/cards")}
-          className="px-4 py-2 rounded-lg text-slate-600 hover:bg-slate-100 text-sm"
+          disabled={loading}
+          className="min-h-11 rounded-lg px-4 py-2 text-sm text-slate-600 hover:bg-slate-100 disabled:cursor-wait disabled:opacity-50"
         >
           取消
         </button>
