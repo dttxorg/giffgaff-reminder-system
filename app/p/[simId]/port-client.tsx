@@ -1,13 +1,12 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { formatPhoneForDisplay } from "@/lib/phone";
 import { todayLocalISODate } from "@/lib/date";
-import { PortCardLoading } from "./port-card-loading";
 
-interface SimInfo {
+export interface SimInfo {
   phoneNumber: string;
   activatedAt: string;
   lastPortedAt: string | null;
@@ -16,55 +15,17 @@ interface SimInfo {
   portToken: string | null;
 }
 
-/**
- * URL 中的 simId 参数可以是:
- * - 老 int id (向后兼容旧的 /p/42)
- * - 新 portToken (不可枚举,32 字符 url-safe)
- *
- * 这两种都传给 API,由 API 决定如何查询。客户端只做"基本格式合法"校验,
- * 不区分形态。
- */
-function isParamValid(s: string): boolean {
-  // 老 int: 1+ 位数字
-  if (/^\d+$/.test(s)) return true;
-  // 新 token: url-safe, 16-64 字符
-  return /^[A-Za-z0-9_-]{16,64}$/.test(s);
+interface PortClientProps {
+  simIdRaw: string;
+  initialSim: SimInfo | null;
 }
 
-export default function PortClient() {
-  const params = useParams<{ simId: string }>();
-  const router = useRouter();
-  const simIdRaw = params.simId;
-  const simIdValid = isParamValid(simIdRaw);
-  const [sim, setSim] = useState<SimInfo | null>(null);
-  const [notFound, setNotFound] = useState(false);
-  const [portedAt, setPortedAt] = useState<string>("");
+export default function PortClient({ simIdRaw, initialSim }: PortClientProps) {
+  const [portedAt, setPortedAt] = useState(todayLocalISODate);
+  const [maxDate] = useState(todayLocalISODate);
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (!simIdValid) return;
-    // 保留原始字符串(todo: 后续如果 Next.js 自动 encode 可省略 encodeURIComponent)
-    fetch(`/api/p/${encodeURIComponent(simIdRaw)}`)
-      .then((r) => (r.ok ? r.json() : Promise.reject(r.status)))
-      .then((data: SimInfo) => {
-        // P6 安全修复:URL 是老 int 形式 且 sim 已有 portToken → 跳到 token URL
-        // 防止公开 URL 可枚举。replace 而非 push,避免 back 按钮回环到 int URL。
-        if (/^\d+$/.test(simIdRaw) && data.portToken) {
-          router.replace(`/p/${data.portToken}`);
-          return;
-        }
-        setSim(data);
-        setPortedAt(todayLocalISODate());
-      })
-      .catch(() => setNotFound(true));
-  }, [simIdRaw, simIdValid, router]);
-
-  // 最早可选 = 激活日期（API 返回的 YYYY-MM-DD 字符串，可直接用于 input[type=date] 的 min）
-  // 计算放在 sim 已确认非 null 之后（下方 early return），这里用占位避免 TS 报错
-  // maxDate 必须按用户本地时区的"今天"算(详见 lib/date.ts 的注释)。
-  const maxDate = todayLocalISODate();
 
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -89,7 +50,7 @@ export default function PortClient() {
     }
   };
 
-  if (notFound || !simIdValid) {
+  if (!initialSim) {
     return (
       <div className="max-w-md mx-auto px-4 py-12 text-center">
         <PublicBrandHeader />
@@ -132,13 +93,11 @@ export default function PortClient() {
     );
   }
 
-  if (!sim) {
-    return <PortCardLoading />;
-  }
-
   if (success) {
     return <SuccessPage />;
   }
+
+  const sim = initialSim;
 
   return (
     <div className="max-w-md mx-auto px-4 py-8 sm:py-12">
@@ -198,6 +157,7 @@ export default function PortClient() {
               min={sim.activatedAt}
               max={maxDate}
               required
+              suppressHydrationWarning
               className="w-full px-3.5 py-2.5 rounded-lg border border-slate-300 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 outline-none transition"
             />
             <p className="text-xs text-slate-500 mt-1">
