@@ -1,7 +1,6 @@
 import Link from "next/link";
 import { requireAdmin } from "@/lib/admin-guard";
 import { prisma } from "@/lib/db";
-import { normalizePhone } from "@/lib/phone";
 import { formatRelativeTime, formatUtcShanghaiDual } from "@/lib/date";
 import { shanghaiParts } from "@/lib/bucket";
 import { buildReminderWhere, hasAnyReminderFilter } from "@/lib/admin-reminder-filter";
@@ -31,41 +30,6 @@ interface PageProps {
 
 const PAGE_SIZE = 20;
 
-/**
- * Round 128: 把 where 构造逻辑抽到 lib/admin-reminder-filter.ts (纯函数,可单测),
- * 这里只剩 DB 查询(q → matching simIds)。
- */
-async function buildWhere(params: {
-  simId?: string;
-  q?: string;
-  status?: string;
-  from?: string;
-  to?: string;
-  channel?: string;
-  bound?: string;
-}) {
-  let matchingSimIds: number[] | undefined;
-  if (params.q) {
-    const cleaned = normalizePhone(params.q);
-    const matchedSims = await prisma.sim.findMany({
-      where: { phoneNumber: { contains: cleaned || params.q } },
-      select: { id: true },
-      take: 200,
-    });
-    matchingSimIds = matchedSims.map((s) => s.id);
-  }
-
-  return buildReminderWhere({
-    simId: params.simId,
-    status: params.status,
-    from: params.from,
-    to: params.to,
-    channel: params.channel,
-    bound: params.bound,
-    matchingSimIds,
-  });
-}
-
 export default async function RemindersPage({ searchParams }: PageProps) {
   await requireAdmin();
   const { simId, q, status, from, to, channel, bound, page } = await searchParams;
@@ -74,7 +38,16 @@ export default async function RemindersPage({ searchParams }: PageProps) {
   const currentPage = Math.max(1, parseInt(page || "1", 10) || 1);
   const skip = (currentPage - 1) * PAGE_SIZE;
 
-  const where = await buildWhere({ simId, q, status, from, to, channel, bound });
+  // 手机号直接通过 reminder → sim 关系过滤,不再先查 SIM ID 形成数据库瀑布。
+  const where = buildReminderWhere({
+    simId,
+    q,
+    status,
+    from,
+    to,
+    channel,
+    bound,
+  });
 
   // 列表 + 概览并行(无 filter,全量)
   const now = new Date();

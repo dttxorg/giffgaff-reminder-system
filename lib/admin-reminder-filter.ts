@@ -2,11 +2,12 @@
 //
 // 设计动机:
 // - 原 page.tsx 内嵌 buildWhere 难以测试(需要 mock Prisma)
-// - 抽出后 caller 仍负责 DB 查询(q→matchingSimIds),函数本身只做参数解析
+// - 手机号直接走 reminder → sim 关系过滤,避免 caller 先查 SIM 再查日志的串行等待
 // - 任何"非合法"输入静默忽略(返回 undefined),让 Prisma 自然不应用该过滤
 //
 // Round 128: 加 channel + bound 过滤(便于排查"哪个渠道最近失败多")
 import type { Prisma } from "./generated/prisma/client";
+import { normalizePhone } from "./phone";
 
 const VALID_CHANNELS = ["serverchan", "bark", "pushplus", "telegram"] as const;
 export type ChannelValue = (typeof VALID_CHANNELS)[number];
@@ -31,8 +32,8 @@ export interface ReminderFilterParams {
   channel?: string;
   /** "yes"=已绑(sim→user 存在);"no"=未绑 */
   bound?: string;
-  /** 通过 q 查 DB 得到的匹配 simId 列表(caller 解析) */
-  matchingSimIds?: number[];
+  /** 手机号搜索;格式化后直接应用到 sim 关系 */
+  q?: string;
 }
 
 /**
@@ -40,7 +41,7 @@ export interface ReminderFilterParams {
  *
  * 行为细节:
  * - simId: `parseInt` 必须是有限数字,否则忽略
- * - simId + matchingSimIds 同时存在 → 取交集;若无交集返回 `{ in: [] }`(零结果)
+ * - q: 规范化手机号后直接过滤 `sim.phoneNumber`;与 simId 同时存在时自然取交集
  * - status: 严格等于 "success" / "failed",其他值忽略
  * - from/to: 合法 yyyy-MM-dd 转 UTC 范围;`to` +1 天确保整天包含
  * - channel: 必须是 4 个合法渠道之一;否则忽略
@@ -54,23 +55,17 @@ export interface ReminderFilterParams {
 export function buildReminderWhere(params: ReminderFilterParams): ReminderWhere {
   const where: ReminderWhere = {};
 
-  // --- simId + matchingSimIds (求交集) ---
+  // --- simId + 手机号关系过滤 ---
   // 用正则确保"全数字"而不是 parseInt 的前缀宽松匹配(parseInt("12abc") → 12)
-  let simIdFilter: number | undefined;
   if (params.simId && /^\d+$/.test(params.simId)) {
-    simIdFilter = parseInt(params.simId, 10);
+    where.simId = parseInt(params.simId, 10);
   }
 
-  if (params.matchingSimIds !== undefined) {
-    if (simIdFilter !== undefined) {
-      where.simId = params.matchingSimIds.includes(simIdFilter)
-        ? simIdFilter
-        : { in: [] };
-    } else {
-      where.simId = { in: params.matchingSimIds };
+  if (params.q) {
+    const query = normalizePhone(params.q) || params.q.trim();
+    if (query) {
+      where.sim = { phoneNumber: { contains: query } };
     }
-  } else if (simIdFilter !== undefined) {
-    where.simId = simIdFilter;
   }
 
   // --- status ---

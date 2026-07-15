@@ -72,26 +72,25 @@ describe("buildReminderWhere — 日期范围", () => {
   });
 });
 
-describe("buildReminderWhere — matchingSimIds (q 解析后)", () => {
-  it("单用 → simId.in 数组", () => {
-    expect(buildReminderWhere({ matchingSimIds: [1, 2, 3] })).toEqual({
-      simId: { in: [1, 2, 3] },
+describe("buildReminderWhere — 手机号关系过滤", () => {
+  it("格式化手机号后直接过滤 sim.phoneNumber", () => {
+    expect(buildReminderWhere({ q: "07724 215 611" })).toEqual({
+      sim: { phoneNumber: { contains: "07724215611" } },
     });
   });
-  it("空数组 → simId.in 空(永远无匹配)", () => {
-    expect(buildReminderWhere({ matchingSimIds: [] })).toEqual({
-      simId: { in: [] },
+  it("支持用手机号后六位搜索", () => {
+    expect(buildReminderWhere({ q: "215611" })).toEqual({
+      sim: { phoneNumber: { contains: "215611" } },
     });
   });
-  it("simId 也在 matchingSimIds → simId 等于那个 number", () => {
-    expect(
-      buildReminderWhere({ simId: "2", matchingSimIds: [1, 2, 3] })
-    ).toEqual({ simId: 2 });
+  it("纯空白搜索静默忽略", () => {
+    expect(buildReminderWhere({ q: "   " })).toEqual({});
   });
-  it("simId 不在 matchingSimIds → 空集(零结果)", () => {
-    expect(
-      buildReminderWhere({ simId: "99", matchingSimIds: [1, 2, 3] })
-    ).toEqual({ simId: { in: [] } });
+  it("simId 与手机号同时存在时保留两个条件,由数据库直接求交集", () => {
+    expect(buildReminderWhere({ simId: "2", q: "215611" })).toEqual({
+      simId: 2,
+      sim: { phoneNumber: { contains: "215611" } },
+    });
   });
 });
 
@@ -162,11 +161,11 @@ describe("buildReminderWhere — 综合场景", () => {
   });
   it("手机号搜 + 日期范围 + 已绑筛选", () => {
     const r = buildReminderWhere({
-      matchingSimIds: [10, 20, 30],
+      q: "215611",
       bound: "yes",
       from: "2026-07-01",
     });
-    expect(r.simId).toEqual({ in: [10, 20, 30] });
+    expect(r.sim).toEqual({ phoneNumber: { contains: "215611" } });
     expect(r.user).toEqual({ isNot: null });
     const range = r.sentAt as { gte?: Date; lt?: Date } | undefined;
     expect(range?.gte).toEqual(new Date("2026-07-01T00:00:00Z"));
