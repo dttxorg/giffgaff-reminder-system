@@ -8,7 +8,7 @@ describe("推送历史查询载荷预算", () => {
     "export const getCurrentUserPushHistoryContext"
   );
   const helperEnd = session.indexOf(
-    "export interface CurrentUserSettingsContext"
+    "interface CurrentUserSettingsRow"
   );
   const helper = session.slice(helperStart, helperEnd);
 

@@ -288,54 +288,126 @@ export const getCurrentUserPushHistoryContext = cache(
   }
 );
 
+interface CurrentUserSettingsRow {
+  expiresAt: Date;
+  username: string;
+  simId: number | null;
+  phoneNumber: string | null;
+  isSelected: boolean | null;
+  selectedPortToken: string | null;
+  selectedActivatedAt: Date | null;
+  selectedLastPortedAt: Date | null;
+  selectedChannel: DashboardChannel | null;
+  selectedChannelKey: string | null;
+}
+
 export interface CurrentUserSettingsContext {
   username: string;
-  sims: Array<{
+  sims: Array<{ id: number; phoneNumber: string }>;
+  selectedSim: {
     id: number;
     phoneNumber: string;
     portToken: string | null;
     activatedAt: Date;
     lastPortedAt: Date | null;
-    channel: "serverchan" | "bark" | "pushplus" | "telegram";
+    channel: DashboardChannel;
     channelKey: string;
-  }>;
+  } | null;
 }
 
-/** 设置页上下文：保留选择器和当前卡表单字段，不读取状态与创建时间。 */
+export function summarizeCurrentUserSettingsRows(
+  rows: CurrentUserSettingsRow[]
+): CurrentUserSettingsContext | null {
+  const first = rows[0];
+  if (!first) return null;
+  const simRows = rows.filter(
+    (row): row is CurrentUserSettingsRow & {
+      simId: number;
+      phoneNumber: string;
+    } => row.simId !== null
+  );
+  const selected = simRows.find((row) => row.isSelected === true);
+  return {
+    username: first.username,
+    sims: simRows.map((row) => ({
+      id: row.simId,
+      phoneNumber: row.phoneNumber,
+    })),
+    selectedSim: selected
+      ? {
+          id: selected.simId,
+          phoneNumber: selected.phoneNumber,
+          portToken: selected.selectedPortToken,
+          activatedAt: selected.selectedActivatedAt!,
+          lastPortedAt: selected.selectedLastPortedAt,
+          channel: selected.selectedChannel!,
+          channelKey: selected.selectedChannelKey!,
+        }
+      : null,
+  };
+}
+
+/** 设置页上下文：全卡只返回选择器摘要，完整表单字段仅返回当前卡。 */
 export const getCurrentUserSettingsContext = cache(
-  async (): Promise<CurrentUserSettingsContext | null> => {
+  async (
+    requestedSimId: number | null
+  ): Promise<CurrentUserSettingsContext | null> => {
     const jar = await cookies();
     const sid = jar.get(USER_COOKIE)?.value;
     if (!sid) return null;
-    const session = await prisma.userSession.findUnique({
-      where: { id: sid },
-      select: {
-        expiresAt: true,
-        user: {
-          select: {
-            username: true,
-            sims: {
-              orderBy: { id: "asc" },
-              select: {
-                id: true,
-                phoneNumber: true,
-                portToken: true,
-                activatedAt: true,
-                lastPortedAt: true,
-                channel: true,
-                channelKey: true,
-              },
-            },
-          },
-        },
-      },
-    });
-    if (!session) return null;
-    if (session.expiresAt < new Date()) {
+
+    const rows = await prisma.$queryRaw<CurrentUserSettingsRow[]>`
+      WITH current_session AS (
+        SELECT
+          session."expiresAt",
+          usr."id" AS "userId",
+          usr."username"
+        FROM "UserSession" session
+        INNER JOIN "User" usr ON usr."id" = session."userId"
+        WHERE session."id" = ${sid}
+      ),
+      ranked_sims AS (
+        SELECT
+          sim.*,
+          ROW_NUMBER() OVER (
+            ORDER BY
+              CASE
+                WHEN ${requestedSimId}::int IS NOT NULL
+                  AND sim."id" = ${requestedSimId} THEN 0
+                ELSE 1
+              END,
+              sim."id" ASC
+          ) AS "simRank"
+        FROM "Sim" sim
+        INNER JOIN current_session current
+          ON current."userId" = sim."userId"
+      )
+      SELECT
+        current."expiresAt",
+        current."username",
+        ranked."id" AS "simId",
+        ranked."phoneNumber",
+        (ranked."simRank" = 1) AS "isSelected",
+        CASE WHEN ranked."simRank" = 1 THEN ranked."portToken" END
+          AS "selectedPortToken",
+        CASE WHEN ranked."simRank" = 1 THEN ranked."activatedAt" END
+          AS "selectedActivatedAt",
+        CASE WHEN ranked."simRank" = 1 THEN ranked."lastPortedAt" END
+          AS "selectedLastPortedAt",
+        CASE WHEN ranked."simRank" = 1 THEN ranked."channel"::text END
+          AS "selectedChannel",
+        CASE WHEN ranked."simRank" = 1 THEN ranked."channelKey" END
+          AS "selectedChannelKey"
+      FROM current_session current
+      LEFT JOIN ranked_sims ranked ON TRUE
+      ORDER BY ranked."id" ASC
+    `;
+    if (rows.length === 0) return null;
+    if (rows[0].expiresAt < new Date()) {
       await prisma.userSession.delete({ where: { id: sid } }).catch(() => {});
       return null;
     }
-    return session.user;
+    return summarizeCurrentUserSettingsRows(rows);
   }
 );
 

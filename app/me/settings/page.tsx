@@ -28,12 +28,17 @@ function parseChannel(input: string | undefined): Channel {
  *     通过 ?simId=X 切换卡
  */
 export default async function MeSettingsPage({ searchParams }: PageProps) {
-  const user = await getCurrentUserSettingsContext();
+  const { channel: channelParam, simId: simIdParam } = await searchParams;
+  const requestedSimId =
+    simIdParam && /^\d+$/.test(simIdParam) && String(Number(simIdParam)) === simIdParam
+      ? Number(simIdParam)
+      : null;
+  const user = await getCurrentUserSettingsContext(requestedSimId);
   if (!user) redirect("/login");
 
-  const { channel: channelParam, simId: simIdParam } = await searchParams;
   const sims = user.sims;
-  if (sims.length === 0) {
+  const selectedSim = user.selectedSim;
+  if (sims.length === 0 || !selectedSim) {
     return (
       <div className="max-w-md mx-auto px-4 py-8 sm:py-12 text-center">
         <h1 className="text-2xl font-bold mb-2">设置</h1>
@@ -47,8 +52,7 @@ export default async function MeSettingsPage({ searchParams }: PageProps) {
       </div>
     );
   }
-  const selectedSim =
-    sims.find((s) => String(s.id) === simIdParam) ?? sims[0];
+  const selectedIndex = sims.findIndex((sim) => sim.id === selectedSim.id);
 
   // 默认 channel:优先用 URL(帮助页 deep-link),否则用当前 sim 的 channel
   const initialChannel = channelParam
@@ -67,7 +71,7 @@ export default async function MeSettingsPage({ searchParams }: PageProps) {
       <h1 className="text-2xl font-bold mb-2">设置</h1>
       <p className="text-sm text-slate-500 mb-6">
         账号 <span className="font-mono text-slate-700">{user.username}</span>
-        {sims.length > 1 && ` · 当前编辑第 ${sims.indexOf(selectedSim) + 1} 张 SIM 卡`}
+        {sims.length > 1 && ` · 当前编辑第 ${selectedIndex + 1} 张 SIM 卡`}
       </p>
 
       {/* 多卡切换：单个原生选择器可稳定承载 50+ 号码，不渲染预取链接墙。 */}
@@ -83,7 +87,7 @@ export default async function MeSettingsPage({ searchParams }: PageProps) {
       )}
 
       <h2 className="text-lg font-semibold mb-3">
-        通知渠道 ({sims.length > 1 ? `第 ${sims.indexOf(selectedSim) + 1} 张` : "本卡"})
+        通知渠道 ({sims.length > 1 ? `第 ${selectedIndex + 1} 张` : "本卡"})
       </h2>
       <p className="text-xs text-slate-500 mb-3">
         每张 SIM 卡可独立设置推送渠道。账号下所有卡用同一渠道(批量复制)
