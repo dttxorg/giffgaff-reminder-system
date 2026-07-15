@@ -230,6 +230,12 @@ export const getCurrentUserSessionStatus = cache(async (): Promise<boolean> => {
   return true;
 });
 
+/** 只读取未校验的 Session Cookie，供把校验并入同一条 SQL 的写路径使用。 */
+export async function getCurrentUserSessionId(): Promise<string | null> {
+  const jar = await cookies();
+  return jar.get(USER_COOKIE)?.value ?? null;
+}
+
 /** 只读取当前 Session 的 userId，供不需要账号/SIM 详情的写接口使用。 */
 export const getCurrentUserId = cache(async (): Promise<number | null> => {
   const jar = await cookies();

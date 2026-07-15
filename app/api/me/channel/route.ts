@@ -1,8 +1,9 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/db";
-import { getCurrentUserId } from "@/lib/session";
+import { getCurrentUserId, getCurrentUserSessionId } from "@/lib/session";
 import { sendPush } from "@/lib/channels";
+import { updateCurrentUserSimChannel } from "@/lib/user-sim-writes";
 
 const BodySchema = z.object({
   channel: z.enum(["serverchan", "bark", "pushplus", "telegram"]),
@@ -25,8 +26,8 @@ const BodySchema = z.object({
  * 避免保存错的 key 导致后续推送失败。
  */
 export async function POST(req: Request) {
-  const userId = await getCurrentUserId();
-  if (!userId) {
+  const sessionId = await getCurrentUserSessionId();
+  if (!sessionId) {
     return NextResponse.json({ ok: false, error: "未登录" }, { status: 401 });
   }
 
@@ -45,20 +46,19 @@ export async function POST(req: Request) {
 
   // 设置页已经完成测试推送时，归属校验与写入合并为一次查询。
   if (verified && requestedSimId !== undefined) {
-    const [updatedSim] = await prisma.sim.updateManyAndReturn({
-      where: { id: requestedSimId, userId },
-      data: { channel, channelKey },
-      select: { id: true },
-    });
-    if (updatedSim) {
-      return NextResponse.json({ ok: true, simId: updatedSim.id });
+    const outcome = await updateCurrentUserSimChannel(
+      sessionId,
+      requestedSimId,
+      channel,
+      channelKey
+    );
+    if (!outcome.authenticated) {
+      return NextResponse.json({ ok: false, error: "未登录" }, { status: 401 });
     }
-
-    const firstOwnedSim = await prisma.sim.findFirst({
-      where: { userId },
-      select: { id: true },
-    });
-    if (!firstOwnedSim) {
+    if (outcome.sim) {
+      return NextResponse.json({ ok: true, simId: outcome.sim.id });
+    }
+    if (!outcome.hasSims) {
       return NextResponse.json(
         { ok: false, error: "您还没绑定任何 SIM 卡" },
         { status: 400 }
@@ -71,6 +71,10 @@ export async function POST(req: Request) {
   }
 
   // 兼容旧客户端不传 simId，以及未先测试推送的请求。
+  const userId = await getCurrentUserId();
+  if (!userId) {
+    return NextResponse.json({ ok: false, error: "未登录" }, { status: 401 });
+  }
   const targetSim = await prisma.sim.findFirst({
     where:
       requestedSimId === undefined

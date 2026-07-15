@@ -2,6 +2,9 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
   getCurrentUserId: vi.fn(),
+  getCurrentUserSessionId: vi.fn(),
+  updateCurrentUserSimActivatedAt: vi.fn(),
+  updateCurrentUserSimChannel: vi.fn(),
   userFindUnique: vi.fn(),
   userUpdate: vi.fn(),
   simFindFirst: vi.fn(),
@@ -15,6 +18,12 @@ const mocks = vi.hoisted(() => ({
 
 vi.mock("../lib/session", () => ({
   getCurrentUserId: mocks.getCurrentUserId,
+  getCurrentUserSessionId: mocks.getCurrentUserSessionId,
+}));
+
+vi.mock("../lib/user-sim-writes", () => ({
+  updateCurrentUserSimActivatedAt: mocks.updateCurrentUserSimActivatedAt,
+  updateCurrentUserSimChannel: mocks.updateCurrentUserSimChannel,
 }));
 
 vi.mock("../lib/db", () => ({
@@ -60,6 +69,7 @@ describe("用户设置写接口", () => {
   beforeEach(() => {
     Object.values(mocks).forEach((mock) => mock.mockReset());
     mocks.getCurrentUserId.mockResolvedValue(7);
+    mocks.getCurrentUserSessionId.mockResolvedValue("session-id");
     mocks.userFindUnique.mockResolvedValue({ passwordHash: "old-hash" });
     mocks.verifyPassword.mockResolvedValue(true);
     mocks.hashPassword.mockResolvedValue("new-hash");
@@ -85,9 +95,11 @@ describe("用户设置写接口", () => {
   });
 
   it("修改指定 SIM 日期时在同一次写入中校验归属并失效公开缓存", async () => {
-    mocks.simUpdateManyAndReturn.mockResolvedValue([
-      { id: 23, portToken: "public-token" },
-    ]);
+    mocks.updateCurrentUserSimActivatedAt.mockResolvedValue({
+      authenticated: true,
+      hasSims: true,
+      sim: { id: 23, portToken: "public-token" },
+    });
 
     const response = await changeActivatedAt(
       jsonRequest("/api/me/sim", "PATCH", {
@@ -99,11 +111,10 @@ describe("用户设置写接口", () => {
 
     expect(response.status).toBe(200);
     expect(payload).toEqual({ ok: true, simId: 23 });
-    expect(mocks.simUpdateManyAndReturn).toHaveBeenCalledWith(
-      expect.objectContaining({
-        where: { id: 23, userId: 7 },
-        select: { id: true, portToken: true },
-      })
+    expect(mocks.updateCurrentUserSimActivatedAt).toHaveBeenCalledWith(
+      "session-id",
+      23,
+      new Date("2026-01-02T00:00:00.000Z")
     );
     expect(mocks.invalidatePublicSimCache).toHaveBeenCalledWith({
       id: 23,
@@ -112,8 +123,11 @@ describe("用户设置写接口", () => {
   });
 
   it("修改他人 SIM 日期仍返回 403", async () => {
-    mocks.simUpdateManyAndReturn.mockResolvedValue([]);
-    mocks.simFindFirst.mockResolvedValue({ id: 11 });
+    mocks.updateCurrentUserSimActivatedAt.mockResolvedValue({
+      authenticated: true,
+      hasSims: true,
+      sim: null,
+    });
 
     const response = await changeActivatedAt(
       jsonRequest("/api/me/sim", "PATCH", {
@@ -127,8 +141,11 @@ describe("用户设置写接口", () => {
   });
 
   it("账号没有 SIM 时修改日期仍返回 400", async () => {
-    mocks.simUpdateManyAndReturn.mockResolvedValue([]);
-    mocks.simFindFirst.mockResolvedValue(null);
+    mocks.updateCurrentUserSimActivatedAt.mockResolvedValue({
+      authenticated: true,
+      hasSims: false,
+      sim: null,
+    });
 
     const response = await changeActivatedAt(
       jsonRequest("/api/me/sim", "PATCH", {
@@ -140,8 +157,30 @@ describe("用户设置写接口", () => {
     expect(response.status).toBe(400);
   });
 
+  it("指定 SIM 日期更新遇到过期 Session 时返回 401", async () => {
+    mocks.updateCurrentUserSimActivatedAt.mockResolvedValue({
+      authenticated: false,
+      hasSims: false,
+      sim: null,
+    });
+
+    const response = await changeActivatedAt(
+      jsonRequest("/api/me/sim", "PATCH", {
+        simId: 23,
+        activatedAt: "2026-01-02",
+      })
+    );
+
+    expect(response.status).toBe(401);
+    expect(mocks.invalidatePublicSimCache).not.toHaveBeenCalled();
+  });
+
   it("已测试的渠道保存只需一次带归属条件的写入", async () => {
-    mocks.simUpdateManyAndReturn.mockResolvedValue([{ id: 23 }]);
+    mocks.updateCurrentUserSimChannel.mockResolvedValue({
+      authenticated: true,
+      hasSims: true,
+      sim: { id: 23, portToken: null },
+    });
 
     const response = await changeChannel(
       jsonRequest("/api/me/channel", "POST", {
@@ -155,21 +194,22 @@ describe("用户设置写接口", () => {
 
     expect(response.status).toBe(200);
     expect(payload).toEqual({ ok: true, simId: 23 });
-    expect(mocks.simUpdateManyAndReturn).toHaveBeenCalledWith({
-      where: { id: 23, userId: 7 },
-      data: {
-        channel: "bark",
-        channelKey: "https://api.day.app/example",
-      },
-      select: { id: true },
-    });
+    expect(mocks.updateCurrentUserSimChannel).toHaveBeenCalledWith(
+      "session-id",
+      23,
+      "bark",
+      "https://api.day.app/example"
+    );
     expect(mocks.simFindFirst).not.toHaveBeenCalled();
     expect(mocks.sendPush).not.toHaveBeenCalled();
   });
 
   it("渠道保存无法越权修改其他用户的 SIM", async () => {
-    mocks.simUpdateManyAndReturn.mockResolvedValue([]);
-    mocks.simFindFirst.mockResolvedValue({ id: 11 });
+    mocks.updateCurrentUserSimChannel.mockResolvedValue({
+      authenticated: true,
+      hasSims: true,
+      sim: null,
+    });
 
     const response = await changeChannel(
       jsonRequest("/api/me/channel", "POST", {
@@ -185,8 +225,11 @@ describe("用户设置写接口", () => {
   });
 
   it("账号没有 SIM 时保存渠道仍返回 400", async () => {
-    mocks.simUpdateManyAndReturn.mockResolvedValue([]);
-    mocks.simFindFirst.mockResolvedValue(null);
+    mocks.updateCurrentUserSimChannel.mockResolvedValue({
+      authenticated: true,
+      hasSims: false,
+      sim: null,
+    });
 
     const response = await changeChannel(
       jsonRequest("/api/me/channel", "POST", {
@@ -198,6 +241,25 @@ describe("用户设置写接口", () => {
     );
 
     expect(response.status).toBe(400);
+  });
+
+  it("渠道保存遇到过期 Session 时返回 401", async () => {
+    mocks.updateCurrentUserSimChannel.mockResolvedValue({
+      authenticated: false,
+      hasSims: false,
+      sim: null,
+    });
+
+    const response = await changeChannel(
+      jsonRequest("/api/me/channel", "POST", {
+        simId: 23,
+        channel: "serverchan",
+        channelKey: "send-key",
+        verified: true,
+      })
+    );
+
+    expect(response.status).toBe(401);
   });
 
   it("未验证渠道先检查归属，不为越权 SIM 发送测试推送", async () => {
