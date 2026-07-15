@@ -2,7 +2,6 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const dbMocks = vi.hoisted(() => ({
   simFindMany: vi.fn(),
-  userFindMany: vi.fn(),
   reminderFindMany: vi.fn(),
   queryRaw: vi.fn(),
 }));
@@ -10,7 +9,6 @@ const dbMocks = vi.hoisted(() => ({
 vi.mock("../lib/db", () => ({
   prisma: {
     sim: { findMany: dbMocks.simFindMany },
-    user: { findMany: dbMocks.userFindMany },
     reminderSent: { findMany: dbMocks.reminderFindMany },
     $queryRaw: dbMocks.queryRaw,
   },
@@ -51,7 +49,6 @@ function reminder(
 describe("admin-dashboard-data", () => {
   beforeEach(() => {
     dbMocks.simFindMany.mockReset();
-    dbMocks.userFindMany.mockReset();
     dbMocks.reminderFindMany.mockReset();
     dbMocks.queryRaw.mockReset();
   });
@@ -85,17 +82,18 @@ describe("admin-dashboard-data", () => {
 
   it("鉴权后一轮并行查询,90 日日志改为聚合快照", async () => {
     dbMocks.simFindMany.mockResolvedValueOnce([]);
-    dbMocks.userFindMany.mockResolvedValueOnce([]);
-    dbMocks.queryRaw.mockResolvedValueOnce([
-      { daily: [], channels: [], sims: [] },
-    ]);
+    dbMocks.queryRaw.mockImplementation((strings: TemplateStringsArray) => {
+      const sql = strings.join(" ");
+      return sql.includes('FROM "User"')
+        ? Promise.resolve([{ totalCount: 0, dailyCounts: [0, 0, 0, 0, 0, 0, 0] }])
+        : Promise.resolve([{ daily: [], channels: [], sims: [] }]);
+    });
     dbMocks.reminderFindMany.mockResolvedValueOnce([]);
 
     await getAdminDashboardData(now);
 
     expect(dbMocks.simFindMany).toHaveBeenCalledOnce();
-    expect(dbMocks.userFindMany).toHaveBeenCalledOnce();
     expect(dbMocks.reminderFindMany).toHaveBeenCalledOnce();
-    expect(dbMocks.queryRaw).toHaveBeenCalledOnce();
+    expect(dbMocks.queryRaw).toHaveBeenCalledTimes(2);
   });
 });

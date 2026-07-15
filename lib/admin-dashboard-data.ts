@@ -8,6 +8,10 @@ import {
   getAdminDashboardReminderSnapshot,
   summarizeAdminReminderSnapshot,
 } from "./admin-dashboard-reminder-snapshot";
+import {
+  getAdminDashboardUserSnapshot,
+  summarizeAdminUserSnapshot,
+} from "./admin-dashboard-user-snapshot";
 import type { Channel } from "@/lib/generated/prisma/enums";
 
 type ReminderStatus = "success" | "failed";
@@ -270,7 +274,7 @@ export function summarizeAdminDashboard(
 
 /** 鉴权完成后固定只等待一轮；90 天日志在数据库内聚合后返回。 */
 export async function getAdminDashboardData(now: Date) {
-  const [sims, users, reminderSnapshot, recent] = await Promise.all([
+  const [sims, userSnapshot, reminderSnapshot, recent] = await Promise.all([
     prisma.sim.findMany({
       select: {
         id: true,
@@ -284,7 +288,7 @@ export async function getAdminDashboardData(now: Date) {
         user: { select: { createdAt: true } },
       },
     }),
-    prisma.user.findMany({ select: { createdAt: true } }),
+    getAdminDashboardUserSnapshot(now),
     getAdminDashboardReminderSnapshot(now),
     prisma.reminderSent.findMany({
       take: 10,
@@ -304,7 +308,8 @@ export async function getAdminDashboardData(now: Date) {
   const phoneById = new Map(sims.map((sim) => [sim.id, sim.phoneNumber]));
 
   return {
-    ...summarizeAdminDashboard([], sims, users, now),
+    ...summarizeAdminDashboard([], sims, [], now),
+    ...summarizeAdminUserSnapshot(userSnapshot, now),
     ...summarizeAdminReminderSnapshot(reminderSnapshot, phoneById, now),
     recent,
   };
