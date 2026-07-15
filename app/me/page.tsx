@@ -5,6 +5,7 @@ import { SimCard } from "./_components/sim-card";
 import { SimTabs } from "./_components/sim-tabs";
 import { PortCountdownHero } from "./_components/port-countdown-hero";
 import { PortOverdueBanner } from "./_components/port-overdue-banner";
+import { ActionBar } from "./_components/action-bar";
 
 interface PageProps {
   searchParams: Promise<{ simId?: string }>;
@@ -105,64 +106,8 @@ export default async function MePage({ searchParams }: PageProps) {
         />
       )}
 
-      {/* 账号级操作(固定在底部) */}
-      {simCount > 0 && (
-        <div className="mt-6 pt-5 border-t border-slate-200">
-          <div className="flex items-center justify-center gap-4 text-sm flex-wrap">
-            <Link
-              href={`/me/settings?simId=${activeSim?.id ?? ""}`}
-              className="text-indigo-600 hover:underline inline-flex items-center gap-1"
-              title="修改密码 / 通知渠道 / 激活日期"
-            >
-              <svg
-                width={14}
-                height={14}
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth={2}
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                aria-hidden="true"
-              >
-                <circle cx="12" cy="12" r="3" />
-                <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" />
-              </svg>
-              设置
-            </Link>
-            <span className="text-slate-300">|</span>
-            <Link
-              href="/redeem"
-              className="text-indigo-600 hover:underline inline-flex items-center gap-1"
-              title="用新卡密把第 N+1 张 SIM 卡绑定到本账号"
-            >
-              <svg
-                width={14}
-                height={14}
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth={2}
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                aria-hidden="true"
-              >
-                <line x1="12" y1="5" x2="12" y2="19" />
-                <line x1="5" y1="12" x2="19" y2="12" />
-              </svg>
-              绑定更多 SIM 卡
-            </Link>
-            <span className="text-slate-300">|</span>
-            <Link
-              href="/api/auth/logout"
-              className="text-slate-500 hover:text-slate-900 inline-flex items-center gap-1"
-              title="退出登录"
-            >
-              退出
-            </Link>
-          </div>
-        </div>
-      )}
+      {/* Round 218: 底部 action bar(改用 pill 按钮,带 icon) */}
+      {simCount > 0 && <ActionBar activeSimId={activeSim?.id ?? null} />}
     </div>
   );
 }
