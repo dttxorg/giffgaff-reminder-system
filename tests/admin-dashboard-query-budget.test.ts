@@ -12,6 +12,10 @@ describe("管理仪表盘查询预算", () => {
     "lib/admin-dashboard-user-snapshot.ts",
     "utf8"
   );
+  const simSnapshot = fs.readFileSync(
+    "lib/admin-dashboard-sim-snapshot.ts",
+    "utf8"
+  );
 
   it("页面只通过统一快照加载数据，不再逐卡片调用统计查询", () => {
     expect(source).toContain("getAdminDashboardData(now)");
@@ -30,7 +34,7 @@ describe("管理仪表盘查询预算", () => {
     expect(data).not.toContain("const reminderStart");
     expect(snapshot).toContain("WITH reminder_base AS MATERIALIZED");
     expect(snapshot).toContain("jsonb_agg");
-    expect(snapshot).toContain('GROUP BY "simId"');
+    expect(snapshot).toContain('GROUP BY base."simId", sim."phoneNumber"');
   });
 
   it("用户总数与 7 日趋势使用单行聚合,不再回传全部用户", () => {
@@ -38,5 +42,13 @@ describe("管理仪表盘查询预算", () => {
     expect(data).not.toContain("prisma.user.findMany");
     expect(userSnapshot).toContain('COUNT(*)::int AS "totalCount"');
     expect(userSnapshot).toContain("jsonb_build_array(");
+  });
+
+  it("SIM 指标使用聚合快照,运行时不再回传全量卡片和渠道密钥", () => {
+    expect(data).toContain("getAdminDashboardSimSnapshot(now)");
+    expect(data).not.toContain("prisma.sim.findMany");
+    expect(simSnapshot).toContain("WITH sim_base AS MATERIALIZED");
+    expect(simSnapshot).toContain('LIMIT 10');
+    expect(snapshot).toContain('sim."phoneNumber"');
   });
 });

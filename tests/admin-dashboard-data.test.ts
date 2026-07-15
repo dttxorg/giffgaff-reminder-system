@@ -1,14 +1,12 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const dbMocks = vi.hoisted(() => ({
-  simFindMany: vi.fn(),
   reminderFindMany: vi.fn(),
   queryRaw: vi.fn(),
 }));
 
 vi.mock("../lib/db", () => ({
   prisma: {
-    sim: { findMany: dbMocks.simFindMany },
     reminderSent: { findMany: dbMocks.reminderFindMany },
     $queryRaw: dbMocks.queryRaw,
   },
@@ -48,7 +46,6 @@ function reminder(
 
 describe("admin-dashboard-data", () => {
   beforeEach(() => {
-    dbMocks.simFindMany.mockReset();
     dbMocks.reminderFindMany.mockReset();
     dbMocks.queryRaw.mockReset();
   });
@@ -81,19 +78,40 @@ describe("admin-dashboard-data", () => {
   });
 
   it("鉴权后一轮并行查询,90 日日志改为聚合快照", async () => {
-    dbMocks.simFindMany.mockResolvedValueOnce([]);
     dbMocks.queryRaw.mockImplementation((strings: TemplateStringsArray) => {
       const sql = strings.join(" ");
-      return sql.includes('FROM "User"')
-        ? Promise.resolve([{ totalCount: 0, dailyCounts: [0, 0, 0, 0, 0, 0, 0] }])
-        : Promise.resolve([{ daily: [], channels: [], sims: [] }]);
+      if (sql.includes('FROM "User"')) {
+        return Promise.resolve([
+          { totalCount: 0, dailyCounts: [0, 0, 0, 0, 0, 0, 0] },
+        ]);
+      }
+      if (sql.includes("WITH sim_base AS MATERIALIZED")) {
+        return Promise.resolve([
+          {
+            totalCount: 0,
+            activeCount: 0,
+            pausedCount: 0,
+            channelCount: 0,
+            boundCount: 0,
+            unboundCount: 0,
+            recentCount: 0,
+            recentActiveCount: 0,
+            recentPausedCount: 0,
+            inWindowCount: 0,
+            newDailyCounts: [0, 0, 0, 0, 0, 0, 0],
+            bindTotalCounts: [0, 0, 0, 0, 0, 0, 0],
+            bindBoundCounts: [0, 0, 0, 0, 0, 0, 0],
+            inWindowSims: [],
+          },
+        ]);
+      }
+      return Promise.resolve([{ daily: [], channels: [], sims: [] }]);
     });
     dbMocks.reminderFindMany.mockResolvedValueOnce([]);
 
     await getAdminDashboardData(now);
 
-    expect(dbMocks.simFindMany).toHaveBeenCalledOnce();
     expect(dbMocks.reminderFindMany).toHaveBeenCalledOnce();
-    expect(dbMocks.queryRaw).toHaveBeenCalledTimes(2);
+    expect(dbMocks.queryRaw).toHaveBeenCalledTimes(3);
   });
 });

@@ -31,6 +31,7 @@ describe("admin dashboard reminder snapshot", () => {
       sims: [
         {
           simId: 1,
+          phoneNumber: "07724215611",
           last7Total: 3,
           last90Total: 3,
           last7Failed: 2,
@@ -41,7 +42,6 @@ describe("admin dashboard reminder snapshot", () => {
 
     const result = summarizeAdminReminderSnapshot(
       snapshot,
-      new Map([[1, "07724215611"]]),
       now
     );
 
@@ -68,7 +68,6 @@ describe("admin dashboard reminder snapshot", () => {
   it("空快照仍补齐 90 天和四个渠道", () => {
     const result = summarizeAdminReminderSnapshot(
       { daily: [], channels: [], sims: [] },
-      new Map(),
       now
     );
 

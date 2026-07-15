@@ -34,6 +34,7 @@ export interface AdminDashboardChannelCount {
 
 export interface AdminDashboardSimCount {
   simId: number;
+  phoneNumber: string;
   last7Total: number;
   last90Total: number;
   last7Failed: number;
@@ -112,18 +113,20 @@ export async function getAdminDashboardReminderSnapshot(
     ),
     sim_counts AS (
       SELECT
-        "simId",
-        (COUNT(*) FILTER (WHERE "sentAt" >= ${last7Exact}))::int
+        base."simId",
+        sim."phoneNumber",
+        (COUNT(*) FILTER (WHERE base."sentAt" >= ${last7Exact}))::int
           AS "last7Total",
         COUNT(*)::int AS "last90Total",
         (COUNT(*) FILTER (
-          WHERE "sentAt" >= ${last7Exact} AND "status" = 'failed'
+          WHERE base."sentAt" >= ${last7Exact} AND base."status" = 'failed'
         ))::int AS "last7Failed",
         (COUNT(*) FILTER (
-          WHERE "sentAt" >= ${todayStart} AND "status" = 'failed'
+          WHERE base."sentAt" >= ${todayStart} AND base."status" = 'failed'
         ))::int AS "todayFailed"
-      FROM reminder_base
-      GROUP BY "simId"
+      FROM reminder_base base
+      INNER JOIN "Sim" sim ON sim."id" = base."simId"
+      GROUP BY base."simId", sim."phoneNumber"
     )
     SELECT
       COALESCE(
@@ -175,15 +178,14 @@ function channelStats(
 
 function rankSims(
   rows: AdminDashboardSimCount[],
-  phoneById: Map<number, string>,
-  field: keyof Omit<AdminDashboardSimCount, "simId">,
+  field: "last7Total" | "last90Total" | "last7Failed" | "todayFailed",
   limit: number
 ) {
   return rows
-    .filter((row) => row[field] > 0 && phoneById.has(row.simId))
+    .filter((row) => row[field] > 0 && row.phoneNumber !== "")
     .map((row) => ({
       simId: row.simId,
-      phoneNumber: phoneById.get(row.simId)!,
+      phoneNumber: row.phoneNumber,
       failedCount: row[field],
     }))
     .sort((a, b) => b.failedCount - a.failedCount || a.simId - b.simId)
@@ -193,7 +195,6 @@ function rankSims(
 /** 把紧凑聚合快照还原成页面原有的提醒指标形状。 */
 export function summarizeAdminReminderSnapshot(
   snapshot: AdminDashboardReminderSnapshot,
-  phoneById: Map<number, string>,
   now: Date
 ) {
   const dailyCounts = Array.from({ length: 90 }, () => 0);
@@ -217,10 +218,10 @@ export function summarizeAdminReminderSnapshot(
       success: stat.success,
       failed: stat.failed,
     })),
-    topFailingSims: rankSims(snapshot.sims, phoneById, "last7Failed", 3),
-    topActiveSims: rankSims(snapshot.sims, phoneById, "last7Total", 5),
-    topActiveSims90d: rankSims(snapshot.sims, phoneById, "last90Total", 5),
-    todayFailingSims: rankSims(snapshot.sims, phoneById, "todayFailed", 5),
+    topFailingSims: rankSims(snapshot.sims, "last7Failed", 3),
+    topActiveSims: rankSims(snapshot.sims, "last7Total", 5),
+    topActiveSims90d: rankSims(snapshot.sims, "last90Total", 5),
+    todayFailingSims: rankSims(snapshot.sims, "todayFailed", 5),
     channelStatsLast7Days: channelStats(snapshot.channels, "last7"),
     channelStatsLast90Days: channelStats(snapshot.channels, "last90"),
   };
