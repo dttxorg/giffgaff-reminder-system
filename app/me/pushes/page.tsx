@@ -11,6 +11,7 @@ import { groupRemindersByDay } from "@/lib/push-grouping";
 import { shanghaiParts } from "@/lib/bucket";
 import { PushSummaryCard } from "../_components/push-summary-card";
 import { PushFrequencyStrip } from "../_components/push-frequency-strip";
+import { EmptyPushes } from "../_components/empty-pushes";
 
 interface PageProps {
   searchParams: Promise<{ status?: string; from?: string; to?: string; simId?: string }>;
@@ -332,9 +333,7 @@ export default async function MePushesPage({ searchParams }: PageProps) {
       </div>
 
       {groups.length === 0 ? (
-        <div className="bg-white rounded-xl border border-slate-200 p-8 text-center text-slate-500 text-sm">
-          {status ? `没有 ${status === "success" ? "成功" : "失败"} 的推送` : "暂无推送记录"}
-        </div>
+        <EmptyPushes status={validStatus} hasDateFilter={!!(from || to)} />
       ) : (
         <div className="space-y-3">
           {groups.map((g) => {
