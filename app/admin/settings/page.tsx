@@ -1,12 +1,10 @@
 import { requireAdmin } from "@/lib/admin-guard";
-import { prisma } from "@/lib/db";
-import { DEFAULT_TEMPLATE } from "@/lib/template";
+import { getCachedReminderTemplate } from "@/lib/reminder-template-cache";
 import SettingsForm from "./settings-form";
 
 export default async function SettingsPage() {
   await requireAdmin();
-  const setting = await prisma.setting.findUnique({ where: { key: "reminder_template" } });
-  const initial = setting?.value || DEFAULT_TEMPLATE;
+  const initial = await getCachedReminderTemplate();
 
   return (
     <div className="p-6 sm:p-8 max-w-3xl">

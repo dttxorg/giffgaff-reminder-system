@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/db";
 import { getAdminSession } from "@/lib/session";
+import { invalidateReminderTemplateCache } from "@/lib/reminder-template-cache";
 
 const BodySchema = z.object({
   template: z.string().min(1).max(2000),
@@ -26,5 +27,6 @@ export async function POST(req: Request) {
     create: { key: "reminder_template", value: parsed.data.template },
     update: { value: parsed.data.template },
   });
+  invalidateReminderTemplateCache();
   return NextResponse.json({ ok: true });
 }

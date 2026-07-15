@@ -1,5 +1,5 @@
-import { prisma } from "@/lib/db";
-import { DEFAULT_TEMPLATE, portUrl, renderTemplate } from "@/lib/template";
+import { portUrl, renderTemplate } from "@/lib/template";
+import { getCachedReminderTemplate } from "@/lib/reminder-template-cache";
 import { formatPhoneForDisplay } from "@/lib/phone";
 import { PushPreviewCopyButton } from "./push-preview-copy-button";
 
@@ -32,13 +32,7 @@ export async function PushPreview({
 }: PushPreviewProps) {
   // 父组件可把模板与其它查询并行预载；独立使用时仍保持原有 fallback。
   const template =
-    templateOverride ??
-    (
-      await prisma.setting.findUnique({
-        where: { key: "reminder_template" },
-      })
-    )?.value ??
-    DEFAULT_TEMPLATE;
+    templateOverride ?? (await getCachedReminderTemplate());
 
   // 检测未知变量
   const known = new Set(["phone", "days", "port_url"]);

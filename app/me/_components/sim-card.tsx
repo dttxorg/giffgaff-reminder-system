@@ -1,5 +1,4 @@
 import Link from "next/link";
-import { prisma } from "@/lib/db";
 import {
   bucketForDay,
   dayOffsetFromBaseline,
@@ -12,7 +11,7 @@ import {
   shanghaiParts,
 } from "@/lib/bucket";
 import { getSimReminderStats } from "@/lib/sim-reminder-stats";
-import { DEFAULT_TEMPLATE } from "@/lib/template";
+import { getCachedReminderTemplate } from "@/lib/reminder-template-cache";
 import { AnniversaryProgress } from "./anniversary-progress";
 import { AnniversaryProgressBar } from "./anniversary-progress-bar";
 import { MilestoneBanner } from "./milestone-banner";
@@ -79,12 +78,9 @@ export async function SimCard({
   const anniversary = getAnniversaryProgress(dayOffset);
 
   // 推送详情统计与模板并行加载，避免号码切换时出现多轮数据库瀑布。
-  const [reminderStats, templateSetting] = await Promise.all([
+  const [reminderStats, reminderTemplate] = await Promise.all([
     getSimReminderStats(sim.id, now),
-    prisma.setting.findUnique({
-      where: { key: "reminder_template" },
-      select: { value: true },
-    }),
+    getCachedReminderTemplate(),
   ]);
   const {
     recentReminders,
@@ -116,8 +112,6 @@ export async function SimCard({
 
   const channelMissing = !sim.channelKey;
   const portUrl = sim.portToken ?? String(sim.id);
-  const reminderTemplate = templateSetting?.value || DEFAULT_TEMPLATE;
-
   return (
     <div>
       {milestone && <MilestoneBanner milestone={milestone} />}
