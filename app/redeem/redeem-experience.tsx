@@ -4,6 +4,10 @@ import { useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { RedeemClient } from "./redeem-client";
 import { RedeemStepIndicator } from "./_components/redeem-step-indicator";
+import {
+  clearClientSessionCache,
+  getRedeemSessionContext,
+} from "@/lib/client-session";
 
 type RedeemSessionContext =
   | { status: "loading" }
@@ -25,20 +29,8 @@ export function RedeemExperience() {
 
   useEffect(() => {
     let active = true;
-    const controller = new AbortController();
 
-    void fetch("/api/auth/session?details=redeem", {
-      cache: "no-store",
-      signal: controller.signal,
-    })
-      .then(async (response) => {
-        if (!response.ok) throw new Error("session request failed");
-        return (await response.json()) as {
-          authenticated?: boolean;
-          username?: string;
-          simCount?: number;
-        };
-      })
+    void getRedeemSessionContext()
       .then((data) => {
         if (!active) return;
         setSessionContext({
@@ -48,14 +40,13 @@ export function RedeemExperience() {
           simCount: data.simCount ?? 0,
         });
       })
-      .catch((error: unknown) => {
-        if (!active || (error instanceof Error && error.name === "AbortError")) return;
+      .catch(() => {
+        if (!active) return;
         setSessionContext({ status: "error" });
       });
 
     return () => {
       active = false;
-      controller.abort();
     };
   }, [sessionAttempt]);
 
@@ -100,6 +91,7 @@ export function RedeemExperience() {
           <button
             type="button"
             onClick={() => {
+              clearClientSessionCache();
               setSessionContext({ status: "loading" });
               setSessionAttempt((attempt) => attempt + 1);
             }}

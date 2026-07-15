@@ -3,6 +3,10 @@
 import { useEffect, useState, useTransition, type FormEvent } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
+import {
+  clearClientSessionCache,
+  getRedeemSessionContext,
+} from "@/lib/client-session";
 
 /**
  * 根导航先静态渲染“登录”，水合后再用轻量接口确认登录态。
@@ -12,6 +16,7 @@ export function UserNav() {
   const router = useRouter();
   const pathname = usePathname();
   const isProtectedUserPage = pathname === "/me" || pathname.startsWith("/me/");
+  const isRedeemPage = pathname === "/redeem";
   const [sessionAuthenticated, setSessionAuthenticated] = useState(false);
   const [loggingOut, setLoggingOut] = useState(false);
   const [isNavigating, startNavigation] = useTransition();
@@ -23,13 +28,18 @@ export function UserNav() {
     if (isProtectedUserPage) return;
 
     let active = true;
-    const controller = new AbortController();
+    const controller = isRedeemPage ? null : new AbortController();
 
-    void fetch("/api/auth/session", {
-      cache: "no-store",
-      signal: controller.signal,
-    })
-      .then((response) => (response.ok ? response.json() : { authenticated: false }))
+    const sessionRequest = isRedeemPage
+      ? getRedeemSessionContext()
+      : fetch("/api/auth/session", {
+          cache: "no-store",
+          signal: controller?.signal,
+        }).then((response) =>
+          response.ok ? response.json() : { authenticated: false }
+        );
+
+    void sessionRequest
       .then((data: { authenticated?: boolean }) => {
         if (active) setSessionAuthenticated(data.authenticated === true);
       })
@@ -39,9 +49,9 @@ export function UserNav() {
 
     return () => {
       active = false;
-      controller.abort();
+      controller?.abort();
     };
-  }, [isProtectedUserPage]);
+  }, [isProtectedUserPage, isRedeemPage]);
 
   const handleLogout = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -50,6 +60,7 @@ export function UserNav() {
     try {
       const response = await fetch("/api/auth/logout", { method: "POST" });
       if (!response.ok) return;
+      clearClientSessionCache();
       setSessionAuthenticated(false);
       startNavigation(() => router.push("/"));
     } finally {

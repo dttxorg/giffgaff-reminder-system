@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useState, useTransition, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { Spinner } from "@/app/_components/skip-to-content";
+import { clearClientSessionCache } from "@/lib/client-session";
 
 interface ActionBarProps {
   /** 当前 activeSim 的 id(用于跳转到对应 sim 的 settings) */
@@ -38,6 +39,7 @@ export function ActionBar({ activeSimId }: ActionBarProps) {
         setLogoutError(true);
         return;
       }
+      clearClientSessionCache();
       startNavigation(() => router.push("/"));
     } catch {
       setLogoutError(true);

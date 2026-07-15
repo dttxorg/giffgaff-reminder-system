@@ -1,6 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 import { RedeemExperience } from "../../app/redeem/redeem-experience";
+import { UserNav } from "../../app/_components/user-nav";
+import { clearClientSessionCache } from "../../lib/client-session";
 
 const { mockPush, mockRefresh } = vi.hoisted(() => ({
   mockPush: vi.fn(),
@@ -10,12 +12,14 @@ const { mockPush, mockRefresh } = vi.hoisted(() => ({
 vi.mock("next/navigation", () => ({
   useSearchParams: () => new URLSearchParams(),
   useRouter: () => ({ push: mockPush, refresh: mockRefresh }),
+  usePathname: () => "/redeem",
 }));
 
 describe("<RedeemExperience />", () => {
   beforeEach(() => {
     mockPush.mockClear();
     mockRefresh.mockClear();
+    clearClientSessionCache();
   });
 
   it("账号状态查询期间已可输入卡密", () => {
@@ -43,5 +47,33 @@ describe("<RedeemExperience />", () => {
     expect(
       await screen.findByRole("heading", { name: "绑定新的 SIM 卡" })
     ).toBeInTheDocument();
+  });
+
+  it("与顶部导航合并为一次详细 Session 请求", async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        authenticated: true,
+        username: "alice",
+        simCount: 3,
+      }),
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    render(
+      <>
+        <UserNav />
+        <RedeemExperience />
+      </>
+    );
+
+    expect(
+      await screen.findByRole("heading", { name: "绑定新的 SIM 卡" })
+    ).toBeInTheDocument();
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(fetchMock).toHaveBeenCalledWith(
+      "/api/auth/session?details=redeem",
+      { cache: "no-store" }
+    );
   });
 });
