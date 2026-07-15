@@ -38,10 +38,9 @@ describe("POST /api/admin/cards", () => {
       sequence += 1;
       return `2345-6789-ABCD-${suffix}`;
     });
-    mocks.findMany.mockResolvedValue([]);
   });
 
-  it("一次批量写入并返回实际创建的卡密", async () => {
+  it("不预查冲突，一次批量写入并返回实际创建的卡密", async () => {
     mocks.createManyAndReturn.mockImplementation(async ({ data }) => data);
 
     const response = await POST(
@@ -53,7 +52,7 @@ describe("POST /api/admin/cards", () => {
     );
     const payload = await response.json();
 
-    expect(mocks.findMany).toHaveBeenCalledOnce();
+    expect(mocks.findMany).not.toHaveBeenCalled();
     expect(mocks.createManyAndReturn).toHaveBeenCalledOnce();
     expect(mocks.createManyAndReturn).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -67,5 +66,27 @@ describe("POST /api/admin/cards", () => {
       createdCount: 3,
     });
     expect(payload.cards).toHaveLength(3);
+  });
+
+  it("由唯一索引跳过并发冲突并准确返回部分成功数量", async () => {
+    mocks.createManyAndReturn.mockImplementation(async ({ data }) => data.slice(0, 2));
+
+    const response = await POST(
+      new Request("http://localhost/api/admin/cards", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ count: 3 }),
+      })
+    );
+    const payload = await response.json();
+
+    expect(mocks.findMany).not.toHaveBeenCalled();
+    expect(mocks.createManyAndReturn).toHaveBeenCalledOnce();
+    expect(payload).toMatchObject({
+      ok: true,
+      requestedCount: 3,
+      createdCount: 2,
+    });
+    expect(payload.cards).toHaveLength(2);
   });
 });

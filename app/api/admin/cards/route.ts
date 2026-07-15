@@ -64,39 +64,22 @@ export async function POST(req: Request) {
   }
 
   const count = parsed.data.count;
-  // 多生成少量候选，数据库里即使已有极小概率碰撞也能补足请求数量。
+  // 先在内存中生成足量的不重复候选；数据库唯一索引负责最终的并发冲突判断。
   const codes = new Set<string>();
-  const candidateTarget = count + Math.min(20, count);
-  const attempts = candidateTarget * 2 + 10;
-  for (let i = 0; i < attempts && codes.size < candidateTarget; i++) {
+  const attempts = count * 2 + 10;
+  for (let i = 0; i < attempts && codes.size < count; i++) {
     codes.add(normalizeCardCode(generateCardCode()));
   }
-  if (codes.size < candidateTarget) {
+  if (codes.size < count) {
     return NextResponse.json(
       { ok: false, error: "生成卡密失败,请重试" },
-      { status: 500 }
-    );
-  }
-  const codeList = Array.from(codes);
-
-  // 检查库内已有（防御性，正常不会冲突）
-  const existing = await prisma.cardKey.findMany({
-    where: { code: { in: codeList } },
-    select: { code: true },
-  });
-  const existingSet = new Set(existing.map((e) => e.code));
-  const finalCodes = codeList.filter((c) => !existingSet.has(c)).slice(0, count);
-
-  if (finalCodes.length < count) {
-    return NextResponse.json(
-      { ok: false, error: "可用卡密数量不足,请重试" },
       { status: 500 }
     );
   }
 
   // PostgreSQL 支持 createManyAndReturn + skipDuplicates：一次写入并返回真正落库的码。
   const created = await prisma.cardKey.createManyAndReturn({
-    data: finalCodes.map((code) => ({
+    data: Array.from(codes, (code) => ({
       code,
       notes: parsed.data.notes,
     })),
