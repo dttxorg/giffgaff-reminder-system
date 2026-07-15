@@ -1,14 +1,16 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const dbMocks = vi.hoisted(() => ({
+  simFindMany: vi.fn(),
+  userFindMany: vi.fn(),
   reminderFindMany: vi.fn(),
-  queryRaw: vi.fn(),
 }));
 
 vi.mock("../lib/db", () => ({
   prisma: {
+    sim: { findMany: dbMocks.simFindMany },
+    user: { findMany: dbMocks.userFindMany },
     reminderSent: { findMany: dbMocks.reminderFindMany },
-    $queryRaw: dbMocks.queryRaw,
   },
 }));
 
@@ -46,8 +48,9 @@ function reminder(
 
 describe("admin-dashboard-data", () => {
   beforeEach(() => {
+    dbMocks.simFindMany.mockReset();
+    dbMocks.userFindMany.mockReset();
     dbMocks.reminderFindMany.mockReset();
-    dbMocks.queryRaw.mockReset();
   });
 
   it("一次内存汇总生成核心、排行、渠道、窗口和趋势数据", () => {
@@ -77,70 +80,31 @@ describe("admin-dashboard-data", () => {
     expect(result.inWindowSimCount).toBe(1);
   });
 
-  it("鉴权后一轮并行查询,90 日日志改为聚合快照", async () => {
-    dbMocks.queryRaw.mockImplementation((strings: TemplateStringsArray) => {
-      const sql = strings.join(" ");
-      if (sql.includes('FROM "User"')) {
-        return Promise.resolve([
-          { totalCount: 0, dailyCounts: [0, 0, 0, 0, 0, 0, 0] },
-        ]);
-      }
-      if (sql.includes("WITH sim_base AS MATERIALIZED")) {
-        return Promise.resolve([
-          {
-            totalCount: 0,
-            activeCount: 0,
-            pausedCount: 0,
-            channelCount: 0,
-            boundCount: 0,
-            unboundCount: 0,
-            recentCount: 0,
-            recentActiveCount: 0,
-            recentPausedCount: 0,
-            inWindowCount: 0,
-            newDailyCounts: [0, 0, 0, 0, 0, 0, 0],
-            bindTotalCounts: [0, 0, 0, 0, 0, 0, 0],
-            bindBoundCounts: [0, 0, 0, 0, 0, 0, 0],
-            inWindowSims: [],
-          },
-        ]);
-      }
-      return Promise.resolve([{ daily: [], channels: [], sims: [] }]);
-    });
-    dbMocks.reminderFindMany.mockResolvedValueOnce([]);
+  it("鉴权后一轮并行读取真实数据，并把提醒限制为近 90 天", async () => {
+    dbMocks.simFindMany.mockResolvedValueOnce([]);
+    dbMocks.userFindMany.mockResolvedValueOnce([]);
+    dbMocks.reminderFindMany
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([]);
 
     await getAdminDashboardData(now);
 
-    expect(dbMocks.reminderFindMany).toHaveBeenCalledOnce();
-    expect(dbMocks.queryRaw).toHaveBeenCalledTimes(3);
+    expect(dbMocks.simFindMany).toHaveBeenCalledOnce();
+    expect(dbMocks.userFindMany).toHaveBeenCalledOnce();
+    expect(dbMocks.reminderFindMany).toHaveBeenCalledTimes(2);
+    expect(dbMocks.reminderFindMany.mock.calls[0][0]).toMatchObject({
+      where: { sentAt: { gte: new Date("2026-04-16T04:00:00.000Z") } },
+      orderBy: { sentAt: "asc" },
+    });
   });
 
-  it("任一数据区查询失败时记录具名日志并返回可渲染的降级数据", async () => {
-    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
-    dbMocks.queryRaw.mockRejectedValue(new Error("database unavailable"));
-    dbMocks.reminderFindMany.mockRejectedValue(new Error("recent unavailable"));
+  it("查询失败时向错误边界传播，不把失败伪装成零数据", async () => {
+    dbMocks.simFindMany.mockRejectedValue(new Error("database unavailable"));
+    dbMocks.userFindMany.mockResolvedValue([]);
+    dbMocks.reminderFindMany.mockResolvedValue([]);
 
-    try {
-      const result = await getAdminDashboardData(now);
-
-      expect(result).toMatchObject({
-        simCount: 0,
-        userCount: 0,
-        todaySent: 0,
-        recent: [],
-      });
-      expect(result.last90DaysSends).toHaveLength(90);
-      expect(errorSpy).toHaveBeenCalledTimes(4);
-      expect(errorSpy.mock.calls.map(([message]) => message)).toEqual(
-        expect.arrayContaining([
-          "[admin-dashboard] sim snapshot failed",
-          "[admin-dashboard] user snapshot failed",
-          "[admin-dashboard] reminder snapshot failed",
-          "[admin-dashboard] recent reminders failed",
-        ])
-      );
-    } finally {
-      errorSpy.mockRestore();
-    }
+    await expect(getAdminDashboardData(now)).rejects.toThrow(
+      "database unavailable"
+    );
   });
 });

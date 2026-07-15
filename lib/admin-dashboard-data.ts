@@ -4,21 +4,6 @@ import {
   getShanghaiDayStart,
   summarizeAdminSendTrends,
 } from "./admin-dashboard-trends";
-import {
-  EMPTY_ADMIN_REMINDER_SNAPSHOT,
-  getAdminDashboardReminderSnapshot,
-  summarizeAdminReminderSnapshot,
-} from "./admin-dashboard-reminder-snapshot";
-import {
-  EMPTY_ADMIN_USER_SNAPSHOT,
-  getAdminDashboardUserSnapshot,
-  summarizeAdminUserSnapshot,
-} from "./admin-dashboard-user-snapshot";
-import {
-  EMPTY_ADMIN_SIM_SNAPSHOT,
-  getAdminDashboardSimSnapshot,
-  summarizeAdminSimSnapshot,
-} from "./admin-dashboard-sim-snapshot";
 import type { Channel } from "@/lib/generated/prisma/enums";
 
 type ReminderStatus = "success" | "failed";
@@ -279,70 +264,52 @@ export function summarizeAdminDashboard(
   };
 }
 
-async function loadDashboardSection<T>(
-  section: string,
-  load: () => Promise<T>,
-  fallback: T
-): Promise<T> {
-  try {
-    return await load();
-  } catch (error) {
-    console.error(`[admin-dashboard] ${section} failed`, error);
-    return fallback;
-  }
-}
-
-/** 鉴权完成后固定只等待一轮；90 天日志在数据库内聚合后返回。 */
+/** 鉴权完成后固定只等待一轮；全部使用已验证的 Prisma 查询以保证数据准确。 */
 export async function getAdminDashboardData(now: Date) {
-  const [simData, userData, reminderData, recent] = await Promise.all([
-    loadDashboardSection(
-      "sim snapshot",
-      async () => summarizeAdminSimSnapshot(
-        await getAdminDashboardSimSnapshot(now),
-        now
-      ),
-      summarizeAdminSimSnapshot(EMPTY_ADMIN_SIM_SNAPSHOT, now)
-    ),
-    loadDashboardSection(
-      "user snapshot",
-      async () => summarizeAdminUserSnapshot(
-        await getAdminDashboardUserSnapshot(now),
-        now
-      ),
-      summarizeAdminUserSnapshot(EMPTY_ADMIN_USER_SNAPSHOT, now)
-    ),
-    loadDashboardSection(
-      "reminder snapshot",
-      async () => summarizeAdminReminderSnapshot(
-        await getAdminDashboardReminderSnapshot(now),
-        now
-      ),
-      summarizeAdminReminderSnapshot(EMPTY_ADMIN_REMINDER_SNAPSHOT, now)
-    ),
-    loadDashboardSection(
-      "recent reminders",
-      () => prisma.reminderSent.findMany({
-        take: 10,
-        orderBy: { sentAt: "desc" },
-        select: {
-          id: true,
-          sentAt: true,
-          simId: true,
-          dayOffset: true,
-          bucket: true,
-          status: true,
-          errorMessage: true,
-          sim: { select: { phoneNumber: true } },
-        },
-      }),
-      []
-    ),
+  const reminderStart = new Date(now.getTime() - 90 * DAY_MS);
+  const [sims, users, reminders, recent] = await Promise.all([
+    prisma.sim.findMany({
+      select: {
+        id: true,
+        phoneNumber: true,
+        activatedAt: true,
+        lastPortedAt: true,
+        status: true,
+        channelKey: true,
+        userId: true,
+        createdAt: true,
+        user: { select: { createdAt: true } },
+      },
+    }),
+    prisma.user.findMany({ select: { createdAt: true } }),
+    prisma.reminderSent.findMany({
+      where: { sentAt: { gte: reminderStart } },
+      select: {
+        sentAt: true,
+        status: true,
+        channel: true,
+        simId: true,
+      },
+      orderBy: { sentAt: "asc" },
+    }),
+    prisma.reminderSent.findMany({
+      take: 10,
+      orderBy: { sentAt: "desc" },
+      select: {
+        id: true,
+        sentAt: true,
+        simId: true,
+        dayOffset: true,
+        bucket: true,
+        status: true,
+        errorMessage: true,
+        sim: { select: { phoneNumber: true } },
+      },
+    }),
   ]);
 
   return {
-    ...simData,
-    ...userData,
-    ...reminderData,
+    ...summarizeAdminDashboard(reminders, sims, users, now),
     recent,
   };
 }

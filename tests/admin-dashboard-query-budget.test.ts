@@ -4,18 +4,6 @@ import fs from "node:fs";
 describe("管理仪表盘查询预算", () => {
   const source = fs.readFileSync("app/admin/page.tsx", "utf8");
   const data = fs.readFileSync("lib/admin-dashboard-data.ts", "utf8");
-  const snapshot = fs.readFileSync(
-    "lib/admin-dashboard-reminder-snapshot.ts",
-    "utf8"
-  );
-  const userSnapshot = fs.readFileSync(
-    "lib/admin-dashboard-user-snapshot.ts",
-    "utf8"
-  );
-  const simSnapshot = fs.readFileSync(
-    "lib/admin-dashboard-sim-snapshot.ts",
-    "utf8"
-  );
 
   it("页面只通过统一快照加载数据，不再逐卡片调用统计查询", () => {
     expect(source).toContain("getAdminDashboardData(now)");
@@ -29,26 +17,29 @@ describe("管理仪表盘查询预算", () => {
     expect(source).toContain("lg:grid-cols-4");
   });
 
-  it("90 天提醒指标使用数据库聚合快照,不再回传逐条日志", () => {
-    expect(data).toContain("getAdminDashboardReminderSnapshot(now)");
-    expect(data).not.toContain("const reminderStart");
-    expect(snapshot).toContain("WITH reminder_base AS MATERIALIZED");
-    expect(snapshot).toContain("jsonb_agg");
-    expect(snapshot).toContain('GROUP BY base."simId", sim."phoneNumber"');
+  it("提醒数据只读取近 90 天和渲染所需字段", () => {
+    expect(data).toContain("const reminderStart");
+    expect(data).toContain("where: { sentAt: { gte: reminderStart } }");
+    expect(data).toContain("channel: true");
+    expect(data).not.toContain("getAdminDashboardReminderSnapshot");
   });
 
-  it("用户总数与 7 日趋势使用单行聚合,不再回传全部用户", () => {
-    expect(data).toContain("getAdminDashboardUserSnapshot(now)");
-    expect(data).not.toContain("prisma.user.findMany");
-    expect(userSnapshot).toContain('COUNT(*)::int AS "totalCount"');
-    expect(userSnapshot).toContain("jsonb_build_array(");
+  it("用户只读取创建时间供总数与 7 日趋势汇总", () => {
+    expect(data).toContain(
+      "prisma.user.findMany({ select: { createdAt: true } })"
+    );
+    expect(data).not.toContain("getAdminDashboardUserSnapshot");
   });
 
-  it("SIM 指标使用聚合快照,运行时不再回传全量卡片和渠道密钥", () => {
-    expect(data).toContain("getAdminDashboardSimSnapshot(now)");
-    expect(data).not.toContain("prisma.sim.findMany");
-    expect(simSnapshot).toContain("WITH sim_base AS MATERIALIZED");
-    expect(simSnapshot).toContain('LIMIT 10');
-    expect(snapshot).toContain('sim."phoneNumber"');
+  it("SIM 查询只读取汇总和排行所需字段", () => {
+    expect(data).toContain("prisma.sim.findMany({");
+    expect(data).toContain("channelKey: true");
+    expect(data).toContain("user: { select: { createdAt: true } }");
+    expect(data).not.toContain("getAdminDashboardSimSnapshot");
+  });
+
+  it("查询失败必须传播给错误边界，禁止返回伪造零值", () => {
+    expect(data).not.toContain("loadDashboardSection");
+    expect(data).not.toContain("EMPTY_ADMIN_");
   });
 });
