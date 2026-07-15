@@ -56,9 +56,10 @@ export default async function UsersPage({ searchParams }: PageProps) {
       where.createdAt = createdAtRange;
     }
   }
+  const hasFilters = Object.keys(where).length > 0;
 
-  // 列表 + 概览并行(无 filter)
-  const [users, totalUsers, withPwd, noPwd, totalCount] = await Promise.all([
+  // 列表 + 一次密码聚合并行；_count.passwordHash 即非空密码数量。
+  const [users, passwordCounts, filteredCount] = await Promise.all([
     prisma.user.findMany({
       where,
       orderBy: { id: "desc" },
@@ -76,11 +77,15 @@ export default async function UsersPage({ searchParams }: PageProps) {
         _count: { select: { reminders: true } },
       },
     }),
-    prisma.user.count(),
-    prisma.user.count({ where: { passwordHash: { not: null } } }),
-    prisma.user.count({ where: { passwordHash: null } }),
-    prisma.user.count({ where }), // 用于分页
+    prisma.user.aggregate({
+      _count: { _all: true, passwordHash: true },
+    }),
+    hasFilters ? prisma.user.count({ where }) : Promise.resolve<number | null>(null),
   ]);
+  const totalUsers = passwordCounts._count._all;
+  const withPwd = passwordCounts._count.passwordHash;
+  const noPwd = totalUsers - withPwd;
+  const totalCount = filteredCount ?? totalUsers;
 
   const rows = users.map((u) => ({
     id: u.id,

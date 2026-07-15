@@ -13,15 +13,21 @@ describe("后台列表查询预算", () => {
     "utf8"
   );
 
-  it("号码分页只保留一次过滤 count，且不读取完整 user", () => {
-    expect(sims.match(/prisma\.sim\.count\(\{ where \}\)/g)).toHaveLength(1);
+  it("号码概览合并为一次状态聚合，仅在有筛选时 count", () => {
+    expect(sims).toContain('prisma.sim.groupBy({');
+    expect(sims).toContain('by: ["status"]');
+    expect(sims).toContain("hasFilters ? prisma.sim.count({ where })");
+    expect(sims).not.toContain("prisma.sim.count()");
     expect(sims).not.toContain("user: true");
     expect(sims).toContain("select: {");
   });
 
-  it("用户列表限制嵌套 SIM 字段", () => {
+  it("用户概览用一次 aggregate 计算总数与非空密码数", () => {
     expect(users).toContain("select: { phoneNumber: true, channel: true }");
     expect(users).not.toContain("include: { sims:");
+    expect(users).toContain("prisma.user.aggregate({");
+    expect(users).toContain("_count: { _all: true, passwordHash: true }");
+    expect(users).not.toContain("prisma.user.count()");
   });
 
   it("用户详情不读取 SIM 渠道密钥或公开 token", () => {
@@ -31,10 +37,10 @@ describe("后台列表查询预算", () => {
     expect(userDetail).toContain("lastPortedAt: true");
   });
 
-  it("卡密列表和统计同一轮加载，并使用过滤总数分页", () => {
-    expect(cards).toContain(
-      "const [cards, totalCount, unusedCount, filteredCount] = await Promise.all(["
-    );
+  it("卡密概览合并为一次兑换状态聚合，并使用过滤总数分页", () => {
+    expect(cards).toContain("prisma.cardKey.groupBy({");
+    expect(cards).toContain('by: ["used"]');
+    expect(cards).not.toContain("prisma.cardKey.count()");
     expect(cards).toContain("totalCount={filteredCount}");
   });
 

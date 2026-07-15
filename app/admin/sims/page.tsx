@@ -59,9 +59,10 @@ export default async function SimsPage({ searchParams }: PageProps) {
       where.createdAt = createdAtRange;
     }
   }
+  const hasFilters = Object.keys(where).length > 0;
 
-  // 列表 + 概览计数并行(无 filter,全量)
-  const [sims, totalSims, activeSims, pausedSims, totalCount] = await Promise.all([
+  // 列表 + 一次状态聚合并行；无筛选时分页总数直接复用聚合结果。
+  const [sims, statusCounts, filteredCount] = await Promise.all([
     prisma.sim.findMany({
       where,
       orderBy: { id: "desc" },
@@ -82,11 +83,18 @@ export default async function SimsPage({ searchParams }: PageProps) {
         },
       },
     }),
-    prisma.sim.count(),
-    prisma.sim.count({ where: { status: "active" } }),
-    prisma.sim.count({ where: { status: "paused" } }),
-    prisma.sim.count({ where }), // 用于分页
+    prisma.sim.groupBy({
+      by: ["status"],
+      _count: { _all: true },
+    }),
+    hasFilters ? prisma.sim.count({ where }) : Promise.resolve<number | null>(null),
   ]);
+  const activeSims =
+    statusCounts.find((group) => group.status === "active")?._count._all ?? 0;
+  const pausedSims =
+    statusCounts.find((group) => group.status === "paused")?._count._all ?? 0;
+  const totalSims = activeSims + pausedSims;
+  const totalCount = filteredCount ?? totalSims;
 
   // 把 server 数据序列化给 client 组件(传给 <SimsBulkTable>)
   const rows = sims.map((sim) => {

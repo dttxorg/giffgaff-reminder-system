@@ -34,9 +34,10 @@ export default async function CardsPage({ searchParams }: PageProps) {
       where.notes = { contains: trimmed, mode: "insensitive" };
     }
   }
+  const hasFilters = Object.keys(where).length > 0;
 
-  // 列表、全局概览和当前筛选总数同一轮加载。
-  const [cards, totalCount, unusedCount, filteredCount] = await Promise.all([
+  // 列表 + 一次兑换状态聚合；无筛选时分页总数直接复用聚合结果。
+  const [cards, usageCounts, filteredCountResult] = await Promise.all([
     prisma.cardKey.findMany({
       where,
       orderBy: { id: "desc" },
@@ -51,11 +52,20 @@ export default async function CardsPage({ searchParams }: PageProps) {
         usedAt: true,
       },
     }),
-    prisma.cardKey.count(),
-    prisma.cardKey.count({ where: { used: false } }),
-    prisma.cardKey.count({ where }),
+    prisma.cardKey.groupBy({
+      by: ["used"],
+      _count: { _all: true },
+    }),
+    hasFilters
+      ? prisma.cardKey.count({ where })
+      : Promise.resolve<number | null>(null),
   ]);
-  const usedCount = totalCount - unusedCount;
+  const usedCount =
+    usageCounts.find((group) => group.used)?._count._all ?? 0;
+  const unusedCount =
+    usageCounts.find((group) => !group.used)?._count._all ?? 0;
+  const totalCount = usedCount + unusedCount;
+  const filteredCount = filteredCountResult ?? totalCount;
 
   const totalPages = Math.max(1, Math.ceil(filteredCount / PAGE_SIZE));
 
