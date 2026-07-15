@@ -1,7 +1,7 @@
 import { Suspense } from "react";
 import { redirect } from "next/navigation";
 import Link from "next/link";
-import { getCurrentUser } from "@/lib/session";
+import { getCurrentUserSettingsContext } from "@/lib/session";
 import { MeSettingsClient } from "./settings-client";
 import { PushPreview } from "@/app/_components/push-preview";
 import { SimSettingsPicker } from "./sim-settings-picker";
@@ -28,7 +28,7 @@ function parseChannel(input: string | undefined): Channel {
  *     通过 ?simId=X 切换卡
  */
 export default async function MeSettingsPage({ searchParams }: PageProps) {
-  const user = await getCurrentUser();
+  const user = await getCurrentUserSettingsContext();
   if (!user) redirect("/login");
 
   const { channel: channelParam, simId: simIdParam } = await searchParams;

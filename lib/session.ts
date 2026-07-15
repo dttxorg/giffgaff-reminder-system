@@ -7,14 +7,9 @@ const USER_COOKIE = "gg_user_session";
 const ADMIN_COOKIE = "gg_admin_session";
 const COOKIE_MAX_AGE = 60 * 60 * 24 * 7; // 7 天
 
-/**
- * 包含的 user 形状:
- * - user (含 username / passwordHash 等账号级字段)
- * - user.sims[] (1:N - 一个账号可挂多张 SIM 卡,按 id 升序)
- *
- * 注:User 上不再有 channel/channelKey - 每张 sim 独立
- */
-const USER_INCLUDE = {
+/** 用户中心首页需要的 Session + 完整卡片字段。 */
+const CURRENT_USER_SESSION_SELECT = {
+  expiresAt: true,
   user: {
     select: {
       id: true,
@@ -71,7 +66,7 @@ export const getCurrentUser = cache(async () => {
   if (!sid) return null;
   const session = await prisma.userSession.findUnique({
     where: { id: sid },
-    include: USER_INCLUDE,
+    select: CURRENT_USER_SESSION_SELECT,
   });
   if (!session) return null;
   if (session.expiresAt < new Date()) {
@@ -144,6 +139,57 @@ export const getCurrentUserPushHistoryContext = cache(
                 id: true,
                 activatedAt: true,
                 lastPortedAt: true,
+              },
+            },
+          },
+        },
+      },
+    });
+    if (!session) return null;
+    if (session.expiresAt < new Date()) {
+      await prisma.userSession.delete({ where: { id: sid } }).catch(() => {});
+      return null;
+    }
+    return session.user;
+  }
+);
+
+export interface CurrentUserSettingsContext {
+  username: string;
+  sims: Array<{
+    id: number;
+    phoneNumber: string;
+    portToken: string | null;
+    activatedAt: Date;
+    lastPortedAt: Date | null;
+    channel: "serverchan" | "bark" | "pushplus" | "telegram";
+    channelKey: string;
+  }>;
+}
+
+/** 设置页上下文：保留选择器和当前卡表单字段，不读取状态与创建时间。 */
+export const getCurrentUserSettingsContext = cache(
+  async (): Promise<CurrentUserSettingsContext | null> => {
+    const jar = await cookies();
+    const sid = jar.get(USER_COOKIE)?.value;
+    if (!sid) return null;
+    const session = await prisma.userSession.findUnique({
+      where: { id: sid },
+      select: {
+        expiresAt: true,
+        user: {
+          select: {
+            username: true,
+            sims: {
+              orderBy: { id: "asc" },
+              select: {
+                id: true,
+                phoneNumber: true,
+                portToken: true,
+                activatedAt: true,
+                lastPortedAt: true,
+                channel: true,
+                channelKey: true,
               },
             },
           },
@@ -232,7 +278,10 @@ export const getAdminSession = cache(async (): Promise<boolean> => {
   const jar = await cookies();
   const sid = jar.get(ADMIN_COOKIE)?.value;
   if (!sid) return false;
-  const session = await prisma.adminSession.findUnique({ where: { id: sid } });
+  const session = await prisma.adminSession.findUnique({
+    where: { id: sid },
+    select: { expiresAt: true },
+  });
   if (!session) return false;
   if (session.expiresAt < new Date()) {
     await prisma.adminSession.delete({ where: { id: sid } }).catch(() => {});

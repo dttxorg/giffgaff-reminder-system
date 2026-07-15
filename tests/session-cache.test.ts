@@ -46,6 +46,12 @@ describe("session helpers are wrapped in React cache()", () => {
     );
   });
 
+  it("设置页最小 session 上下文也使用 cache() 包裹", () => {
+    expect(src).toMatch(
+      /getCurrentUserSettingsContext\s*=\s*cache\s*\(\s*async\s*\(/
+    );
+  });
+
   it("两个函数都是箭头函数(没有 async function NAME 声明)", () => {
     // 防止有人后续不小心改成 async function getCurrentUser() {...}(那种写法不能被 cache() 正确包裹)
     expect(src).not.toMatch(/async\s+function\s+getCurrentUser\b/);
@@ -53,9 +59,17 @@ describe("session helpers are wrapped in React cache()", () => {
   });
 
   it("共享用户查询显式限制 User 和 SIM 字段", () => {
-    expect(src).toContain("const USER_INCLUDE = {");
+    expect(src).toContain("const CURRENT_USER_SESSION_SELECT = {");
+    expect(src).toContain("select: CURRENT_USER_SESSION_SELECT");
     expect(src).toContain("username: true");
     expect(src).toContain("portToken: true");
     expect(src).not.toContain('sims: { orderBy: { id: "asc" as const } },');
+  });
+
+  it("管理员 session 只读取过期时间", () => {
+    const adminStart = src.indexOf("export const getAdminSession");
+    const adminEnd = src.indexOf("export async function destroyAdminSession");
+    const adminHelper = src.slice(adminStart, adminEnd);
+    expect(adminHelper).toContain("select: { expiresAt: true }");
   });
 });
