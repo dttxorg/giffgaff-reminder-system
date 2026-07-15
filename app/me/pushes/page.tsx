@@ -4,7 +4,7 @@
 
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { getCurrentUser } from "@/lib/session";
+import { getCurrentUserPushHistoryContext } from "@/lib/session";
 import { prisma } from "@/lib/db";
 import { formatRelativeTime, formatUtcShanghaiDual } from "@/lib/date";
 import { groupRemindersByDay } from "@/lib/push-grouping";
@@ -24,7 +24,7 @@ interface PageProps {
 
 
 export default async function MePushesPage({ searchParams }: PageProps) {
-  const user = await getCurrentUser();
+  const user = await getCurrentUserPushHistoryContext();
   if (!user) redirect("/login");
 
   const { status, from, to, simId: simIdParam } = await searchParams;
@@ -119,6 +119,14 @@ export default async function MePushesPage({ searchParams }: PageProps) {
   const [reminders, last7DayReminders] = await Promise.all([
     prisma.reminderSent.findMany({
       where,
+      select: {
+        id: true,
+        sentAt: true,
+        status: true,
+        dayOffset: true,
+        bucket: true,
+        errorMessage: true,
+      },
       orderBy: { sentAt: "desc" },
       take: 200,
     }),
