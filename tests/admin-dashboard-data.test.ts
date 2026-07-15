@@ -4,6 +4,7 @@ const dbMocks = vi.hoisted(() => ({
   simFindMany: vi.fn(),
   userFindMany: vi.fn(),
   reminderFindMany: vi.fn(),
+  queryRaw: vi.fn(),
 }));
 
 vi.mock("../lib/db", () => ({
@@ -11,6 +12,7 @@ vi.mock("../lib/db", () => ({
     sim: { findMany: dbMocks.simFindMany },
     user: { findMany: dbMocks.userFindMany },
     reminderSent: { findMany: dbMocks.reminderFindMany },
+    $queryRaw: dbMocks.queryRaw,
   },
 }));
 
@@ -51,6 +53,7 @@ describe("admin-dashboard-data", () => {
     dbMocks.simFindMany.mockReset();
     dbMocks.userFindMany.mockReset();
     dbMocks.reminderFindMany.mockReset();
+    dbMocks.queryRaw.mockReset();
   });
 
   it("一次内存汇总生成核心、排行、渠道、窗口和趋势数据", () => {
@@ -80,15 +83,19 @@ describe("admin-dashboard-data", () => {
     expect(result.inWindowSimCount).toBe(1);
   });
 
-  it("鉴权后固定只发起四个并行 findMany 查询", async () => {
+  it("鉴权后一轮并行查询,90 日日志改为聚合快照", async () => {
     dbMocks.simFindMany.mockResolvedValueOnce([]);
     dbMocks.userFindMany.mockResolvedValueOnce([]);
-    dbMocks.reminderFindMany.mockResolvedValueOnce([]).mockResolvedValueOnce([]);
+    dbMocks.queryRaw.mockResolvedValueOnce([
+      { daily: [], channels: [], sims: [] },
+    ]);
+    dbMocks.reminderFindMany.mockResolvedValueOnce([]);
 
     await getAdminDashboardData(now);
 
     expect(dbMocks.simFindMany).toHaveBeenCalledOnce();
     expect(dbMocks.userFindMany).toHaveBeenCalledOnce();
-    expect(dbMocks.reminderFindMany).toHaveBeenCalledTimes(2);
+    expect(dbMocks.reminderFindMany).toHaveBeenCalledOnce();
+    expect(dbMocks.queryRaw).toHaveBeenCalledOnce();
   });
 });

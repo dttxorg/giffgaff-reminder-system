@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
 
-import { getShanghaiDayStart, summarizeAdminSendTrends } from "../lib/admin-dashboard-trends";
+import {
+  buildAdminSendTrendsFromCounts,
+  getShanghaiDayStart,
+  summarizeAdminSendTrends,
+} from "../lib/admin-dashboard-trends";
 
 const now = new Date("2026-07-15T04:00:00.000Z"); // 上海 7 月 15 日 12:00
 
@@ -24,6 +28,17 @@ describe("admin-dashboard-trends", () => {
     expect(trends.last7DaysData).toHaveLength(7);
     expect(trends.last30DaysSends).toHaveLength(30);
     expect(trends.last90DaysSends).toHaveLength(90);
+    expect(trends.last90DaysSends.at(-2)?.count).toBe(1);
+    expect(trends.last90DaysSends.at(-1)?.count).toBe(2);
+  });
+
+  it("数据库每日计数与逐条日志生成相同趋势", () => {
+    const counts = Array.from({ length: 90 }, () => 0);
+    counts[88] = 1;
+    counts[89] = 2;
+    const trends = buildAdminSendTrendsFromCounts(counts, now);
+
+    expect(trends.last7DaysData).toHaveLength(7);
     expect(trends.last90DaysSends.at(-2)?.count).toBe(1);
     expect(trends.last90DaysSends.at(-1)?.count).toBe(2);
   });

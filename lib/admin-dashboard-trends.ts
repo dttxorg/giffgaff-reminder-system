@@ -36,6 +36,20 @@ export function summarizeAdminSendTrends(
     if (dayIndex >= 0 && dayIndex <= 89) counts[dayIndex] += 1;
   }
 
+  return buildAdminSendTrendsFromCounts(counts, now);
+}
+
+/** 从数据库聚合后的 90 个每日计数构建与逐条日志完全相同的趋势形状。 */
+export function buildAdminSendTrendsFromCounts(
+  sourceCounts: readonly number[],
+  now: Date
+): AdminSendTrends {
+  const todayStart = getShanghaiDayStart(now);
+  const periodStart = new Date(todayStart.getTime() - 89 * DAY_MS);
+  const counts = Array.from(
+    { length: 90 },
+    (_, index) => sourceCounts[index] ?? 0
+  );
   const last90DaysSends = counts.map((count, index) => {
     const dayStart = periodStart.getTime() + index * DAY_MS;
     return {

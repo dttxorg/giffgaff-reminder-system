@@ -4,6 +4,10 @@ import {
   getShanghaiDayStart,
   summarizeAdminSendTrends,
 } from "./admin-dashboard-trends";
+import {
+  getAdminDashboardReminderSnapshot,
+  summarizeAdminReminderSnapshot,
+} from "./admin-dashboard-reminder-snapshot";
 import type { Channel } from "@/lib/generated/prisma/enums";
 
 type ReminderStatus = "success" | "failed";
@@ -264,10 +268,9 @@ export function summarizeAdminDashboard(
   };
 }
 
-/** 鉴权完成后，仪表盘固定只等待一轮、四个并行查询。 */
+/** 鉴权完成后固定只等待一轮；90 天日志在数据库内聚合后返回。 */
 export async function getAdminDashboardData(now: Date) {
-  const reminderStart = new Date(now.getTime() - 90 * DAY_MS);
-  const [sims, users, reminders, recent] = await Promise.all([
+  const [sims, users, reminderSnapshot, recent] = await Promise.all([
     prisma.sim.findMany({
       select: {
         id: true,
@@ -282,16 +285,7 @@ export async function getAdminDashboardData(now: Date) {
       },
     }),
     prisma.user.findMany({ select: { createdAt: true } }),
-    prisma.reminderSent.findMany({
-      where: { sentAt: { gte: reminderStart } },
-      select: {
-        sentAt: true,
-        status: true,
-        channel: true,
-        simId: true,
-      },
-      orderBy: { sentAt: "asc" },
-    }),
+    getAdminDashboardReminderSnapshot(now),
     prisma.reminderSent.findMany({
       take: 10,
       orderBy: { sentAt: "desc" },
@@ -307,9 +301,11 @@ export async function getAdminDashboardData(now: Date) {
       },
     }),
   ]);
+  const phoneById = new Map(sims.map((sim) => [sim.id, sim.phoneNumber]));
 
   return {
-    ...summarizeAdminDashboard(reminders, sims, users, now),
+    ...summarizeAdminDashboard([], sims, users, now),
+    ...summarizeAdminReminderSnapshot(reminderSnapshot, phoneById, now),
     recent,
   };
 }
