@@ -3,6 +3,7 @@ import Link from "next/link";
 import { getCurrentUser } from "@/lib/session";
 import { SimCard } from "./_components/sim-card";
 import { SimTabs } from "./_components/sim-tabs";
+import { PortCountdownHero } from "./_components/port-countdown-hero";
 
 interface PageProps {
   searchParams: Promise<{ simId?: string }>;
@@ -62,6 +63,16 @@ export default async function MePage({ searchParams }: PageProps) {
             missingChannel: !s.channelKey,
           }))}
           activeSimId={activeSim.id}
+        />
+      )}
+
+      {/* Round 216: 保号窗口 hero 倒计时(170-180 窗口期内才显示) */}
+      {activeSim && (
+        <PortCountdownHero
+          baseline={activeSim.lastPortedAt ?? activeSim.activatedAt}
+          portToken={activeSim.portToken}
+          simId={activeSim.id}
+          now={now}
         />
       )}
 
