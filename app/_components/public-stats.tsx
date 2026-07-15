@@ -1,15 +1,9 @@
 import { unstable_cache } from "next/cache";
-import { prisma } from "@/lib/db";
+import { getPublicStatsSnapshot } from "@/lib/public-stats";
 
 const getCachedPublicStats = unstable_cache(
-  async () => {
-    const [simCount, sentCount] = await Promise.all([
-      prisma.sim.count(),
-      prisma.reminderSent.count({ where: { status: "success" } }),
-    ]);
-    return { simCount, sentCount };
-  },
-  ["home-public-stats-v1"],
+  getPublicStatsSnapshot,
+  ["home-public-stats-v2"],
   { revalidate: 300 }
 );
 
