@@ -37,6 +37,12 @@ describe("后台列表查询预算", () => {
     expect(userDetail).toContain("lastPortedAt: true");
   });
 
+  it("用户详情把提醒总数并入用户查询,不再单独 count", () => {
+    expect(userDetail).toContain("_count: { select: { reminders: true } }");
+    expect(userDetail).toContain("const reminderCount = user._count.reminders");
+    expect(userDetail).not.toContain("prisma.reminderSent.count");
+  });
+
   it("卡密概览合并为一次兑换状态聚合，并使用过滤总数分页", () => {
     expect(cards).toContain("prisma.cardKey.groupBy({");
     expect(cards).toContain('by: ["used"]');

@@ -20,7 +20,7 @@ export default async function UserDetailPage({ params }: PageProps) {
     notFound();
   }
 
-  const [user, recentReminders, reminderCount] = await Promise.all([
+  const [user, recentReminders] = await Promise.all([
     prisma.user.findUnique({
       where: { id: userId },
       select: {
@@ -28,6 +28,7 @@ export default async function UserDetailPage({ params }: PageProps) {
         username: true,
         passwordHash: true,
         createdAt: true,
+        _count: { select: { reminders: true } },
         sims: {
           orderBy: { id: "asc" },
           select: {
@@ -55,7 +56,6 @@ export default async function UserDetailPage({ params }: PageProps) {
         simId: true,
       },
     }),
-    prisma.reminderSent.count({ where: { userId } }),
   ]);
 
   if (!user) {
@@ -63,6 +63,7 @@ export default async function UserDetailPage({ params }: PageProps) {
   }
 
   const sims = user.sims;
+  const reminderCount = user._count.reminders;
 
   // 给 UsersClient 的 row(重置密码按钮用)
   const row = {
