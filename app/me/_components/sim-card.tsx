@@ -3,6 +3,7 @@ import { prisma } from "@/lib/db";
 import {
   bucketForDay,
   dayOffsetFromBaseline,
+  daysUntilReminderWindow,
   getMilestone,
   COUNTS,
   getAnniversaryProgress,
@@ -22,6 +23,7 @@ import { TodayHourlyChart } from "./today-hourly-chart";
 import { MonthDailyChart } from "./month-daily-chart";
 import { DaysUntilWindowCountdown } from "./days-until-window-countdown";
 import { formatPhoneForDisplay } from "@/lib/phone";
+import { formatActivatedDays } from "@/lib/activated-days";
 import { formatRelativeTime, formatTimeGap } from "@/lib/date";
 import {
   DayOffsetProgress,
@@ -70,6 +72,10 @@ export async function SimCard({
     : 0;
   const dayOffset = dayOffsetFromBaseline(baseline);
   const inWindow = isInReminderWindow(dayOffset);
+  // Round 214: 距保号窗口距离(0/1/2 边界 + 170/180 窗口期)
+  const windowDistance = daysUntilReminderWindow(dayOffset);
+  // Round 214: 0/1/2 边缘"刚激活"徽标(从纯函数拿,与单测对齐)
+  const activatedDisplay = formatActivatedDays(dayOffset);
   const milestone = getMilestone(dayOffset);
   const nextMilestone = milestone ? null : getNextMilestone(dayOffset);
   const anniversary = getAnniversaryProgress(dayOffset);
@@ -272,16 +278,35 @@ export async function SimCard({
           <span className="text-sm text-slate-500">已激活</span>
           <span
             className={
-              dayOffset > 180
+              // Round 214: 颜色由 activatedDisplay.mode 决定(单测覆盖所有边界)
+              activatedDisplay.mode === "overdue"
                 ? "text-3xl font-bold text-rose-600"
-                : inWindow
-                  ? "text-3xl font-bold text-amber-600"
-                  : "text-3xl font-bold text-indigo-600"
+                : activatedDisplay.mode === "fresh"
+                  ? "text-3xl font-bold text-slate-500"
+                  : activatedDisplay.mode === "inWindow"
+                    ? "text-3xl font-bold text-amber-600"
+                    : "text-3xl font-bold text-indigo-600"
             }
           >
             {dayOffset === 0 ? "今天" : dayOffset === 1 ? "昨天" : dayOffset === 2 ? "前天" : dayOffset}
           </span>
           <span className="text-base font-normal text-slate-500">天</span>
+          {/* Round 214: 边缘标记 — 今天/昨天/前天加小绿点(从 activatedDisplay 拿) */}
+          {activatedDisplay.showFreshBadge && (
+            <span
+              className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium bg-emerald-100 text-emerald-700"
+              title={
+                dayOffset === 0
+                  ? "今天激活,系统会从 170 天后开始提醒保号"
+                  : dayOffset === 1
+                    ? "昨天激活,等待 170 天进入保号窗口"
+                    : "前天激活,等待 170 天进入保号窗口"
+              }
+            >
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" aria-hidden="true" />
+              刚激活
+            </span>
+          )}
           <Link
             href={`/me/pushes?simId=${sim.id}`}
             className="ml-2 text-xs text-indigo-600 hover:underline"
@@ -289,6 +314,23 @@ export async function SimCard({
           >
             推送历史 →
           </Link>
+          {/* Round 214: 距保号窗口指示(0/1/2 边缘不显示,避免噪音) */}
+          {windowDistance.kind === "before" && windowDistance.days > 2 && (
+            <span
+              className="ml-2 text-xs text-slate-500"
+              title={`还有 ${windowDistance.days} 天进入 170 天保号提醒窗口`}
+            >
+              · 距保号窗口 <strong className="font-semibold text-slate-700">{windowDistance.days}</strong> 天
+            </span>
+          )}
+          {windowDistance.kind === "after" && (
+            <span
+              className="ml-2 text-xs text-rose-600"
+              title={`已过 180 天保号窗口 ${windowDistance.days} 天,建议尽快保号`}
+            >
+              · 已过保号窗口 <strong className="font-semibold">{windowDistance.days}</strong> 天
+            </span>
+          )}
           {anniversary.years === 0 && anniversary.daysLeft > 0 && anniversary.daysLeft < 365 && (
             <span
               className="ml-2 text-xs text-amber-700"

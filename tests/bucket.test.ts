@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 import {
   bucketForDay,
   dayOffsetFromBaseline,
+  daysUntilReminderWindow,
   getAnniversaryProgress, getMilestone,
   getNextMilestone,
   isInReminderWindow,
@@ -354,5 +355,45 @@ describe("getAnniversaryProgress", () => {
     const r = getAnniversaryProgress(930);
     expect(r.years).toBe(2);
     expect(r.daysLeft).toBe(165);
+  });
+});
+
+describe("daysUntilReminderWindow", () => {
+  it("0 天(刚激活)→ before 170 天", () => {
+    expect(daysUntilReminderWindow(0)).toEqual({ kind: "before", days: 170 });
+  });
+  it("1 天 → before 169", () => {
+    expect(daysUntilReminderWindow(1)).toEqual({ kind: "before", days: 169 });
+  });
+  it("2 天(前天激活)→ before 168", () => {
+    expect(daysUntilReminderWindow(2)).toEqual({ kind: "before", days: 168 });
+  });
+  it("100 天 → before 70", () => {
+    expect(daysUntilReminderWindow(100)).toEqual({ kind: "before", days: 70 });
+  });
+  it("169 天(差 1 天进入窗口)→ before 1", () => {
+    expect(daysUntilReminderWindow(169)).toEqual({ kind: "before", days: 1 });
+  });
+
+  it("170 天(进入窗口首日)→ in 0", () => {
+    expect(daysUntilReminderWindow(170)).toEqual({ kind: "in", days: 0 });
+  });
+  it("175 天(窗口中段)→ in 0", () => {
+    expect(daysUntilReminderWindow(175)).toEqual({ kind: "in", days: 0 });
+  });
+  it("180 天(窗口末日)→ in 0", () => {
+    expect(daysUntilReminderWindow(180)).toEqual({ kind: "in", days: 0 });
+  });
+
+  it("181 天(刚过窗口)→ after 1", () => {
+    expect(daysUntilReminderWindow(181)).toEqual({ kind: "after", days: 1 });
+  });
+  it("200 天(过窗口 20 天)→ after 20", () => {
+    expect(daysUntilReminderWindow(200)).toEqual({ kind: "after", days: 20 });
+  });
+
+  it("单测负数(防御:用户填了未来激活日期)→ before 多天", () => {
+    // dayOffset 为负 = "激活日期在 N 天后",等 170+N 天
+    expect(daysUntilReminderWindow(-5)).toEqual({ kind: "before", days: 175 });
   });
 });

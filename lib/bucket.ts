@@ -245,3 +245,35 @@ export function getNextMilestone(
 export function isInReminderWindow(dayOffset: number): boolean {
   return dayOffset >= 170 && dayOffset <= 180;
 }
+
+/**
+ * Round 214: 距保号提醒窗口还有几天
+ *
+ * 返回带标签的 union,UI 可以根据状态显示不同文案:
+ *  - before: 还没到 170 天,距离还有 N 天
+ *  - in:     正好在 170-180 窗口内(days 字段为 0,UI 显示"窗口期内")
+ *  - after:  已超过 180 天(过期未保号),days 为负数(越小越久)
+ *
+ * 边界(纯日期语义,跟 dayOffset 一样是整数天):
+ *  - 0 → before 170(刚激活,等 170 天)
+ *  - 169 → before 1(明天进入窗口)
+ *  - 170 → in 0
+ *  - 180 → in 0
+ *  - 181 → after -1
+ */
+export type ReminderWindowDistance =
+  | { kind: "before"; days: number }
+  | { kind: "in"; days: 0 }
+  | { kind: "after"; days: number };
+
+export function daysUntilReminderWindow(
+  dayOffset: number
+): ReminderWindowDistance {
+  if (dayOffset < 170) {
+    return { kind: "before", days: 170 - dayOffset };
+  }
+  if (dayOffset <= 180) {
+    return { kind: "in", days: 0 };
+  }
+  return { kind: "after", days: dayOffset - 180 };
+}
