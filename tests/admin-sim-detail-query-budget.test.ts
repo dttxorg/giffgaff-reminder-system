@@ -18,10 +18,11 @@ describe("SIM 编辑页查询与交互预算", () => {
     expect(client).not.toContain('.then((data');
   });
 
-  it("共享查询只读取表单和最近记录需要的字段", () => {
-    expect(loader).toContain("await Promise.all([");
-    expect(loader).toContain("select: {");
-    expect(loader).not.toContain("include:");
+  it("共享查询用一次有界快照读取表单和最近记录所需字段", () => {
+    expect(loader.match(/prisma\.\$queryRaw/g)).toHaveLength(1);
+    expect(loader).toContain("LIMIT 5");
+    expect(loader).not.toContain("prisma.sim.findUnique");
+    expect(loader).not.toContain("prisma.reminderSent.findMany");
     expect(loader).not.toContain("channelKey: true");
     expect(loader).not.toContain("portToken: true");
   });

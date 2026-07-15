@@ -1,5 +1,22 @@
 import { prisma } from "./db";
 
+interface AdminSimDetailRow {
+  id: number;
+  phoneNumber: string;
+  activatedAt: Date | string;
+  lastPortedAt: Date | string | null;
+  status: "active" | "paused";
+  user: { id: number; username: string } | null;
+  recentReminders: Array<{
+    id: number;
+    dayOffset: number;
+    bucket: number;
+    sentAt: Date | string;
+    status: "success" | "failed";
+    errorMessage: string | null;
+  }>;
+}
+
 export interface AdminSimDetail {
   id: number;
   phoneNumber: string;
@@ -17,48 +34,65 @@ export interface AdminSimDetail {
   }>;
 }
 
-/** 编辑页与详情 API 共用的最小查询；两部分并行且不读取渠道密钥。 */
+/** 编辑页与详情 API 共用的单次有界快照；不读取渠道密钥。 */
 export async function getAdminSimDetail(
   simId: number
 ): Promise<AdminSimDetail | null> {
-  const [sim, recentReminders] = await Promise.all([
-    prisma.sim.findUnique({
-      where: { id: simId },
-      select: {
-        id: true,
-        phoneNumber: true,
-        activatedAt: true,
-        lastPortedAt: true,
-        status: true,
-        user: { select: { id: true, username: true } },
-      },
-    }),
-    prisma.reminderSent.findMany({
-      where: { simId },
-      orderBy: { sentAt: "desc" },
-      take: 5,
-      select: {
-        id: true,
-        dayOffset: true,
-        bucket: true,
-        sentAt: true,
-        status: true,
-        errorMessage: true,
-      },
-    }),
-  ]);
+  const [snapshot] = await prisma.$queryRaw<AdminSimDetailRow[]>`
+    SELECT
+      sim."id",
+      sim."phoneNumber",
+      sim."activatedAt",
+      sim."lastPortedAt",
+      sim."status"::text AS "status",
+      CASE
+        WHEN owner."id" IS NULL THEN NULL
+        ELSE jsonb_build_object(
+          'id', owner."id",
+          'username', owner."username"
+        )
+      END AS "user",
+      COALESCE(
+        (
+          SELECT jsonb_agg(recent_row ORDER BY recent_row."sentAt" DESC)
+          FROM (
+            SELECT
+              reminder."id",
+              reminder."dayOffset",
+              reminder."bucket",
+              reminder."sentAt",
+              reminder."status"::text AS "status",
+              reminder."errorMessage"
+            FROM "ReminderSent" reminder
+            WHERE reminder."simId" = sim."id"
+            ORDER BY reminder."sentAt" DESC
+            LIMIT 5
+          ) recent_row
+        ),
+        '[]'::jsonb
+      ) AS "recentReminders"
+    FROM "Sim" sim
+    LEFT JOIN "User" owner ON owner."id" = sim."userId"
+    WHERE sim."id" = ${simId}
+    LIMIT 1
+  `;
 
-  if (!sim) return null;
+  if (!snapshot) return null;
   return {
-    id: sim.id,
-    phoneNumber: sim.phoneNumber,
-    activatedAt: sim.activatedAt.toISOString().slice(0, 10),
-    lastPortedAt: sim.lastPortedAt?.toISOString().slice(0, 10) ?? null,
-    status: sim.status,
-    user: sim.user,
-    recentReminders: recentReminders.map((reminder) => ({
+    id: snapshot.id,
+    phoneNumber: snapshot.phoneNumber,
+    activatedAt: new Date(snapshot.activatedAt).toISOString().slice(0, 10),
+    lastPortedAt: snapshot.lastPortedAt
+      ? new Date(snapshot.lastPortedAt).toISOString().slice(0, 10)
+      : null,
+    status: snapshot.status,
+    user: snapshot.user,
+    recentReminders: snapshot.recentReminders.map((reminder) => ({
       ...reminder,
-      sentAt: reminder.sentAt.toISOString().replace("T", " ").slice(0, 19),
+      sentAt: new Date(reminder.sentAt)
+        .toISOString()
+        .replace("T", " ")
+        .slice(0, 19),
     })),
   };
 }
