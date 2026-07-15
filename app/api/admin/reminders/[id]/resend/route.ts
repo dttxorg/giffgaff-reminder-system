@@ -30,10 +30,14 @@ export async function POST(_req: Request, ctx: RouteContext) {
     return NextResponse.json({ ok: false, error: "id 无效" }, { status: 400 });
   }
 
-  const reminder = await prisma.reminderSent.findUnique({
-    where: { id: reminderId },
-    include: { sim: true },
-  });
+  // 提醒快照与模板互不依赖，并行读取以缩短手动重发的等待路径。
+  const [reminder, setting] = await Promise.all([
+    prisma.reminderSent.findUnique({
+      where: { id: reminderId },
+      include: { sim: true },
+    }),
+    prisma.setting.findUnique({ where: { key: "reminder_template" } }),
+  ]);
   if (!reminder) {
     return NextResponse.json({ ok: false, error: "记录不存在" }, { status: 404 });
   }
@@ -53,10 +57,13 @@ export async function POST(_req: Request, ctx: RouteContext) {
   if (reminder.sim.portToken) {
     url = portUrl(baseUrl, reminder.sim.portToken);
   } else {
-    const token = await ensureSimPortToken(reminder.sim.id);
+    // 已知当前值为空，避免 ensureSimPortToken 再查一次 SIM。
+    const token = await ensureSimPortToken(
+      reminder.sim.id,
+      reminder.sim.portToken
+    );
     url = token ? portUrl(baseUrl, token) : portUrl(baseUrl, reminder.sim.id);
   }
-  const setting = await prisma.setting.findUnique({ where: { key: "reminder_template" } });
   const template = setting?.value || DEFAULT_TEMPLATE;
   const title = "Giffgaff 保号提醒";
   const body = renderTemplate(template, {
