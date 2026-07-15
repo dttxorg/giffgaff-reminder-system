@@ -1,8 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { prisma } from "@/lib/db";
-import { findSimByParam } from "@/lib/port-token-db";
 import { invalidatePublicSimCache } from "@/lib/public-sim-cache";
+import { updatePublicSimPortDate } from "@/lib/public-port-write";
 
 const BodySchema = z.object({
   portedAt: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "日期格式 YYYY-MM-DD"),
@@ -34,36 +33,25 @@ export async function POST(req: Request, ctx: RouteContext) {
     return NextResponse.json({ ok: false, error: "参数错误" }, { status: 400 });
   }
 
-  const sim = await findSimByParam(simId);
-  if (!sim) {
-    return NextResponse.json({ ok: false, error: "sim 不存在" }, { status: 404 });
-  }
-
   // 解析 portedAt（按 UTC 0 点）
   const [y, m, d] = parsed.data.portedAt.split("-").map(Number);
   const portedAt = new Date(Date.UTC(y, m - 1, d));
 
   const today = new Date();
   const todayUTC = new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate()));
-  // 最早可选 = 激活日期（同一天或之后均可；保号不可能早于激活）
-  const activatedAt = new Date(Date.UTC(
-    sim.activatedAt.getUTCFullYear(),
-    sim.activatedAt.getUTCMonth(),
-    sim.activatedAt.getUTCDate()
-  ));
-
   if (portedAt > todayUTC) {
     return NextResponse.json({ ok: false, error: "保号日期不能晚于今天" }, { status: 400 });
   }
-  if (portedAt < activatedAt) {
+
+  const outcome = await updatePublicSimPortDate(simId, portedAt);
+  if (!outcome.found) {
+    return NextResponse.json({ ok: false, error: "sim 不存在" }, { status: 404 });
+  }
+  if (!outcome.sim) {
     return NextResponse.json({ ok: false, error: "保号日期不能早于激活日期" }, { status: 400 });
   }
 
-  await prisma.sim.update({
-    where: { id: sim.id },
-    data: { lastPortedAt: portedAt },
-  });
-  invalidatePublicSimCache(sim);
+  invalidatePublicSimCache(outcome.sim);
 
   return NextResponse.json({ ok: true });
 }
