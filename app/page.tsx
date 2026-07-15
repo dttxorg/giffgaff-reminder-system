@@ -103,6 +103,54 @@ export default async function HomePage() {
         </div>
       </div>
 
+      {/* Round 219: 提醒频率时间线 — 让用户一眼看出"170 天后才会推"的等待感 */}
+      <section className="mb-12">
+        <h2 className="text-xl font-semibold mb-2 text-center">170 天后,提醒自动开始</h2>
+        <p className="text-sm text-slate-500 text-center mb-5">越临近 180 天截止日,提醒越频繁</p>
+        <div className="bg-white rounded-xl p-5 shadow-sm border border-slate-100">
+          {/* 时间轴:从 170 到 180 */}
+          <div className="relative pt-6 pb-2">
+            {/* 横向轴 */}
+            <div className="absolute top-9 left-0 right-0 h-0.5 bg-slate-200" aria-hidden="true" />
+            <ol className="relative grid grid-cols-5 gap-1" aria-label="保号提醒频率时间线">
+              {[
+                { day: 170, count: 1, label: "1 次/天", tone: "slate" },
+                { day: 175, count: 2, label: "2 次/天", tone: "amber" },
+                { day: 178, count: 3, label: "3 次/天", tone: "orange" },
+                { day: 179, count: 5, label: "5 次/天", tone: "red" },
+                { day: 180, count: 10, label: "10 次/天", tone: "rose" },
+              ].map((step) => {
+                const colorMap: Record<string, { bg: string; ring: string; text: string }> = {
+                  slate: { bg: "bg-slate-400", ring: "ring-slate-200", text: "text-slate-700" },
+                  amber: { bg: "bg-amber-500", ring: "ring-amber-200", text: "text-amber-700" },
+                  orange: { bg: "bg-orange-500", ring: "ring-orange-200", text: "text-orange-700" },
+                  red: { bg: "bg-red-500", ring: "ring-red-200", text: "text-red-700" },
+                  rose: { bg: "bg-rose-600", ring: "ring-rose-200", text: "text-rose-700" },
+                };
+                const c = colorMap[step.tone];
+                return (
+                  <li key={step.day} className="flex flex-col items-center">
+                    <div
+                      className={`w-5 h-5 rounded-full ${c.bg} ring-4 ring-white shadow-sm z-10 relative`}
+                      aria-hidden="true"
+                    />
+                    <div className="mt-2 text-center">
+                      <div className={`text-xs font-semibold ${c.text}`}>
+                        第 {step.day} 天
+                      </div>
+                      <div className="text-[10px] text-slate-500 mt-0.5">{step.label}</div>
+                    </div>
+                  </li>
+                );
+              })}
+            </ol>
+          </div>
+          <p className="text-[11px] text-slate-500 text-center mt-3">
+            过了 180 天系统停止提醒,SIM 卡可能被运营商回收
+          </p>
+        </div>
+      </section>
+
       {/* 两条主路径并列:已有账号登录 / 卡密新用户兑换。
           把卡密入口从浅色文字链提升为同样大小的按钮,因为卡密用户是新用户最大来源。 */}
       <div className="grid sm:grid-cols-2 gap-3 mb-12">

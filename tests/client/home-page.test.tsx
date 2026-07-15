@@ -50,5 +50,40 @@ describe("<HomePage />", () => {
     expect(text).toContain("100");
     expect(text).toContain("正在被守护");
   });
+
+  describe("Round 219: 提醒频率时间线", () => {
+    it("渲染 5 个时间节点(170/175/178/179/180)", async () => {
+      const { container } = await renderHome();
+      const ol = container.querySelector("ol[aria-label='保号提醒频率时间线']");
+      expect(ol).toBeInTheDocument();
+      const items = ol?.querySelectorAll("li");
+      expect(items?.length).toBe(5);
+      expect(items?.[0]?.textContent).toContain("第 170 天");
+      expect(items?.[1]?.textContent).toContain("第 175 天");
+      expect(items?.[2]?.textContent).toContain("第 178 天");
+      expect(items?.[3]?.textContent).toContain("第 179 天");
+      expect(items?.[4]?.textContent).toContain("第 180 天");
+    });
+
+    it("每个节点显示提醒频率(1/2/3/5/10 次/天)", async () => {
+      const { container } = await renderHome();
+      const text = container.textContent ?? "";
+      expect(text).toContain("1 次/天");
+      expect(text).toContain("2 次/天");
+      expect(text).toContain("3 次/天");
+      expect(text).toContain("5 次/天");
+      expect(text).toContain("10 次/天");
+    });
+
+    it("标题:'170 天后,提醒自动开始'", async () => {
+      const { container } = await renderHome();
+      expect(container.textContent).toContain("170 天后,提醒自动开始");
+    });
+
+    it("底部说明:过了 180 天系统停止提醒", async () => {
+      const { container } = await renderHome();
+      expect(container.textContent).toContain("过了 180 天系统停止提醒");
+    });
+  });
 });
 
