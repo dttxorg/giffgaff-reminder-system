@@ -4,6 +4,7 @@ import Link from "next/link";
 import { getCurrentUser } from "@/lib/session";
 import { MeSettingsClient } from "./settings-client";
 import { PushPreview } from "@/app/_components/push-preview";
+import { SimSettingsPicker } from "./sim-settings-picker";
 
 type Channel = "serverchan" | "bark" | "pushplus" | "telegram";
 
@@ -69,24 +70,16 @@ export default async function MeSettingsPage({ searchParams }: PageProps) {
         {sims.length > 1 && ` · 当前编辑第 ${sims.indexOf(selectedSim) + 1} 张 SIM 卡`}
       </p>
 
-      {/* 多卡切换(仅在 sims.length > 1 时显示) */}
+      {/* 多卡切换：单个原生选择器可稳定承载 50+ 号码，不渲染预取链接墙。 */}
       {sims.length > 1 && (
-        <div className="mb-5 flex gap-2 overflow-x-auto pb-1">
-          {sims.map((s, idx) => (
-            <Link
-              key={s.id}
-              href={`/me/settings?simId=${s.id}`}
-              className={`shrink-0 px-3 py-1.5 rounded-lg text-sm border transition-colors ${
-                selectedSim.id === s.id
-                  ? "bg-indigo-600 text-white border-indigo-600"
-                  : "bg-white text-slate-700 border-slate-300 hover:bg-slate-50"
-              }`}
-            >
-              <span className="font-mono">**** {s.phoneNumber.slice(-4)}</span>
-              {idx === 0 && <span className="ml-1 text-xs opacity-75">(主)</span>}
-            </Link>
-          ))}
-        </div>
+        <SimSettingsPicker
+          sims={sims.map((sim, index) => ({
+            id: sim.id,
+            phoneNumber: sim.phoneNumber,
+            isPrimary: index === 0,
+          }))}
+          activeSimId={selectedSim.id}
+        />
       )}
 
       <h2 className="text-lg font-semibold mb-3">
