@@ -96,6 +96,8 @@ model ReminderSent {
   @@unique([simId, dayOffset, bucket]) // 同号同日同 bucket 唯一 → 幂等
   @@index([simId, sentAt])
   @@index([userId, sentAt])
+  @@index([status, sentAt])
+  @@index([channel, sentAt])
   @@index([sentAt])
 }
 

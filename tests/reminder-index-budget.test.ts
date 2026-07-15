@@ -7,6 +7,10 @@ describe("提醒记录高频查询索引", () => {
     "prisma/migrations/20260715000000_add_reminder_lookup_indexes/migration.sql",
     "utf8"
   );
+  const filterMigration = fs.readFileSync(
+    "prisma/migrations/20260715010000_add_reminder_filter_indexes/migration.sql",
+    "utf8"
+  );
 
   it("Schema 覆盖按 SIM/用户读取时间线的查询形状", () => {
     expect(schema).toContain("@@index([simId, sentAt])");
@@ -18,5 +22,18 @@ describe("提醒记录高频查询索引", () => {
     expect(migration).toContain('ON "ReminderSent"("simId", "sentAt")');
     expect(migration).toContain('"ReminderSent_userId_sentAt_idx"');
     expect(migration).toContain('ON "ReminderSent"("userId", "sentAt")');
+  });
+
+  it("Schema 和迁移覆盖后台状态/渠道时间线筛选", () => {
+    expect(schema).toContain("@@index([status, sentAt])");
+    expect(schema).toContain("@@index([channel, sentAt])");
+    expect(filterMigration).toContain('"ReminderSent_status_sentAt_idx"');
+    expect(filterMigration).toContain(
+      'ON "ReminderSent"("status", "sentAt")'
+    );
+    expect(filterMigration).toContain('"ReminderSent_channel_sentAt_idx"');
+    expect(filterMigration).toContain(
+      'ON "ReminderSent"("channel", "sentAt")'
+    );
   });
 });
