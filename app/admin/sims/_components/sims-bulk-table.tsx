@@ -331,6 +331,7 @@ export function SimsBulkTable({ sims }: SimsBulkTableProps) {
                 <td className="px-3 py-2">
                   <Link
                     href={`/admin/sims/${sim.id}`}
+                    prefetch={false}
                     className="text-indigo-600 hover:underline text-sm"
                   >
                     编辑

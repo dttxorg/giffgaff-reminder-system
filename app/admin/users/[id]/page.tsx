@@ -23,8 +23,23 @@ export default async function UserDetailPage({ params }: PageProps) {
   const [user, recentReminders, reminderCount] = await Promise.all([
     prisma.user.findUnique({
       where: { id: userId },
-      // 1:N - 多 sim
-      include: { sims: { orderBy: { id: "asc" } } },
+      select: {
+        id: true,
+        username: true,
+        passwordHash: true,
+        createdAt: true,
+        sims: {
+          orderBy: { id: "asc" },
+          select: {
+            id: true,
+            phoneNumber: true,
+            activatedAt: true,
+            lastPortedAt: true,
+            channel: true,
+            status: true,
+          },
+        },
+      },
     }),
     prisma.reminderSent.findMany({
       where: { userId },
@@ -163,6 +178,7 @@ export default async function UserDetailPage({ params }: PageProps) {
                         <dd>
                           <Link
                             href={`/admin/sims/${sim.id}`}
+                            prefetch={false}
                             className="font-mono text-indigo-600 hover:underline"
                           >
                             {formatPhoneForDisplay(sim.phoneNumber)}
@@ -223,6 +239,7 @@ export default async function UserDetailPage({ params }: PageProps) {
               <Link
                 key={s.id}
                 href={`/admin/sims/${s.id}`}
+                prefetch={false}
                 className="text-xs text-indigo-600 hover:underline"
               >
                 编辑 **** {s.phoneNumber.slice(-4)} →

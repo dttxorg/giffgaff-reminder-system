@@ -6,6 +6,12 @@ describe("后台列表查询预算", () => {
   const users = fs.readFileSync("app/admin/users/page.tsx", "utf8");
   const cards = fs.readFileSync("app/admin/cards/page.tsx", "utf8");
   const reminders = fs.readFileSync("app/admin/reminders/page.tsx", "utf8");
+  const userDetail = fs.readFileSync("app/admin/users/[id]/page.tsx", "utf8");
+  const userClient = fs.readFileSync("app/admin/users/users-client.tsx", "utf8");
+  const simTable = fs.readFileSync(
+    "app/admin/sims/_components/sims-bulk-table.tsx",
+    "utf8"
+  );
 
   it("号码分页只保留一次过滤 count，且不读取完整 user", () => {
     expect(sims.match(/prisma\.sim\.count\(\{ where \}\)/g)).toHaveLength(1);
@@ -16,6 +22,13 @@ describe("后台列表查询预算", () => {
   it("用户列表限制嵌套 SIM 字段", () => {
     expect(users).toContain("select: { phoneNumber: true, channel: true }");
     expect(users).not.toContain("include: { sims:");
+  });
+
+  it("用户详情不读取 SIM 渠道密钥或公开 token", () => {
+    expect(userDetail).not.toContain("include: { sims:");
+    expect(userDetail).not.toContain("channelKey: true");
+    expect(userDetail).not.toContain("portToken: true");
+    expect(userDetail).toContain("lastPortedAt: true");
   });
 
   it("卡密列表和统计同一轮加载，并使用过滤总数分页", () => {
@@ -32,5 +45,10 @@ describe("后台列表查询预算", () => {
       "sim: { select: { phoneNumber: true } }"
     );
     expect(reminders).toContain("prefetch={false}");
+  });
+
+  it("高密度用户与号码列表不批量预取详情", () => {
+    expect(userClient).toContain("prefetch={false}");
+    expect(simTable).toContain("prefetch={false}");
   });
 });

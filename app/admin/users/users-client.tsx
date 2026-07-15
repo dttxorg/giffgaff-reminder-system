@@ -169,6 +169,7 @@ export function UsersClient({ users }: UsersClientProps) {
                     <td className="px-3 py-2 whitespace-nowrap">
                       <Link
                         href={`/admin/users/${u.id}`}
+                        prefetch={false}
                         className="text-indigo-600 hover:underline text-xs mr-3"
                       >
                         查看
