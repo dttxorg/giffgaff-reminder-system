@@ -1,30 +1,26 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const dbMocks = vi.hoisted(() => ({
-  findMany: vi.fn(),
-  groupBy: vi.fn(),
+  queryRaw: vi.fn(),
 }));
 
 vi.mock("../lib/db", () => ({
   prisma: {
-    reminderSent: {
-      findMany: dbMocks.findMany,
-      groupBy: dbMocks.groupBy,
-    },
+    $queryRaw: dbMocks.queryRaw,
   },
 }));
 
 import {
   getSimReminderStats,
   summarizeReminderPeriod,
+  summarizeSimReminderStatsSnapshot,
 } from "../lib/sim-reminder-stats";
 
 const now = new Date("2026-07-15T04:00:00.000Z"); // 上海时间 7 月 15 日 12:00
 
 describe("sim-reminder-stats", () => {
   beforeEach(() => {
-    dbMocks.findMany.mockReset();
-    dbMocks.groupBy.mockReset();
+    dbMocks.queryRaw.mockReset();
   });
 
   it("一次内存汇总生成今日、本月、小时和近 7 日数据", () => {
@@ -48,32 +44,85 @@ describe("sim-reminder-stats", () => {
     expect(summary.last7DaysForSim.at(-2)?.count).toBe(1);
   });
 
-  it("详情统计固定为 3 次并行查询，不再发起多轮 count", async () => {
-    dbMocks.findMany
-      .mockResolvedValueOnce([
-        {
-          id: 1,
-          dayOffset: 175,
-          bucket: 0,
-          sentAt: new Date("2026-07-15T01:00:00.000Z"),
-          status: "success",
-        },
-      ])
-      .mockResolvedValueOnce([
-        { sentAt: new Date("2026-07-15T01:00:00.000Z"), status: "success" },
-      ]);
-    dbMocks.groupBy.mockResolvedValueOnce([
-      { status: "success", _count: { _all: 12 } },
-      { status: "failed", _count: { _all: 2 } },
+  it("从紧凑快照还原日期对象和生命周期计数", () => {
+    const result = summarizeSimReminderStatsSnapshot(
+      {
+        recentReminders: [
+          {
+            id: 1,
+            dayOffset: 175,
+            bucket: 0,
+            sentAt: "2026-07-15T01:00:00.000Z",
+            status: "success",
+          },
+        ],
+        periodReminders: [
+          { sentAt: "2026-07-15T01:00:00.000Z", status: "success" },
+        ],
+        successCount: 12,
+        failedCount: 2,
+      },
+      now
+    );
+
+    expect(result.lifetimeCount).toBe(14);
+    expect(result.recentReminders[0].sentAt).toBeInstanceOf(Date);
+    expect(result.todayCount).toBe(1);
+  });
+
+  it("详情统计固定为一次数据库快照查询", async () => {
+    dbMocks.queryRaw.mockResolvedValueOnce([
+      {
+        recentReminders: [
+          {
+            id: 1,
+            dayOffset: 175,
+            bucket: 0,
+            sentAt: "2026-07-15T01:00:00.000Z",
+            status: "success",
+          },
+        ],
+        periodReminders: [
+          {
+            sentAt: "2026-07-15T01:00:00.000Z",
+            status: "success",
+          },
+        ],
+        successCount: 12,
+        failedCount: 2,
+      },
     ]);
 
     const result = await getSimReminderStats(88, now);
 
-    expect(dbMocks.findMany).toHaveBeenCalledTimes(2);
-    expect(dbMocks.groupBy).toHaveBeenCalledTimes(1);
+    expect(dbMocks.queryRaw).toHaveBeenCalledOnce();
     expect(result.lifetimeCount).toBe(14);
     expect(result.successCount).toBe(12);
     expect(result.failedCount).toBe(2);
     expect(result.recentReminders).toHaveLength(1);
+  });
+
+  it("空快照返回完整的零值图表", async () => {
+    dbMocks.queryRaw.mockResolvedValueOnce([
+      {
+        recentReminders: [],
+        periodReminders: [],
+        successCount: 0,
+        failedCount: 0,
+      },
+    ]);
+
+    const result = await getSimReminderStats(88, now);
+
+    expect(result).toMatchObject({
+      recentReminders: [],
+      lifetimeCount: 0,
+      successCount: 0,
+      failedCount: 0,
+      todayCount: 0,
+      thisMonthCount: 0,
+    });
+    expect(result.todayHourlySends).toHaveLength(24);
+    expect(result.last7DaysForSim).toHaveLength(7);
   });
 });

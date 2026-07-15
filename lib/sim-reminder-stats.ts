@@ -40,6 +40,24 @@ export interface SimReminderStats {
   last7DaysForSim: DailySendSummary[];
 }
 
+interface ReminderSnapshotEvent {
+  sentAt: Date | string;
+  status: ReminderStatus;
+}
+
+interface RecentReminderSnapshot extends ReminderSnapshotEvent {
+  id: number;
+  dayOffset: number;
+  bucket: number;
+}
+
+export interface SimReminderStatsSnapshot {
+  recentReminders: RecentReminderSnapshot[];
+  periodReminders: ReminderSnapshotEvent[];
+  successCount: number;
+  failedCount: number;
+}
+
 const HOUR_MS = 60 * 60 * 1000;
 const DAY_MS = 24 * HOUR_MS;
 const SHANGHAI_OFFSET_MS = 8 * HOUR_MS;
@@ -127,9 +145,36 @@ export function summarizeReminderPeriod(
   };
 }
 
+function snapshotDate(value: Date | string): Date {
+  return value instanceof Date ? value : new Date(value);
+}
+
+/** 把数据库返回的紧凑快照还原成号码详情所需的完整统计。 */
+export function summarizeSimReminderStatsSnapshot(
+  snapshot: SimReminderStatsSnapshot,
+  now: Date
+): SimReminderStats {
+  const recentReminders = snapshot.recentReminders.map((reminder) => ({
+    ...reminder,
+    sentAt: snapshotDate(reminder.sentAt),
+  }));
+  const periodReminders = snapshot.periodReminders.map((reminder) => ({
+    ...reminder,
+    sentAt: snapshotDate(reminder.sentAt),
+  }));
+
+  return {
+    recentReminders,
+    lifetimeCount: snapshot.successCount + snapshot.failedCount,
+    successCount: snapshot.successCount,
+    failedCount: snapshot.failedCount,
+    ...summarizeReminderPeriod(periodReminders, now),
+  };
+}
+
 /**
  * 单卡详情所需的全部推送统计。
- * 以前是 16 次查询、3 轮串行等待；现在固定为 3 次并行查询、1 轮等待。
+ * 一次扫描同卡日志，在数据库内同时生成最近记录、生命周期计数和周期记录快照。
  */
 export async function getSimReminderStats(
   simId: number,
@@ -137,41 +182,59 @@ export async function getSimReminderStats(
 ): Promise<SimReminderStats> {
   const { activityStart } = periodBoundaries(now);
 
-  const [recentReminders, statusGroups, periodReminders] = await Promise.all([
-    prisma.reminderSent.findMany({
-      where: { simId },
-      orderBy: { sentAt: "desc" },
-      take: 5,
-      select: {
-        id: true,
-        dayOffset: true,
-        bucket: true,
-        sentAt: true,
-        status: true,
-      },
-    }),
-    prisma.reminderSent.groupBy({
-      by: ["status"],
-      where: { simId },
-      _count: { _all: true },
-    }),
-    prisma.reminderSent.findMany({
-      where: { simId, sentAt: { gte: activityStart } },
-      select: { sentAt: true, status: true },
-      orderBy: { sentAt: "asc" },
-    }),
-  ]);
+  const [snapshot] = await prisma.$queryRaw<SimReminderStatsSnapshot[]>`
+    WITH reminder_base AS MATERIALIZED (
+      SELECT "id", "dayOffset", "bucket", "sentAt", "status"
+      FROM "ReminderSent"
+      WHERE "simId" = ${simId}
+    ),
+    status_counts AS (
+      SELECT
+        (COUNT(*) FILTER (WHERE "status" = 'success'))::int
+          AS "successCount",
+        (COUNT(*) FILTER (WHERE "status" = 'failed'))::int
+          AS "failedCount"
+      FROM reminder_base
+    ),
+    recent_reminders AS (
+      SELECT
+        "id",
+        "dayOffset",
+        "bucket",
+        "sentAt",
+        "status"::text AS "status"
+      FROM reminder_base
+      ORDER BY "sentAt" DESC
+      LIMIT 5
+    ),
+    period_reminders AS (
+      SELECT "sentAt", "status"::text AS "status"
+      FROM reminder_base
+      WHERE "sentAt" >= ${activityStart}
+    )
+    SELECT
+      COALESCE(
+        (SELECT jsonb_agg(recent_row ORDER BY recent_row."sentAt" DESC)
+          FROM recent_reminders recent_row),
+        '[]'::jsonb
+      ) AS "recentReminders",
+      COALESCE(
+        (SELECT jsonb_agg(period_row ORDER BY period_row."sentAt" ASC)
+          FROM period_reminders period_row),
+        '[]'::jsonb
+      ) AS "periodReminders",
+      status_counts."successCount",
+      status_counts."failedCount"
+    FROM status_counts
+  `;
 
-  const successCount =
-    statusGroups.find((group) => group.status === "success")?._count._all ?? 0;
-  const failedCount =
-    statusGroups.find((group) => group.status === "failed")?._count._all ?? 0;
-
-  return {
-    recentReminders,
-    lifetimeCount: successCount + failedCount,
-    successCount,
-    failedCount,
-    ...summarizeReminderPeriod(periodReminders, now),
-  };
+  return summarizeSimReminderStatsSnapshot(
+    snapshot ?? {
+      recentReminders: [],
+      periodReminders: [],
+      successCount: 0,
+      failedCount: 0,
+    },
+    now
+  );
 }
