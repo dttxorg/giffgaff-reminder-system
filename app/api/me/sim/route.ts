@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/db";
-import { getCurrentUser } from "@/lib/session";
+import { getCurrentUserId } from "@/lib/session";
 import { invalidatePublicSimCache } from "@/lib/public-sim-cache";
 
 const BodySchema = z.object({
@@ -20,15 +20,9 @@ const BodySchema = z.object({
  * - 不影响 lastPortedAt(激活日期 vs 上次保号日期 语义独立)
  */
 export async function PATCH(req: Request) {
-  const user = await getCurrentUser();
-  if (!user) {
+  const userId = await getCurrentUserId();
+  if (!userId) {
     return NextResponse.json({ ok: false, error: "未登录" }, { status: 401 });
-  }
-  if (user.sims.length === 0) {
-    return NextResponse.json(
-      { ok: false, error: "您账号下没有 SIM 卡" },
-      { status: 400 }
-    );
   }
 
   let body: unknown;
@@ -42,19 +36,6 @@ export async function PATCH(req: Request) {
     return NextResponse.json(
       { ok: false, error: parsed.error.issues[0]?.message || "参数错误" },
       { status: 400 }
-    );
-  }
-
-  const ownedSimIds = new Set(user.sims.map((s) => s.id));
-  const targetSimId =
-    parsed.data.simId !== undefined && ownedSimIds.has(parsed.data.simId)
-      ? parsed.data.simId
-      : user.sims[0].id;
-
-  if (parsed.data.simId !== undefined && !ownedSimIds.has(parsed.data.simId)) {
-    return NextResponse.json(
-      { ok: false, error: "无权修改该 SIM 卡" },
-      { status: 403 }
     );
   }
 
@@ -72,12 +53,48 @@ export async function PATCH(req: Request) {
     );
   }
 
-  await prisma.sim.update({
-    where: { id: targetSimId },
-    data: { activatedAt: newActivated },
-  });
-  const targetSim = user.sims.find((sim) => sim.id === targetSimId);
-  if (targetSim) invalidatePublicSimCache(targetSim);
+  let targetSim: { id: number; portToken: string | null } | undefined;
+  if (parsed.data.simId !== undefined) {
+    [targetSim] = await prisma.sim.updateManyAndReturn({
+      where: { id: parsed.data.simId, userId },
+      data: { activatedAt: newActivated },
+      select: { id: true, portToken: true },
+    });
+    if (!targetSim) {
+      const firstOwnedSim = await prisma.sim.findFirst({
+        where: { userId },
+        select: { id: true },
+      });
+      if (!firstOwnedSim) {
+        return NextResponse.json(
+          { ok: false, error: "您账号下没有 SIM 卡" },
+          { status: 400 }
+        );
+      }
+      return NextResponse.json(
+        { ok: false, error: "无权修改该 SIM 卡" },
+        { status: 403 }
+      );
+    }
+  } else {
+    const firstOwnedSim = await prisma.sim.findFirst({
+      where: { userId },
+      orderBy: { id: "asc" },
+      select: { id: true },
+    });
+    if (!firstOwnedSim) {
+      return NextResponse.json(
+        { ok: false, error: "您账号下没有 SIM 卡" },
+        { status: 400 }
+      );
+    }
+    targetSim = await prisma.sim.update({
+      where: { id: firstOwnedSim.id },
+      data: { activatedAt: newActivated },
+      select: { id: true, portToken: true },
+    });
+  }
+  invalidatePublicSimCache(targetSim);
 
-  return NextResponse.json({ ok: true, simId: targetSimId });
+  return NextResponse.json({ ok: true, simId: targetSim.id });
 }

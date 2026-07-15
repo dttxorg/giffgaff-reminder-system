@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/db";
-import { getCurrentUser } from "@/lib/session";
+import { getCurrentUserId } from "@/lib/session";
 import { sendPush } from "@/lib/channels";
 
 const BodySchema = z.object({
@@ -25,8 +25,8 @@ const BodySchema = z.object({
  * 避免保存错的 key 导致后续推送失败。
  */
 export async function POST(req: Request) {
-  const user = await getCurrentUser();
-  if (!user) {
+  const userId = await getCurrentUserId();
+  if (!userId) {
     return NextResponse.json({ ok: false, error: "未登录" }, { status: 401 });
   }
 
@@ -43,23 +43,58 @@ export async function POST(req: Request) {
 
   const { channel, channelKey, verified, simId: requestedSimId } = parsed.data;
 
-  // 找目标 sim:URL 传 simId 时校验所有权,否则用 sims[0]
-  const ownedSimIds = new Set(user.sims.map((s) => s.id));
-  const targetSimId =
-    requestedSimId !== undefined && ownedSimIds.has(requestedSimId)
-      ? requestedSimId
-      : user.sims[0]?.id;
+  // 设置页已经完成测试推送时，归属校验与写入合并为一次查询。
+  if (verified && requestedSimId !== undefined) {
+    const [updatedSim] = await prisma.sim.updateManyAndReturn({
+      where: { id: requestedSimId, userId },
+      data: { channel, channelKey },
+      select: { id: true },
+    });
+    if (updatedSim) {
+      return NextResponse.json({ ok: true, simId: updatedSim.id });
+    }
 
-  if (!targetSimId) {
-    return NextResponse.json(
-      { ok: false, error: "您还没绑定任何 SIM 卡" },
-      { status: 400 }
-    );
-  }
-  if (requestedSimId !== undefined && !ownedSimIds.has(requestedSimId)) {
+    const firstOwnedSim = await prisma.sim.findFirst({
+      where: { userId },
+      select: { id: true },
+    });
+    if (!firstOwnedSim) {
+      return NextResponse.json(
+        { ok: false, error: "您还没绑定任何 SIM 卡" },
+        { status: 400 }
+      );
+    }
     return NextResponse.json(
       { ok: false, error: "无权修改该 SIM 卡的渠道" },
       { status: 403 }
+    );
+  }
+
+  // 兼容旧客户端不传 simId，以及未先测试推送的请求。
+  const targetSim = await prisma.sim.findFirst({
+    where:
+      requestedSimId === undefined
+        ? { userId }
+        : { id: requestedSimId, userId },
+    orderBy: requestedSimId === undefined ? { id: "asc" } : undefined,
+    select: { id: true },
+  });
+  if (!targetSim) {
+    if (requestedSimId !== undefined) {
+      const firstOwnedSim = await prisma.sim.findFirst({
+        where: { userId },
+        select: { id: true },
+      });
+      if (firstOwnedSim) {
+        return NextResponse.json(
+          { ok: false, error: "无权修改该 SIM 卡的渠道" },
+          { status: 403 }
+        );
+      }
+    }
+    return NextResponse.json(
+      { ok: false, error: "您还没绑定任何 SIM 卡" },
+      { status: 400 }
     );
   }
 
@@ -80,9 +115,9 @@ export async function POST(req: Request) {
   }
 
   await prisma.sim.update({
-    where: { id: targetSimId },
+    where: { id: targetSim.id },
     data: { channel, channelKey },
   });
 
-  return NextResponse.json({ ok: true, simId: targetSimId });
+  return NextResponse.json({ ok: true, simId: targetSim.id });
 }

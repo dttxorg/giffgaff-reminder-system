@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/db";
-import { getCurrentUser } from "@/lib/session";
+import { getCurrentUserId } from "@/lib/session";
 import { hashPassword, verifyPassword } from "@/lib/auth";
 
 const BodySchema = z.object({
@@ -17,8 +17,8 @@ const BodySchema = z.object({
  * - 清空失败计数
  */
 export async function POST(req: Request) {
-  const user = await getCurrentUser();
-  if (!user) {
+  const userId = await getCurrentUserId();
+  if (!userId) {
     return NextResponse.json({ ok: false, error: "未登录" }, { status: 401 });
   }
 
@@ -36,8 +36,10 @@ export async function POST(req: Request) {
     );
   }
 
-  // 重新查最新 user（getCurrentUser 返回的可能是缓存）
-  const fresh = await prisma.user.findUnique({ where: { id: user.id } });
+  const fresh = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { passwordHash: true },
+  });
   if (!fresh || !fresh.passwordHash) {
     return NextResponse.json(
       { ok: false, error: "账号未初始化密码,请联系管理员" },
@@ -52,7 +54,7 @@ export async function POST(req: Request) {
 
   const newHash = await hashPassword(parsed.data.newPassword);
   await prisma.user.update({
-    where: { id: user.id },
+    where: { id: userId },
     data: {
       passwordHash: newHash,
       failedLoginCount: 0,
