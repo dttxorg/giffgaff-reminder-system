@@ -10,6 +10,7 @@ import { EmptyState } from "@/app/_components/empty-state";
 import { Pagination } from "../_components/pagination";
 import { ResendButton } from "./_components/resend-button";
 import { AutoSubmitForm } from "../_components/auto-submit-form";
+import { getAdminReminderLogSummary } from "@/lib/admin-reminder-log-summary";
 
 interface PageProps {
   searchParams: Promise<{
@@ -79,8 +80,17 @@ export default async function RemindersPage({ searchParams }: PageProps) {
   const now = new Date();
   const sp = shanghaiParts(now);
   const todayStartUTC = new Date(Date.UTC(sp.year, sp.month - 1, sp.day));
+  const hasAnyFilter = hasAnyReminderFilter({
+    simId,
+    q,
+    status,
+    channel,
+    bound,
+    from,
+    to,
+  });
 
-  const [reminders, totalCount, totalToday, failedToday] = await Promise.all([
+  const [reminders, summary, filteredCount] = await Promise.all([
     prisma.reminderSent.findMany({
       where,
       orderBy: { sentAt: "desc" },
@@ -97,12 +107,13 @@ export default async function RemindersPage({ searchParams }: PageProps) {
         sim: { select: { phoneNumber: true } },
       },
     }),
-    prisma.reminderSent.count({ where }),
-    prisma.reminderSent.count({ where: { sentAt: { gte: todayStartUTC } } }),
-    prisma.reminderSent.count({
-      where: { status: "failed", sentAt: { gte: todayStartUTC } },
-    }),
+    getAdminReminderLogSummary(todayStartUTC),
+    hasAnyFilter
+      ? prisma.reminderSent.count({ where })
+      : Promise.resolve<number | null>(null),
   ]);
+  const totalCount = filteredCount ?? summary.totalCount;
+  const { totalToday, failedToday } = summary;
 
   const totalPages = Math.max(1, Math.ceil(totalCount / PAGE_SIZE));
 
@@ -117,9 +128,6 @@ export default async function RemindersPage({ searchParams }: PageProps) {
   const exportUrl = `/api/admin/reminders/export${
     exportQS.toString() ? "?" + exportQS.toString() : ""
   }`;
-
-  // Round 130: 是否有任何筛选条件(用于 empty state 区分"真没数据" vs "筛选无果")
-  const hasAnyFilter = hasAnyReminderFilter({ simId, q, status, channel, bound, from, to });
 
   return (
     <div className="p-6 sm:p-8">
