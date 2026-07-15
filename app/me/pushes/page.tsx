@@ -8,6 +8,7 @@ import { getCurrentUser } from "@/lib/session";
 import { prisma } from "@/lib/db";
 import { formatRelativeTime, formatUtcShanghaiDual } from "@/lib/date";
 import { groupRemindersByDay } from "@/lib/push-grouping";
+import { PushSummaryCard } from "../_components/push-summary-card";
 
 interface PageProps {
   searchParams: Promise<{ status?: string; from?: string; to?: string; simId?: string }>;
@@ -129,6 +130,14 @@ export default async function MePushesPage({ searchParams }: PageProps) {
         </Link>
       </div>
       <h1 className="text-2xl font-bold mb-2">推送历史</h1>
+
+      {/* Round 220: 顶部推送统计概览(成功/失败/送达率) */}
+      <PushSummaryCard
+        totalShown={totalShown}
+        successCount={successCount}
+        failedCount={failedCount}
+        activeSimId={requestedSimId}
+      />
       <p className="text-sm text-slate-500 mb-6">
         共 {totalShown} 条 ·{" "}
         <strong className="text-emerald-700">{successCount}</strong> 成功 ·{" "}
