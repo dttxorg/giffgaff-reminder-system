@@ -15,6 +15,7 @@ import {
 import { PushSummaryCard } from "../_components/push-summary-card";
 import { PushFrequencyStrip } from "../_components/push-frequency-strip";
 import { EmptyPushes } from "../_components/empty-pushes";
+import { HistoryFilterLink } from "../_components/history-filter-link";
 
 interface PageProps {
   searchParams: Promise<{ status?: string; from?: string; to?: string; simId?: string }>;
@@ -62,10 +63,7 @@ export default async function MePushesPage({ searchParams }: PageProps) {
   const _90daysAgoDate = new Date(_monthEnd);
   _90daysAgoDate.setDate(_90daysAgoDate.getDate() - 90);
   const _90daysAgo = `${_90daysAgoDate.getFullYear()}-${String(_90daysAgoDate.getMonth() + 1).padStart(2, "0")}-${String(_90daysAgoDate.getDate()).padStart(2, "0")}`;
-  // Round 205 + 208: 近 3 / 6 个月 (够覆盖 1 / 2 个保号周期)
-  const _3monthsAgoDate = new Date(_monthEnd);
-  _3monthsAgoDate.setDate(_3monthsAgoDate.getDate() - 90);
-  const _3monthsAgo = `${_3monthsAgoDate.getFullYear()}-${String(_3monthsAgoDate.getMonth() + 1).padStart(2, "0")}-${String(_3monthsAgoDate.getDate()).padStart(2, "0")}`;
+  // Round 208: 近 6 个月 (够覆盖两个保号周期)
   const _6monthsAgoDate = new Date(_monthEnd);
   _6monthsAgoDate.setDate(_6monthsAgoDate.getDate() - 180);
   const _6monthsAgo = `${_6monthsAgoDate.getFullYear()}-${String(_6monthsAgoDate.getMonth() + 1).padStart(2, "0")}-${String(_6monthsAgoDate.getDate()).padStart(2, "0")}`;
@@ -146,6 +144,23 @@ export default async function MePushesPage({ searchParams }: PageProps) {
 
   // Round 175: 按日分组(用 lib/push-grouping 纯函数,可测)
   const groups = groupRemindersByDay(reminders);
+  const today = `${_monthEnd.getFullYear()}-${String(_monthEnd.getMonth() + 1).padStart(2, "0")}-${String(_monthEnd.getDate()).padStart(2, "0")}`;
+  const commonDateFilters = [
+    { label: "全部", href: "/me/pushes", active: !from && !to },
+    { label: "今天", href: `/me/pushes?from=${today}&to=${today}`, active: from === today && to === today },
+    { label: "近 7 日", href: `/me/pushes?from=${_7daysAgo}&to=${today}`, active: from === _7daysAgo },
+    { label: "近 30 日", href: `/me/pushes?from=${_30daysAgo}&to=${today}`, active: from === _30daysAgo },
+    { label: "近 90 日", href: `/me/pushes?from=${_90daysAgo}&to=${today}`, active: from === _90daysAgo },
+    { label: "近 6 个月", href: `/me/pushes?from=${_6monthsAgo}&to=${today}`, active: from === _6monthsAgo },
+  ];
+  const moreDateFilters = [
+    { label: "本周", href: `/me/pushes?from=${_weekStart}&to=${today}`, active: from === _weekStart },
+    { label: "本月", href: `/me/pushes?from=${monthStart}&to=${monthEnd}`, active: from === monthStart && to === monthEnd },
+    { label: "上月", href: `/me/pushes?from=${_lastMonthStart}&to=${_lastMonthEnd}`, active: from === _lastMonthStart && to === _lastMonthEnd },
+    { label: "本年", href: `/me/pushes?from=${_yearStart}&to=${today}`, active: from === _yearStart },
+    { label: "近 1 年", href: `/me/pushes?from=${_1yearAgo}&to=${today}`, active: from === _1yearAgo },
+  ];
+  const moreDateActive = moreDateFilters.some((filter) => filter.active);
 
   return (
     <div className="max-w-2xl mx-auto px-4 py-8 sm:py-12">
@@ -180,7 +195,7 @@ export default async function MePushesPage({ searchParams }: PageProps) {
           <span className="ml-2 text-slate-400">
             (过滤: {status})
             {" · "}
-            <Link href="/me/pushes" className="text-indigo-600 hover:underline">
+            <Link prefetch={false} href="/me/pushes" className="text-indigo-600 hover:underline">
               清除
             </Link>
           </span>
@@ -189,137 +204,38 @@ export default async function MePushesPage({ searchParams }: PageProps) {
           <span className="ml-2 text-slate-400">
             (日期: {from || "..."} → {to || "..."})
             {" · "}
-            <Link href="/me/pushes" className="text-indigo-600 hover:underline">
+            <Link prefetch={false} href="/me/pushes" className="text-indigo-600 hover:underline">
               清除
             </Link>
           </span>
         )}
       </p>
 
-      {/* Round 198: 日期范围快捷筛选链接 */}
-      <div className="flex gap-2 mb-3 text-xs flex-wrap">
-        <span className="text-slate-500 mr-1">日期:</span>
-        <Link
-          href="/me/pushes"
-          className={`px-2 py-1 rounded ${!from && !to ? "bg-indigo-600 text-white" : "bg-slate-100 text-slate-600 hover:bg-slate-200"}`}
-        >
-          全部
-        </Link>
-        <Link
-          href={`/me/pushes?from=${_monthEnd.getFullYear()}-${String(_monthEnd.getMonth() + 1).padStart(2, "0")}-${String(_monthEnd.getDate()).padStart(2, "0")}&to=${_monthEnd.getFullYear()}-${String(_monthEnd.getMonth() + 1).padStart(2, "0")}-${String(_monthEnd.getDate()).padStart(2, "0")}`}
-          className={`px-2 py-1 rounded ${from === `${_monthEnd.getFullYear()}-${String(_monthEnd.getMonth() + 1).padStart(2, "0")}-${String(_monthEnd.getDate()).padStart(2, "0")}` && to === from ? "bg-indigo-600 text-white" : "bg-slate-100 text-slate-600 hover:bg-slate-200"}`}
-        >
-          今天
-        </Link>
-        {/* Round 199: 本周 (周一到今天) */}
-        <Link
-          href={`/me/pushes?from=${_weekStart}&to=${_monthEnd.getFullYear()}-${String(_monthEnd.getMonth() + 1).padStart(2, "0")}-${String(_monthEnd.getDate()).padStart(2, "0")}`}
-          className={`px-2 py-1 rounded ${from === _weekStart ? "bg-indigo-600 text-white" : "bg-slate-100 text-slate-600 hover:bg-slate-200"}`}
-        >
-          本周
-        </Link>
-        {/* Round 199: 上月 */}
-        <Link
-          href={`/me/pushes?from=${_lastMonthStart}&to=${_lastMonthEnd}`}
-          className={`px-2 py-1 rounded ${from === _lastMonthStart && to === _lastMonthEnd ? "bg-indigo-600 text-white" : "bg-slate-100 text-slate-600 hover:bg-slate-200"}`}
-        >
-          上月
-        </Link>
-        <Link
-          href={`/me/pushes?from=${monthStart}&to=${monthEnd}`}
-          className={`px-2 py-1 rounded ${from === monthStart && to === monthEnd ? "bg-indigo-600 text-white" : "bg-slate-100 text-slate-600 hover:bg-slate-200"}`}
-        >
-          本月
-        </Link>
-        {/* Round 199: 本年 */}
-        <Link
-          href={`/me/pushes?from=${_yearStart}&to=${_monthEnd.getFullYear()}-${String(_monthEnd.getMonth() + 1).padStart(2, "0")}-${String(_monthEnd.getDate()).padStart(2, "0")}`}
-          className={`px-2 py-1 rounded ${from === _yearStart ? "bg-indigo-600 text-white" : "bg-slate-100 text-slate-600 hover:bg-slate-200"}`}
-        >
-          本年
-        </Link>
-        {/* Round 200: 近 30 日 (镜像 admin 仪表盘 round 169) */}
-        <Link
-          href={`/me/pushes?from=${_30daysAgo}&to=${_monthEnd.getFullYear()}-${String(_monthEnd.getMonth() + 1).padStart(2, "0")}-${String(_monthEnd.getDate()).padStart(2, "0")}`}
-          className={`px-2 py-1 rounded ${from === _30daysAgo ? "bg-indigo-600 text-white" : "bg-slate-100 text-slate-600 hover:bg-slate-200"}`}
-        >
-          近 30 日
-        </Link>
-        {/* Round 201: 近 7 日 (mirror /admin 仪表盘) */}
-        <Link
-          href={`/me/pushes?from=${_7daysAgo}&to=${_monthEnd.getFullYear()}-${String(_monthEnd.getMonth() + 1).padStart(2, "0")}-${String(_monthEnd.getDate()).padStart(2, "0")}`}
-          className={`px-2 py-1 rounded ${from === _7daysAgo ? "bg-indigo-600 text-white" : "bg-slate-100 text-slate-600 hover:bg-slate-200"}`}
-        >
-          近 7 日
-        </Link>
-        {/* Round 200: 近 90 日 (镜像 admin 仪表盘 round 169) */}
-        <Link
-          href={`/me/pushes?from=${_90daysAgo}&to=${_monthEnd.getFullYear()}-${String(_monthEnd.getMonth() + 1).padStart(2, "0")}-${String(_monthEnd.getDate()).padStart(2, "0")}`}
-          className={`px-2 py-1 rounded ${from === _90daysAgo ? "bg-indigo-600 text-white" : "bg-slate-100 text-slate-600 hover:bg-slate-200"}`}
-        >
-          近 90 日
-        </Link>
-        {/* Round 205: 近 3 个月 (90 天,够覆盖一个完整保号周期) */}
-        <Link
-          href={`/me/pushes?from=${_3monthsAgo}&to=${_monthEnd.getFullYear()}-${String(_monthEnd.getMonth() + 1).padStart(2, "0")}-${String(_monthEnd.getDate()).padStart(2, "0")}`}
-          className={`px-2 py-1 rounded ${from === _3monthsAgo ? "bg-indigo-600 text-white" : "bg-slate-100 text-slate-600 hover:bg-slate-200"}`}
-        >
-          近 3 个月
-        </Link>
-        {/* Round 208: 近 6 个月 (180 天,够覆盖两个保号周期) */}
-        <Link
-          href={`/me/pushes?from=${_6monthsAgo}&to=${_monthEnd.getFullYear()}-${String(_monthEnd.getMonth() + 1).padStart(2, "0")}-${String(_monthEnd.getDate()).padStart(2, "0")}`}
-          className={`px-2 py-1 rounded ${from === _6monthsAgo ? "bg-indigo-600 text-white" : "bg-slate-100 text-slate-600 hover:bg-slate-200"}`}
-        >
-          近 6 个月
-        </Link>
-        {/* Round 210: 近 1 年 (365 天,看长期推送模式) */}
-        <Link
-          href={`/me/pushes?from=${_1yearAgo}&to=${_monthEnd.getFullYear()}-${String(_monthEnd.getMonth() + 1).padStart(2, "0")}-${String(_monthEnd.getDate()).padStart(2, "0")}`}
-          className={`px-2 py-1 rounded ${from === _1yearAgo ? "bg-indigo-600 text-white" : "bg-slate-100 text-slate-600 hover:bg-slate-200"}`}
-        >
-          近 1 年
-        </Link>
-        <Link
-          href={`/me/pushes?status=${status || ""}`}
-          className={`px-2 py-1 rounded ${status ? "bg-slate-100 text-slate-600 hover:bg-slate-200" : "invisible"}`}
-        >
-          清除 status
-        </Link>
+      <div className="mb-3 text-xs" role="group" aria-label="按日期筛选推送历史">
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="mr-1 text-slate-500">日期:</span>
+          {commonDateFilters.map((filter) => (
+            <HistoryFilterLink key={filter.label} {...filter} />
+          ))}
+          <details className="group" open={moreDateActive || undefined}>
+            <summary className="inline-flex min-h-8 cursor-pointer list-none items-center gap-1 rounded-lg bg-slate-100 px-2.5 py-1 text-slate-600 hover:bg-slate-200">
+              更多日期
+              <span className="details-chevron text-slate-400" aria-hidden="true">⌄</span>
+            </summary>
+            <div className="mt-2 flex flex-wrap gap-2 rounded-lg border border-slate-200 bg-white p-2.5">
+              {moreDateFilters.map((filter) => (
+                <HistoryFilterLink key={filter.label} {...filter} />
+              ))}
+            </div>
+          </details>
+        </div>
       </div>
 
-      {/* 过滤链接 */}
-      <div className="flex gap-2 mb-4 text-xs">
-        <Link
-          href="/me/pushes"
-          className={
-            !status
-              ? "px-2 py-1 rounded bg-indigo-600 text-white"
-              : "px-2 py-1 rounded bg-slate-100 text-slate-600 hover:bg-slate-200"
-          }
-        >
-          全部
-        </Link>
-        <Link
-          href="/me/pushes?status=success"
-          className={
-            status === "success"
-              ? "px-2 py-1 rounded bg-emerald-600 text-white"
-              : "px-2 py-1 rounded bg-slate-100 text-slate-600 hover:bg-slate-200"
-          }
-        >
-          成功
-        </Link>
-        <Link
-          href="/me/pushes?status=failed"
-          className={
-            status === "failed"
-              ? "px-2 py-1 rounded bg-rose-600 text-white"
-              : "px-2 py-1 rounded bg-slate-100 text-slate-600 hover:bg-slate-200"
-          }
-        >
-          失败
-        </Link>
+      <div className="mb-4 flex items-center gap-2 text-xs" role="group" aria-label="按状态筛选推送历史">
+        <span className="mr-1 text-slate-500">状态:</span>
+        <HistoryFilterLink label="全部" href="/me/pushes" active={!status} />
+        <HistoryFilterLink label="成功" href="/me/pushes?status=success" active={status === "success"} tone="success" />
+        <HistoryFilterLink label="失败" href="/me/pushes?status=failed" active={status === "failed"} tone="failed" />
       </div>
 
       {groups.length === 0 ? (
