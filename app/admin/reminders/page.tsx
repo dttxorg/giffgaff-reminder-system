@@ -86,7 +86,16 @@ export default async function RemindersPage({ searchParams }: PageProps) {
       orderBy: { sentAt: "desc" },
       skip,
       take: PAGE_SIZE,
-      include: { sim: true, user: true },
+      select: {
+        id: true,
+        sentAt: true,
+        simId: true,
+        dayOffset: true,
+        bucket: true,
+        status: true,
+        errorMessage: true,
+        sim: { select: { phoneNumber: true } },
+      },
     }),
     prisma.reminderSent.count({ where }),
     prisma.reminderSent.count({ where: { sentAt: { gte: todayStartUTC } } }),
@@ -200,6 +209,7 @@ export default async function RemindersPage({ searchParams }: PageProps) {
                       <td className="px-3 py-2 font-mono whitespace-nowrap">
                         <Link
                           href={`/admin/sims/${r.simId}`}
+                          prefetch={false}
                           className="text-indigo-600 hover:underline"
                         >
                           {r.sim.phoneNumber}
