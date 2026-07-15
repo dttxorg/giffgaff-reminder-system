@@ -1,8 +1,7 @@
 import type { Metadata } from "next";
-import { Suspense } from "react";
 import "./globals.css";
 import Link from "next/link";
-import { UserNav, UserNavFallback } from "./_components/user-nav";
+import { UserNav } from "./_components/user-nav";
 import { SkipToContent } from "./_components/skip-to-content";
 
 export const metadata: Metadata = {
@@ -13,12 +12,8 @@ export const metadata: Metadata = {
 /**
  * 根 layout。
  *
- * G5 优化: 不再在 layout 顶层 await getCurrentUser(),而是用 <Suspense>
- * 包裹 UserNav。让页面的主体内容(连 /login / /help 这种不需要用户态的)
- * 不被这一查阻塞 — DB 慢的话用户能更早看到页面内容。
- *
- * 视觉: header 右侧 nav 区域在 DB 返回前显示 UserNavFallback 占位(同高度,
- * 避免抖动),DB 返回后无缝替换为真实导航。
+ * 根布局不读取 Cookie / DB，让首页、帮助页等公共页面可静态缓存。
+ * UserNav 水合后通过私有轻量接口补齐登录态。
  */
 export default function RootLayout({
   children,
@@ -29,16 +24,20 @@ export default function RootLayout({
         <SkipToContent />
         <header className="border-b border-slate-200 bg-white/80 backdrop-blur-sm sticky top-0 z-30">
           <div className="max-w-5xl mx-auto px-4 sm:px-6 py-3 flex items-center justify-between">
-            <Link href="/" className="flex items-center gap-2 font-semibold text-lg text-indigo-600">
+            <Link
+              href="/"
+              className="flex min-w-0 items-center gap-2 text-lg font-semibold text-indigo-600"
+            >
               <span className="inline-block w-8 h-8 rounded-lg bg-indigo-600 text-white text-center leading-8">
                 G
               </span>
-              <span>Giffgaff 保号提醒</span>
+              <span className="whitespace-nowrap">
+                <span className="max-[359px]:hidden">Giffgaff </span>
+                保号提醒
+              </span>
             </Link>
             <nav className="flex items-center gap-1 text-sm">
-              <Suspense fallback={<UserNavFallback />}>
-                <UserNav />
-              </Suspense>
+              <UserNav />
             </nav>
           </div>
         </header>

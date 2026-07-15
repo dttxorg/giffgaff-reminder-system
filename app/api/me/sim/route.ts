@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/db";
 import { getCurrentUser } from "@/lib/session";
+import { invalidatePublicSimCache } from "@/lib/public-sim-cache";
 
 const BodySchema = z.object({
   activatedAt: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "日期格式 YYYY-MM-DD"),
@@ -75,6 +76,8 @@ export async function PATCH(req: Request) {
     where: { id: targetSimId },
     data: { activatedAt: newActivated },
   });
+  const targetSim = user.sims.find((sim) => sim.id === targetSimId);
+  if (targetSim) invalidatePublicSimCache(targetSim);
 
   return NextResponse.json({ ok: true, simId: targetSimId });
 }

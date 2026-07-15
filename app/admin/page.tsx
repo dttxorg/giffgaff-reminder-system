@@ -1,8 +1,7 @@
 import Link from "next/link";
 import { requireAdmin } from "@/lib/admin-guard";
-import { prisma } from "@/lib/db";
 import { formatRelativeTime, formatUtcShanghaiDual } from "@/lib/date";
-import { dayOffsetFromBaseline } from "@/lib/bucket";
+import { getAdminDashboardData } from "@/lib/admin-dashboard-data";
 import { Last7DaysDetail } from "./_components/last-7-days-detail";
 import { Last30DaysSends } from "./_components/last-30-days-sends";
 import { Last90DaysSends } from "./_components/last-90-days-sends";
@@ -14,57 +13,12 @@ import { InWindowSims } from "./_components/in-window-sims";
 import { TodayFailingSims } from "./_components/today-failing-sims";
 import { TopActiveSims } from "./_components/top-active-sims";
 import { TopFailingSims } from "./_components/top-failing-sims";
-import { getChannelStatsLast7Days, getChannelStatsLast90Days, getInWindowSims, getLast30DaysSends, getLast7DaysBindRate, getLast7DaysNewSims, getLast7DaysNewUsers, getActiveSimStats, getLast7DaysUserBindRate, getPausedSimStats, getLast90DaysSends, getSimStatusBreakdown, getTodayChannelStats, getTodayFailingSims, getTopActiveSims, getTopFailingSims } from "@/lib/admin-reminder-stats";
 
 export default async function AdminDashboard() {
   await requireAdmin();
 
-  // 上海时区的"今天" 0 点
-  const { shanghaiParts } = await import("@/lib/bucket");
   const now = new Date();
-  const sp = shanghaiParts(now);
-  const todayStartUTC = new Date(Date.UTC(sp.year, sp.month - 1, sp.day));
-  // 昨日 0 点(用于 vs 昨日对比)
-  const yesterdayStartUTC = new Date(todayStartUTC.getTime() - 24 * 60 * 60 * 1000);
-
-  // D1: 7 天每日发送数(给 sparkline 用,从今天倒数 7 天)
-  // Round 146: 同步算 (date, count) 给详细列表用
-  const last7DaysData = await Promise.all(
-    Array.from({ length: 7 }, async (_, i) => {
-      const dayStart = new Date(todayStartUTC.getTime() - (6 - i) * 24 * 60 * 60 * 1000);
-      const dayEnd = new Date(dayStart.getTime() + 24 * 60 * 60 * 1000);
-      const count = await prisma.reminderSent.count({
-        where: { sentAt: { gte: dayStart, lt: dayEnd } },
-      });
-      return {
-        // 0-6 表示"6 天前到今天"
-        offset: 6 - i,
-        // 用 sp 算相对日期标签
-        date: new Date(dayStart.getTime() + 12 * 60 * 60 * 1000), // +12h 防时区抖动
-        count,
-      };
-    })
-  );
-  const last7DaysSends = last7DaysData.map((d) => d.count);
-
-  // 算每个 sim 的 dayOffset(只取 status=active),O(N) 但小系统可接受
-  // future 7 天会进窗口:now + 7 天时 dayOffset 首次达到 170 的 sim
-  // eslint-disable-next-line react-hooks/purity -- server component,Date.now() 安全
-  const nowMs = Date.now();
-  const inWindowSimCount = await (async () => {
-    const sims = await prisma.sim.findMany({
-      where: { status: "active" },
-      select: { activatedAt: true, lastPortedAt: true },
-    });
-    return sims.filter((s) => {
-      const baseline = s.lastPortedAt ?? s.activatedAt;
-      const days = dayOffsetFromBaseline(baseline, new Date(nowMs));
-      // 在 170-180 窗口内,或未来 7 天内将进入窗口
-      return days >= 170 && days <= 180;
-    }).length;
-  })();
-
-  const [
+  const {
     simCount,
     activeSimCount,
     pausedSimCount,
@@ -74,84 +28,28 @@ export default async function AdminDashboard() {
     todayFailed,
     failedRecent,
     yesterdaySent,
-  ] = await Promise.all([
-    prisma.sim.count(),
-    prisma.sim.count({ where: { status: "active" } }),
-    prisma.sim.count({ where: { status: "paused" } }),
-    prisma.user.count(),
-    // 1:N - 渠道在 sim 上,数 sim.channelKey 非空的数量
-    prisma.sim.count({ where: { channelKey: { not: "" } } }),
-    prisma.reminderSent.count({
-      where: { sentAt: { gte: todayStartUTC } },
-    }),
-    prisma.reminderSent.count({
-      where: { status: "failed", sentAt: { gte: todayStartUTC } },
-    }),
-    prisma.reminderSent.count({
-      where: {
-        status: "failed",
-        sentAt: { gte: new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000) },
-      },
-    }),
-    prisma.reminderSent.count({
-      where: {
-        sentAt: { gte: yesterdayStartUTC, lt: todayStartUTC },
-      },
-    }),
-  ]);
-
-  const recent = await prisma.reminderSent.findMany({
-    take: 10,
-    orderBy: { sentAt: "desc" },
-    include: { sim: true, user: true },
-  });
-
-  // Round 140: 今日按渠道统计(给"今日按渠道"卡片用)
-  const todayChannelStats = await getTodayChannelStats(todayStartUTC);
-
-  // Round 141: 7 日失败 top 3 sim(给"top failing"卡片用)
-  const topFailingSims = await getTopFailingSims(7, 3);
-
-  // Round 160: 7 日推送 top 5 sim(给"top active"卡片用,跟 top failing 镜像)
-  const topActiveSims = await getTopActiveSims(7, 5);
-
-  // Round 163: 90 日推送 top 5 sim(更长期活跃 sim 排行)
-  const topActiveSims90d = await getTopActiveSims(90, 5);
-
-  // Round 164: 今日失败 sim 列表(给"今日失败 sim"卡用)
-  const todayFailingSims = await getTodayFailingSims(todayStartUTC);
-
-  // Round 165: 近 7 日按 channel 统计(给"近 7 日按 channel"卡用)
-  const channelStatsLast7Days = await getChannelStatsLast7Days();
-
-  // Round 167: 近 90 日按 channel 统计(给"近 90 日按 channel"卡用)
-  const channelStatsLast90Days = await getChannelStatsLast90Days();
-
-  // Round 149: 近 30 日每日发送数(给 30 日 mini bar 用)
-  const last30DaysSends = await getLast30DaysSends();
-
-  // Round 156: 近 90 日每日发送数(给 90 日更紧凑 mini bar 用)
-  const last90DaysSends = await getLast90DaysSends();
-
-  // Round 151: 提醒窗口内 sim 列表(给"提醒窗口内 sim 列表"卡用)
-  const inWindowSims = await getInWindowSims(10);
-
-  // Round 152+157+171: sim 状态 + 近 7 日新增 sim/user 统计(给"sim 状态"卡用)
-  const [simStatusBreakdown, newSimsLast7Days, newUsersLast7Days, bindRateLast7Days, userBindRateLast7Days, pausedSimStats, activeSimStats] = await Promise.all([
-    getSimStatusBreakdown(),
-    // Round 157: 近 7 日新增 sim 统计
-    getLast7DaysNewSims(),
-    // Round 171: 近 7 日新增 user 统计
-    getLast7DaysNewUsers(),
-    // Round 172: 近 7 日绑定率历史
-    getLast7DaysBindRate(),
-    // Round 193: 近 7 日用户绑定率历史(镜像 sim 绑定率)
-    getLast7DaysUserBindRate(),
-    // Round 203: 近 7 日暂停 sim 统计
-    getPausedSimStats(),
-    // Round 204: 近 7 日激活 sim 统计
-    getActiveSimStats(),
-  ]);
+    recent,
+    last7DaysData,
+    last30DaysSends,
+    last90DaysSends,
+    todayChannelStats,
+    topFailingSims,
+    topActiveSims,
+    topActiveSims90d,
+    todayFailingSims,
+    channelStatsLast7Days,
+    channelStatsLast90Days,
+    inWindowSimCount,
+    inWindowSims,
+    simStatusBreakdown,
+    newSimsLast7Days,
+    newUsersLast7Days,
+    bindRateLast7Days,
+    userBindRateLast7Days,
+    pausedSimStats,
+    activeSimStats,
+  } = await getAdminDashboardData(now);
+  const last7DaysSends = last7DaysData.map((day) => day.count);
 
   const channelCoverage = simCount > 0 ? Math.round((channelCount / simCount) * 100) : 0;
 
@@ -173,7 +71,7 @@ export default async function AdminDashboard() {
       <h1 className="text-2xl font-bold mb-6">仪表盘</h1>
 
       {/* 核心数据 — 6 个 stat */}
-      <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-3 mb-6">
+      <div className="mb-6 grid grid-cols-2 gap-3 lg:grid-cols-4">
         <AdminStat
           label="号码总数"
           value={simCount}
@@ -215,7 +113,6 @@ export default async function AdminDashboard() {
           sub={simCount > 0 ? `占 ${Math.round((inWindowSimCount / simCount) * 100)}%` : "—"}
           href="/admin/sims?status=active"
         />
-        <AdminStat label="卡密未用" value={undefined} sub="在 卡密管理 查看" />
         {/* Round 169: 30 日 + 90 日总推送对比(扩展时间窗口) */}
         <AdminStat
           label="近 30 日推送"

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/db";
 import { getAdminSession } from "@/lib/session";
+import { invalidatePublicSimCache } from "@/lib/public-sim-cache";
 
 interface RouteContext {
   params: Promise<{ id: string }>;
@@ -136,6 +137,7 @@ export async function PATCH(req: Request, ctx: RouteContext) {
       );
     }
     const updated = await prisma.sim.update({ where: { id: simId }, data });
+    invalidatePublicSimCache(updated);
     return NextResponse.json({ ok: true, sim: updated });
   } catch (e) {
     return NextResponse.json(
@@ -155,7 +157,8 @@ export async function DELETE(_req: Request, ctx: RouteContext) {
     return NextResponse.json({ ok: false, error: "id 无效" }, { status: 400 });
   }
   try {
-    await prisma.sim.delete({ where: { id: simId } });
+    const deleted = await prisma.sim.delete({ where: { id: simId } });
+    invalidatePublicSimCache(deleted);
     return NextResponse.json({ ok: true });
   } catch (e) {
     return NextResponse.json(

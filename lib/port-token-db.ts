@@ -15,12 +15,19 @@ export { generatePortToken, looksLikeToken };
  * - 找不到返回 null
  */
 export async function findSimByParam(param: string) {
+  const select = {
+    id: true,
+    phoneNumber: true,
+    activatedAt: true,
+    lastPortedAt: true,
+    portToken: true,
+  } as const;
   if (looksLikeToken(param)) {
-    return prisma.sim.findUnique({ where: { portToken: param } });
+    return prisma.sim.findUnique({ where: { portToken: param }, select });
   }
   const id = parseInt(param, 10);
   if (!Number.isFinite(id) || id <= 0) return null;
-  return prisma.sim.findUnique({ where: { id } });
+  return prisma.sim.findUnique({ where: { id }, select });
 }
 
 /**
@@ -33,14 +40,20 @@ export async function findSimByParam(param: string) {
  * 冲突处理: 极小概率生成重复 token,DB 唯一约束会抛错,重试。
  */
 export async function ensureSimPortToken(
-  simId: number
+  simId: number,
+  /** 调用方已读取过当前值时传入；undefined 才需要再次查询。 */
+  currentPortToken?: string | null
 ): Promise<string | null> {
-  const sim = await prisma.sim.findUnique({
-    where: { id: simId },
-    select: { portToken: true },
-  });
-  if (!sim) return null;
-  if (sim.portToken) return sim.portToken;
+  if (currentPortToken !== undefined) {
+    if (currentPortToken) return currentPortToken;
+  } else {
+    const sim = await prisma.sim.findUnique({
+      where: { id: simId },
+      select: { portToken: true },
+    });
+    if (!sim) return null;
+    if (sim.portToken) return sim.portToken;
+  }
 
   for (let attempt = 0; attempt < 3; attempt++) {
     const token = generatePortToken();

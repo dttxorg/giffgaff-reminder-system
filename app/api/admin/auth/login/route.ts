@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { prisma } from "@/lib/db";
 import { verifyPassword } from "@/lib/auth";
 import { ensureDefaultAdmin } from "@/lib/admin-bootstrap";
 import { createAdminSession } from "@/lib/session";
@@ -23,12 +22,8 @@ export async function POST(req: Request) {
   }
 
   // 首次访问时创建默认管理员
-  await ensureDefaultAdmin();
-
-  const admin = await prisma.adminUser.findUnique({
-    where: { username: parsed.data.username },
-  });
-  if (!admin) {
+  const admin = await ensureDefaultAdmin();
+  if (admin.username !== parsed.data.username) {
     return NextResponse.json({ ok: false, error: "账号或密码错误" }, { status: 401 });
   }
   const ok = await verifyPassword(parsed.data.password, admin.passwordHash);

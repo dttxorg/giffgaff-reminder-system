@@ -1,5 +1,5 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { render, waitFor } from "@testing-library/react";
+import { describe, it, expect, vi, beforeEach } from "vitest";
+import { render, screen, waitFor } from "@testing-library/react";
 
 // next/navigation stubs
 let mockParams: Record<string, string> = { simId: "42" };
@@ -9,30 +9,30 @@ vi.mock("next/navigation", () => ({
   useRouter: () => ({ replace: mockReplace }),
 }));
 
-// 用 spy 替换 globalThis.fetch。注意:不要用 vi.clearAllMocks() 删 spy 的实现,
-// 只清 mock 函数自身的调用历史。clearAllMocks 会重置 mock 函数的实现为 undefined。
 const mockFetch = vi.fn();
-const fetchSpy = vi.spyOn(globalThis, "fetch").mockImplementation(mockFetch);
+vi.stubGlobal("fetch", mockFetch);
 
-const { default: PortPage } = await import("../../app/p/[simId]/page");
+const { default: PortPage } = await import("../../app/p/[simId]/port-client");
 
 beforeEach(() => {
   mockReplace.mockReset();
-  mockFetch.mockReset(); // 只清调用历史,不动 spy 实现
+  mockFetch.mockReset();
   mockParams = { simId: "42" };
 });
 
-afterEach(() => {
-  // 不调 vi.clearAllMocks — 会把 fetchSpy 的实现也清掉
-  vi.restoreAllMocks();
-  // 重新挂上(下一个 test 还需要)
-  fetchSpy.mockImplementation(mockFetch);
-});
-
 describe("<PortPage /> — P6 redirect (int → portToken)", () => {
+  it("数据返回前使用与路由一致的稳定卡片骨架", () => {
+    mockFetch.mockReturnValue(new Promise(() => {}));
+    render(<PortPage />);
+
+    expect(
+      screen.getByRole("status", { name: "正在加载保号信息" })
+    ).toBeInTheDocument();
+  });
+
   it("URL 是 int 且 sim 有 portToken → router.replace 到 token URL", async () => {
     mockParams = { simId: "42" };
-    mockFetch.mockResolvedValueOnce({
+    mockFetch.mockResolvedValue({
       ok: true,
       json: async () => ({
         phoneNumber: "07724215611",
@@ -55,7 +55,7 @@ describe("<PortPage /> — P6 redirect (int → portToken)", () => {
 
   it("URL 是 int 且 sim 无 portToken (老 sim lazy-backfill 前) → 不重定向", async () => {
     mockParams = { simId: "99" };
-    mockFetch.mockResolvedValueOnce({
+    mockFetch.mockResolvedValue({
       ok: true,
       json: async () => ({
         phoneNumber: "07724215611",
@@ -74,7 +74,7 @@ describe("<PortPage /> — P6 redirect (int → portToken)", () => {
 
   it("URL 已经是 token → 不重定向", async () => {
     mockParams = { simId: "abc123def456ghi789jkl012mno345pq" };
-    mockFetch.mockResolvedValueOnce({
+    mockFetch.mockResolvedValue({
       ok: true,
       json: async () => ({
         phoneNumber: "07724215611",
@@ -92,7 +92,7 @@ describe("<PortPage /> — P6 redirect (int → portToken)", () => {
 
   it("API 返回 404 → 不重定向(setNotFound)", async () => {
     mockParams = { simId: "9999" };
-    mockFetch.mockResolvedValueOnce({
+    mockFetch.mockResolvedValue({
       ok: false,
       status: 404,
       json: async () => ({ ok: false }),

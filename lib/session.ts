@@ -16,8 +16,23 @@ const COOKIE_MAX_AGE = 60 * 60 * 24 * 7; // 7 天
  */
 const USER_INCLUDE = {
   user: {
-    include: {
-      sims: { orderBy: { id: "asc" as const } },
+    select: {
+      id: true,
+      username: true,
+      sims: {
+        orderBy: { id: "asc" as const },
+        select: {
+          id: true,
+          phoneNumber: true,
+          portToken: true,
+          activatedAt: true,
+          lastPortedAt: true,
+          status: true,
+          channel: true,
+          channelKey: true,
+          createdAt: true,
+        },
+      },
     },
   },
 };
@@ -65,6 +80,78 @@ export const getCurrentUser = cache(async () => {
   }
   return session.user;
 });
+
+/**
+ * 只判断用户 session 是否有效，不加载 user.sims。
+ * 给客户端导航状态接口使用，避免公共页面的根布局读取 Cookie 而整体动态化。
+ */
+export const getCurrentUserSessionStatus = cache(async (): Promise<boolean> => {
+  const jar = await cookies();
+  const sid = jar.get(USER_COOKIE)?.value;
+  if (!sid) return false;
+  const session = await prisma.userSession.findUnique({
+    where: { id: sid },
+    select: { expiresAt: true },
+  });
+  if (!session) return false;
+  if (session.expiresAt < new Date()) {
+    await prisma.userSession.delete({ where: { id: sid } }).catch(() => {});
+    return false;
+  }
+  return true;
+});
+
+/** 只读取当前 Session 的 userId，供不需要账号/SIM 详情的写接口使用。 */
+export const getCurrentUserId = cache(async (): Promise<number | null> => {
+  const jar = await cookies();
+  const sid = jar.get(USER_COOKIE)?.value;
+  if (!sid) return null;
+  const session = await prisma.userSession.findUnique({
+    where: { id: sid },
+    select: { userId: true, expiresAt: true },
+  });
+  if (!session) return null;
+  if (session.expiresAt < new Date()) {
+    await prisma.userSession.delete({ where: { id: sid } }).catch(() => {});
+    return null;
+  }
+  return session.userId;
+});
+
+export interface CurrentUserSessionSummary {
+  username: string;
+  simCount: number;
+}
+
+/** 兑换页需要的最小账号上下文，不加载 SIM 详情或渠道密钥。 */
+export const getCurrentUserSessionSummary = cache(
+  async (): Promise<CurrentUserSessionSummary | null> => {
+    const jar = await cookies();
+    const sid = jar.get(USER_COOKIE)?.value;
+    if (!sid) return null;
+    const session = await prisma.userSession.findUnique({
+      where: { id: sid },
+      select: {
+        expiresAt: true,
+        user: {
+          select: {
+            username: true,
+            _count: { select: { sims: true } },
+          },
+        },
+      },
+    });
+    if (!session) return null;
+    if (session.expiresAt < new Date()) {
+      await prisma.userSession.delete({ where: { id: sid } }).catch(() => {});
+      return null;
+    }
+    return {
+      username: session.user.username,
+      simCount: session.user._count.sims,
+    };
+  }
+);
 
 /**
  * 销毁用户 session

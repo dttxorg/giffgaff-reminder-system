@@ -22,6 +22,8 @@ type Phase =
 
 interface RedeemClientProps {
   initialCode: string;
+  /** 登录态查询完成前可以输入/校验卡密，但不能提交兑换。 */
+  sessionReady?: boolean;
   isLoggedIn: boolean;
   currentUsername?: string;
   /** 账号下已有 sim 数(给用户提示"再添加 1 张"等) */
@@ -30,6 +32,7 @@ interface RedeemClientProps {
 
 export function RedeemClient({
   initialCode,
+  sessionReady = true,
   isLoggedIn,
   currentUsername,
   existingSimCount = 0,
@@ -78,6 +81,7 @@ export function RedeemClient({
     username?: string;
     password?: string;
   }) {
+    if (!sessionReady) return;
     setPhase({ kind: "redeeming" });
     try {
       const body: Record<string, string> = {
@@ -131,7 +135,16 @@ export function RedeemClient({
         </div>
       )}
 
-      {phase.kind === "form" && (
+      {phase.kind === "form" && !sessionReady && (
+        <div className="py-10 text-center" role="status">
+          <Spinner size={20} label="正在确认账号状态" />
+          <p className="mt-3 text-sm text-slate-600">
+            正在确认这次兑换是新开通还是追加号码…
+          </p>
+        </div>
+      )}
+
+      {phase.kind === "form" && sessionReady && (
         <FormPhase
           notes={phase.notes}
           isLoggedIn={isLoggedIn}

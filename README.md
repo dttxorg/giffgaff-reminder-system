@@ -162,7 +162,7 @@ npm run dev
 
 | 变量 | 必填 | 说明 |
 |---|---|---|
-| `DATABASE_URL` | 是 | Postgres 连接串。fallback 顺序: `DATABASE_URL` → `POSTGRES_PRISMA_URL` → `POSTGRES_URL` → `POSTGRES_URL_NON_POOLING`(Vercel Neon 集成自动注入 `POSTGRES_PRISMA_URL`) |
+| `DATABASE_URL` | 是 | Postgres 连接串。运行时优先级: `POSTGRES_PRISMA_URL`(池化) → `DATABASE_URL` → `POSTGRES_URL` → `POSTGRES_URL_NON_POOLING` |
 | `CRON_SECRET` | 是 | cron 路由 Bearer token(本地调试可省略) |
 | `PUBLIC_BASE_URL` | **强烈推荐** | 推送给用户的保号链接域名,例 `https://baohao.681218.xyz`。不设会 fallback 到 Vercel 默认域名 `*.vercel.app` |
 | `ADMIN_USERNAME` | 否 | 管理员账号(默认 `admin`) |

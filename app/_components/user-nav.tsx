@@ -1,62 +1,92 @@
+"use client";
+
+import { useEffect, useState, type FormEvent } from "react";
 import Link from "next/link";
-import { getCurrentUser } from "@/lib/session";
+import { usePathname, useRouter } from "next/navigation";
 
 /**
- * 用户态导航(用户中心 / 退出 OR 登录链接)
- *
- * 关键: 这是个 async server component,被 layout 用 <Suspense> 包裹。
- * - 之前 layout 直接 await getCurrentUser(),所有页面(连 /login、/help 都算)
- *   都要等 DB round-trip 完才能渲染 HTML。
- * - 拆出来后 layout 不再 await,页面先 streaming 出去,
- *   UserNav 后台查 DB,完成后流式插入。视觉上仅头部右侧短暂空白,
- *   主体内容不受影响。
- *
- * Fallback: 用同尺寸的占位 div,避免 nav 区域高度跳动。
+ * 根导航先静态渲染“登录”，水合后再用轻量接口确认登录态。
+ * 这样首页 / 帮助页不再因为根布局读取 Cookie 而被强制动态渲染。
  */
-export async function UserNav() {
-  const user = await getCurrentUser();
+export function UserNav() {
+  const router = useRouter();
+  const pathname = usePathname();
+  const isProtectedUserPage = pathname === "/me" || pathname.startsWith("/me/");
+  const [sessionAuthenticated, setSessionAuthenticated] = useState(false);
+  const [loggingOut, setLoggingOut] = useState(false);
+  const authenticated = isProtectedUserPage || sessionAuthenticated;
 
-  if (user) {
+  useEffect(() => {
+    // /me 本身已经经过服务端鉴权，不再水合后重复查一次 Session。
+    if (isProtectedUserPage) return;
+
+    let active = true;
+    const controller = new AbortController();
+
+    void fetch("/api/auth/session", {
+      cache: "no-store",
+      signal: controller.signal,
+    })
+      .then((response) => (response.ok ? response.json() : { authenticated: false }))
+      .then((data: { authenticated?: boolean }) => {
+        if (active) setSessionAuthenticated(data.authenticated === true);
+      })
+      .catch(() => {
+        if (active) setSessionAuthenticated(false);
+      });
+
+    return () => {
+      active = false;
+      controller.abort();
+    };
+  }, [isProtectedUserPage]);
+
+  const handleLogout = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (loggingOut) return;
+    setLoggingOut(true);
+    try {
+      const response = await fetch("/api/auth/logout", { method: "POST" });
+      if (!response.ok) return;
+      setSessionAuthenticated(false);
+      router.push("/");
+      router.refresh();
+    } finally {
+      setLoggingOut(false);
+    }
+  };
+
+  if (authenticated) {
     return (
-      <>
+      <div className="flex min-h-8 min-w-36 items-center justify-end gap-1">
         <Link
           href="/me"
-          className="px-3 py-1.5 rounded-md hover:bg-slate-100 transition-colors"
+          className="rounded-md px-3 py-1.5 transition-colors hover:bg-slate-100"
         >
           用户中心
         </Link>
-        <form action="/api/auth/logout" method="post">
+        <form onSubmit={handleLogout}>
           <button
             type="submit"
-            className="px-3 py-1.5 rounded-md hover:bg-slate-100 transition-colors text-slate-600"
+            disabled={loggingOut}
+            aria-busy={loggingOut}
+            className="rounded-md px-3 py-1.5 text-slate-600 transition-colors hover:bg-slate-100 disabled:text-slate-400"
           >
-            退出
+            {loggingOut ? "退出中" : "退出"}
           </button>
         </form>
-      </>
+      </div>
     );
   }
-  return (
-    <Link
-      href="/login"
-      className="px-3 py-1.5 rounded-md hover:bg-slate-100 transition-colors"
-    >
-      登录
-    </Link>
-  );
-}
 
-/**
- * nav 区域的占位 skeleton,与 UserNav 渲染后高度一致,
- * 避免 streaming 期间布局抖动。
- */
-export function UserNavFallback() {
-  // 宽度约等于"用户中心 + 退出"两个按钮的总宽度
   return (
-    <div
-      aria-hidden="true"
-      className="flex items-center gap-1 text-sm"
-      style={{ minWidth: "9rem", minHeight: "2rem" }}
-    />
+    <div className="flex min-h-8 min-w-36 items-center justify-end">
+      <Link
+        href="/login"
+        className="rounded-md px-3 py-1.5 transition-colors hover:bg-slate-100"
+      >
+        登录
+      </Link>
+    </div>
   );
 }

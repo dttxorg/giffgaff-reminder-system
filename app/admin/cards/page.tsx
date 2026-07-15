@@ -35,21 +35,29 @@ export default async function CardsPage({ searchParams }: PageProps) {
     }
   }
 
-  const cards = await prisma.cardKey.findMany({
-    where,
-    orderBy: { id: "desc" },
-    skip,
-    take: PAGE_SIZE,
-  });
-
-  // 顶部统计:total / unused / used
-  const [totalCount, unusedCount] = await Promise.all([
+  // 列表、全局概览和当前筛选总数同一轮加载。
+  const [cards, totalCount, unusedCount, filteredCount] = await Promise.all([
+    prisma.cardKey.findMany({
+      where,
+      orderBy: { id: "desc" },
+      skip,
+      take: PAGE_SIZE,
+      select: {
+        id: true,
+        code: true,
+        used: true,
+        notes: true,
+        createdAt: true,
+        usedAt: true,
+      },
+    }),
     prisma.cardKey.count(),
     prisma.cardKey.count({ where: { used: false } }),
+    prisma.cardKey.count({ where }),
   ]);
   const usedCount = totalCount - unusedCount;
 
-  const totalPages = Math.max(1, Math.ceil(totalCount / PAGE_SIZE));
+  const totalPages = Math.max(1, Math.ceil(filteredCount / PAGE_SIZE));
 
   const exportUrl = (() => {
     const sp = new URLSearchParams();
@@ -204,7 +212,7 @@ export default async function CardsPage({ searchParams }: PageProps) {
         <Pagination
           currentPage={currentPage}
           totalPages={totalPages}
-          totalCount={totalCount}
+          totalCount={filteredCount}
           basePath="/admin/cards"
           searchParams={
             new URLSearchParams(

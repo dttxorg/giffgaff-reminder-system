@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { getCurrentUser } from "@/lib/session";
@@ -129,21 +130,29 @@ export default async function MeSettingsPage({ searchParams }: PageProps) {
         <p className="text-xs text-slate-500 mt-2 mb-3">
           折叠打开,看系统到日子会给您发什么。模板由管理员设置,改渠道不影响内容。
         </p>
-        <PushPreview
-          phoneNumber={selectedSim.phoneNumber}
-          days={Math.max(
-            0,
-            Math.floor(
-              (Date.now() -
-                new Date(
-                  selectedSim.lastPortedAt ?? selectedSim.activatedAt
-                ).getTime()) /
-                (1000 * 60 * 60 * 24)
-            )
-          )}
-          portToken={selectedSim.portToken}
-          simIdFallback={selectedSim.id}
-        />
+        <Suspense
+          fallback={
+            <div className="h-28 animate-pulse rounded-lg bg-slate-100" role="status">
+              <span className="sr-only">正在加载推送样例</span>
+            </div>
+          }
+        >
+          <PushPreview
+            phoneNumber={selectedSim.phoneNumber}
+            days={Math.max(
+              0,
+              Math.floor(
+                (Date.now() -
+                  new Date(
+                    selectedSim.lastPortedAt ?? selectedSim.activatedAt
+                  ).getTime()) /
+                  (1000 * 60 * 60 * 24)
+              )
+            )}
+            portToken={selectedSim.portToken}
+            simIdFallback={selectedSim.id}
+          />
+        </Suspense>
       </details>
     </div>
   );

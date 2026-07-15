@@ -68,8 +68,13 @@ export default async function SimsPage({ searchParams }: PageProps) {
       skip,
       take: PAGE_SIZE,
       // N6: 拉取最近一次发送的时间+状态,join 在单次 SQL 里完成,避免 N+1
-      include: {
-        user: true,
+      select: {
+        id: true,
+        phoneNumber: true,
+        activatedAt: true,
+        lastPortedAt: true,
+        status: true,
+        channel: true,
         reminders: {
           orderBy: { sentAt: "desc" },
           take: 1,
@@ -81,7 +86,6 @@ export default async function SimsPage({ searchParams }: PageProps) {
     prisma.sim.count({ where: { status: "active" } }),
     prisma.sim.count({ where: { status: "paused" } }),
     prisma.sim.count({ where }), // 用于分页
-    prisma.sim.count({ where }), // 用于分页(应用了 where 过滤)
   ]);
 
   // 把 server 数据序列化给 client 组件(传给 <SimsBulkTable>)

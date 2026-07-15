@@ -1,4 +1,9 @@
+"use client";
+
 import Link from "next/link";
+import { useState, type FormEvent } from "react";
+import { useRouter } from "next/navigation";
+import { Spinner } from "@/app/_components/skip-to-content";
 
 interface ActionBarProps {
   /** 当前 activeSim 的 id(用于跳转到对应 sim 的 settings) */
@@ -15,6 +20,31 @@ interface ActionBarProps {
  *  - flex-wrap 自动换行
  */
 export function ActionBar({ activeSimId }: ActionBarProps) {
+  const router = useRouter();
+  const [loggingOut, setLoggingOut] = useState(false);
+  const [logoutError, setLogoutError] = useState(false);
+
+  const handleLogout = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (loggingOut) return;
+
+    setLogoutError(false);
+    setLoggingOut(true);
+    try {
+      const response = await fetch("/api/auth/logout", { method: "POST" });
+      if (!response.ok) {
+        setLogoutError(true);
+        return;
+      }
+      router.push("/");
+      router.refresh();
+    } catch {
+      setLogoutError(true);
+    } finally {
+      setLoggingOut(false);
+    }
+  };
+
   return (
     <div className="mt-6 pt-5 border-t border-slate-200">
       <nav
@@ -87,29 +117,42 @@ export function ActionBar({ activeSimId }: ActionBarProps) {
           推送历史
         </Link>
 
-        <Link
-          href="/api/auth/logout"
-          className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-full text-slate-500 text-sm hover:bg-slate-100 hover:text-slate-700 transition-colors min-h-[36px]"
-          title="退出登录"
-        >
-          <svg
-            width={14}
-            height={14}
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth={2}
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            aria-hidden="true"
+        <form onSubmit={handleLogout}>
+          <button
+            type="submit"
+            disabled={loggingOut}
+            aria-busy={loggingOut}
+            className="inline-flex min-h-[36px] items-center gap-1.5 rounded-full px-3.5 py-2 text-sm text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-700 disabled:cursor-wait disabled:text-slate-400"
+            title="退出登录"
           >
-            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
-            <polyline points="16 17 21 12 16 7" />
-            <line x1="21" y1="12" x2="9" y2="12" />
-          </svg>
-          退出
-        </Link>
+            {loggingOut ? (
+              <Spinner size={14} className="text-slate-400" label="退出中" />
+            ) : (
+              <svg
+                width={14}
+                height={14}
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth={2}
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                aria-hidden="true"
+              >
+                <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+                <polyline points="16 17 21 12 16 7" />
+                <line x1="21" y1="12" x2="9" y2="12" />
+              </svg>
+            )}
+            {loggingOut ? "退出中" : "退出"}
+          </button>
+        </form>
       </nav>
+      {logoutError && (
+        <p className="mt-2 text-center text-xs text-rose-700" role="alert">
+          退出失败，请检查网络后重试
+        </p>
+      )}
     </div>
   );
 }

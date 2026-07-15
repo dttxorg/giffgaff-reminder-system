@@ -12,6 +12,8 @@ interface PushPreviewProps {
   portToken: string | null;
   /** 预览用 sim id,fallback */
   simIdFallback: number;
+  /** 父组件已经加载模板时直接传入，避免重复数据库查询 */
+  templateOverride?: string;
 }
 
 /**
@@ -26,12 +28,17 @@ export async function PushPreview({
   days,
   portToken,
   simIdFallback,
+  templateOverride,
 }: PushPreviewProps) {
-  // 拉当前模板(没有就用默认)
-  const setting = await prisma.setting.findUnique({
-    where: { key: "reminder_template" },
-  });
-  const template = setting?.value || DEFAULT_TEMPLATE;
+  // 父组件可把模板与其它查询并行预载；独立使用时仍保持原有 fallback。
+  const template =
+    templateOverride ??
+    (
+      await prisma.setting.findUnique({
+        where: { key: "reminder_template" },
+      })
+    )?.value ??
+    DEFAULT_TEMPLATE;
 
   // 检测未知变量
   const known = new Set(["phone", "days", "port_url"]);

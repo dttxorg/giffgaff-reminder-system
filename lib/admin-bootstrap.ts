@@ -7,14 +7,17 @@ import { hashPassword } from "./auth";
  * V1 单管理员模式：环境变量 ADMIN_USERNAME / ADMIN_PASSWORD 决定首登账号
  * 如未设置，使用默认 admin / admin123（生产应改）
  */
-export async function ensureDefaultAdmin(): Promise<void> {
+export async function ensureDefaultAdmin() {
   const username = process.env.ADMIN_USERNAME || "admin";
   const password = process.env.ADMIN_PASSWORD || "admin123";
   const existing = await prisma.adminUser.findUnique({ where: { username } });
-  if (existing) return;
+  if (existing) return existing;
   const passwordHash = await hashPassword(password);
-  await prisma.adminUser.create({
-    data: { username, passwordHash },
+  const admin = await prisma.adminUser.upsert({
+    where: { username },
+    update: {},
+    create: { username, passwordHash },
   });
   console.log(`[admin] 已创建默认管理员：${username}`);
+  return admin;
 }

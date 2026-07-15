@@ -11,10 +11,8 @@ import {
   isInReminderWindow,
   shanghaiParts,
 } from "@/lib/bucket";
-import {
-  getLast7DaysSendsForSim,
-  getTodayHourlySends,
-} from "@/lib/admin-reminder-stats";
+import { getSimReminderStats } from "@/lib/sim-reminder-stats";
+import { DEFAULT_TEMPLATE } from "@/lib/template";
 import { AnniversaryProgress } from "./anniversary-progress";
 import { AnniversaryProgressBar } from "./anniversary-progress-bar";
 import { MilestoneBanner } from "./milestone-banner";
@@ -80,39 +78,32 @@ export async function SimCard({
   const nextMilestone = milestone ? null : getNextMilestone(dayOffset);
   const anniversary = getAnniversaryProgress(dayOffset);
 
-  const [recentReminders, lifetimeCount, successCount, failedCount] = await Promise.all([
-    prisma.reminderSent.findMany({
-      where: { simId: sim.id },
-      orderBy: { sentAt: "desc" },
-      take: 5,
-      select: {
-        id: true,
-        dayOffset: true,
-        bucket: true,
-        sentAt: true,
-        status: true,
-      },
+  // 推送详情统计与模板并行加载，避免号码切换时出现多轮数据库瀑布。
+  const [reminderStats, templateSetting] = await Promise.all([
+    getSimReminderStats(sim.id, now),
+    prisma.setting.findUnique({
+      where: { key: "reminder_template" },
+      select: { value: true },
     }),
-    prisma.reminderSent.count({ where: { simId: sim.id } }),
-    prisma.reminderSent.count({ where: { simId: sim.id, status: "success" } }),
-    prisma.reminderSent.count({ where: { simId: sim.id, status: "failed" } }),
   ]);
+  const {
+    recentReminders,
+    lifetimeCount,
+    successCount,
+    failedCount,
+    thisMonthCount,
+    thisMonthFailedCount,
+    todayCount,
+    todayFailedCount,
+    todayHourlySends,
+    last7DaysForSim,
+  } = reminderStats;
   const successRate =
     lifetimeCount > 0 ? Math.round((successCount / lifetimeCount) * 100) : 100;
 
   const sp = shanghaiParts(now);
   const hourOfDay = sp.hour;
   const bucketInfo = bucketForDay(dayOffset, hourOfDay);
-
-  const monthStart = new Date(Date.UTC(sp.year, sp.month - 1, 1));
-  const [thisMonthCount, thisMonthFailedCount] = await Promise.all([
-    prisma.reminderSent.count({
-      where: { simId: sim.id, sentAt: { gte: monthStart } },
-    }),
-    prisma.reminderSent.count({
-      where: { simId: sim.id, sentAt: { gte: monthStart }, status: "failed" },
-    }),
-  ]);
 
   let thisMonthExpected = 0;
   for (let d = 1; d <= sp.day; d++) {
@@ -123,26 +114,9 @@ export async function SimCard({
     thisMonthExpected += COUNTS[dayOffsetAtMonth] ?? 0;
   }
 
-  const todayStartUTC = new Date(Date.UTC(sp.year, sp.month - 1, sp.day));
-  const [
-    todayCount,
-    todayFailedCount,
-    todayHourlySends,
-    last7DaysForSim,
-  ] = await Promise.all([
-    prisma.reminderSent.count({
-      where: { simId: sim.id, sentAt: { gte: todayStartUTC } },
-    }),
-    prisma.reminderSent.count({
-      where: { simId: sim.id, sentAt: { gte: todayStartUTC }, status: "failed" },
-    }),
-    getTodayHourlySends(sim.id),
-    getLast7DaysSendsForSim(sim.id),
-  ]);
-
-  const phoneTail4 = sim.phoneNumber.slice(-4);
   const channelMissing = !sim.channelKey;
   const portUrl = sim.portToken ?? String(sim.id);
+  const reminderTemplate = templateSetting?.value || DEFAULT_TEMPLATE;
 
   return (
     <div>
@@ -695,6 +669,7 @@ export async function SimCard({
           days={dayOffset}
           portToken={sim.portToken}
           simIdFallback={sim.id}
+          templateOverride={reminderTemplate}
         />
       </details>
     </div>

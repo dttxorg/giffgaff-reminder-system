@@ -6,7 +6,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/db";
 import { redeemCard } from "@/lib/redeem";
-import { createUserSession, getCurrentUser } from "@/lib/session";
+import { createUserSession, getCurrentUserId } from "@/lib/session";
 import { normalizeUsername, usernameError } from "@/lib/auth";
 
 const NewUserBodySchema = z.object({
@@ -48,9 +48,9 @@ export async function POST(req: Request) {
   }
 
   // 检测登录态,决定走哪条 zod schema
-  const currentUser = await getCurrentUser();
+  const currentUserId = await getCurrentUserId();
 
-  if (currentUser) {
+  if (currentUserId !== null) {
     // 追加卡场景:不需 username/password
     const parsed = AppendBodySchema.safeParse(body);
     if (!parsed.success) {
@@ -60,7 +60,7 @@ export async function POST(req: Request) {
         { status: 400 }
       );
     }
-    return await runRedeem(parsed.data, currentUser.id);
+    return await runRedeem(parsed.data, currentUserId);
   }
 
   // 未登录:必须带 username + password

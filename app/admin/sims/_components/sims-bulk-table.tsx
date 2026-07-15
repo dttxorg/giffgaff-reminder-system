@@ -23,6 +23,8 @@ interface SimsBulkTableProps {
   sims: SimRow[];
 }
 
+type BulkAction = "delete" | "pause" | "activate" | "test-push";
+
 /**
  * sims 列表 + 多选 + 批量操作
  *
@@ -35,7 +37,8 @@ interface SimsBulkTableProps {
 export function SimsBulkTable({ sims }: SimsBulkTableProps) {
   const router = useRouter();
   const [selected, setSelected] = useState<Set<number>>(new Set());
-  const [loading, setLoading] = useState(false);
+  const [loadingAction, setLoadingAction] = useState<BulkAction | null>(null);
+  const loading = loadingAction !== null;
   const [message, setMessage] = useState<
     { kind: "success" | "error"; text: string } | null
   >(null);
@@ -74,9 +77,9 @@ export function SimsBulkTable({ sims }: SimsBulkTableProps) {
     setSelected(next);
   };
 
-  const runAction = async (action: "delete" | "pause" | "activate" | "test-push") => {
+  const runAction = async (action: BulkAction) => {
     setConfirm(null);
-    setLoading(true);
+    setLoadingAction(action);
     setMessage(null);
     const url = action === "test-push" ? "/api/admin/sims/test-push" : "/api/admin/sims/batch";
     const body = action === "test-push"
@@ -115,11 +118,11 @@ export function SimsBulkTable({ sims }: SimsBulkTableProps) {
         text: e instanceof Error ? e.message : "网络错误",
       });
     } finally {
-      setLoading(false);
+      setLoadingAction(null);
     }
   };
 
-  const submit = async (action: "delete" | "pause" | "activate" | "test-push") => {
+  const submit = async (action: BulkAction) => {
     if (selected.size === 0) return;
     // 危险/副作用操作弹 ConfirmModal 二次确认(替代原生 confirm())
     if (action === "delete") {
@@ -161,7 +164,10 @@ export function SimsBulkTable({ sims }: SimsBulkTableProps) {
     <>
       {/* 批量操作工具栏 — 仅在有选中时显示 */}
       {totalSelected > 0 && (
-        <div className="flex flex-wrap items-center gap-2 mb-3 p-3 rounded-lg bg-indigo-50 border border-indigo-200">
+        <div
+          className="mb-3 flex flex-wrap items-center gap-2 rounded-lg border border-indigo-200 bg-indigo-50 p-3"
+          aria-busy={loading}
+        >
           <span className="text-sm text-indigo-900 font-medium">
             已选 <strong>{totalSelected}</strong> 个
           </span>
@@ -171,7 +177,7 @@ export function SimsBulkTable({ sims }: SimsBulkTableProps) {
             disabled={loading}
             className="px-3 py-1.5 text-xs rounded-md border border-indigo-300 text-indigo-800 bg-white hover:bg-indigo-50 disabled:opacity-50 transition-colors"
           >
-            测试推送
+            {loadingAction === "test-push" ? "发送中…" : "测试推送"}
           </button>
           <button
             type="button"
@@ -179,7 +185,7 @@ export function SimsBulkTable({ sims }: SimsBulkTableProps) {
             disabled={loading}
             className="px-3 py-1.5 text-xs rounded-md border border-emerald-300 text-emerald-800 bg-white hover:bg-emerald-50 disabled:opacity-50 transition-colors"
           >
-            激活
+            {loadingAction === "activate" ? "激活中…" : "激活"}
           </button>
           <button
             type="button"
@@ -187,7 +193,7 @@ export function SimsBulkTable({ sims }: SimsBulkTableProps) {
             disabled={loading}
             className="px-3 py-1.5 text-xs rounded-md border border-amber-300 text-amber-800 bg-white hover:bg-amber-50 disabled:opacity-50 transition-colors"
           >
-            暂停
+            {loadingAction === "pause" ? "暂停中…" : "暂停"}
           </button>
           <button
             type="button"
@@ -195,7 +201,7 @@ export function SimsBulkTable({ sims }: SimsBulkTableProps) {
             disabled={loading}
             className="px-3 py-1.5 text-xs rounded-md border border-rose-300 text-rose-800 bg-white hover:bg-rose-50 disabled:opacity-50 transition-colors"
           >
-            删除
+            {loadingAction === "delete" ? "删除中…" : "删除"}
           </button>
           <button
             type="button"
@@ -205,6 +211,11 @@ export function SimsBulkTable({ sims }: SimsBulkTableProps) {
           >
             清除选择
           </button>
+          {loadingAction && (
+            <span className="w-full text-xs text-indigo-700 sm:ml-auto sm:w-auto" role="status" aria-live="polite">
+              正在{pendingActionLabel(loadingAction)} {totalSelected} 个号码，请稍候
+            </span>
+          )}
         </div>
       )}
       {message && (
@@ -264,11 +275,11 @@ export function SimsBulkTable({ sims }: SimsBulkTableProps) {
                     className="w-4 h-4 cursor-pointer accent-indigo-600"
                   />
                 </td>
-                <td className="px-3 py-2 font-mono text-xs text-slate-500">{sim.id}</td>
+                <td className="hidden px-3 py-2 font-mono text-xs text-slate-500 md:table-cell">{sim.id}</td>
                 <td className="px-3 py-2 font-mono">{sim.phoneNumber}</td>
-                <td className="px-3 py-2">{sim.activatedAt}</td>
-                <td className="px-3 py-2 text-slate-500">{sim.lastPortedAt || "—"}</td>
-                <td className="px-3 py-2">
+                <td className="hidden px-3 py-2 md:table-cell">{sim.activatedAt}</td>
+                <td className="hidden px-3 py-2 text-slate-500 md:table-cell">{sim.lastPortedAt || "—"}</td>
+                <td className="hidden px-3 py-2 md:table-cell">
                   <span
                     className={
                       sim.inWindow
@@ -290,10 +301,10 @@ export function SimsBulkTable({ sims }: SimsBulkTableProps) {
                     {sim.status}
                   </span>
                 </td>
-                <td className="px-3 py-2 text-xs">
+                <td className="hidden px-3 py-2 text-xs md:table-cell">
                   <span className="text-slate-700">{sim.channel}</span>
                 </td>
-                <td className="px-3 py-2 text-xs">
+                <td className="hidden px-3 py-2 text-xs md:table-cell">
                   {sim.lastSentAt ? (
                     <div>
                       <div className="flex items-center gap-1.5">
@@ -347,4 +358,8 @@ export function SimsBulkTable({ sims }: SimsBulkTableProps) {
 
 function actionLabel(action: "delete" | "pause" | "activate"): string {
   return action === "delete" ? "删除" : action === "pause" ? "暂停" : "激活";
+}
+
+function pendingActionLabel(action: BulkAction): string {
+  return action === "test-push" ? "发送测试推送到" : actionLabel(action);
 }

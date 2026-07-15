@@ -42,8 +42,8 @@ export function AdminStat({
       ? "text-rose-600"
       : "text-slate-500";
   const containerClass = href
-    ? "block bg-white rounded-xl border border-slate-200 p-4 hover:bg-slate-50 hover:border-indigo-300 transition-colors"
-    : "bg-white rounded-xl border border-slate-200 p-4";
+    ? "block min-h-28 rounded-xl border border-slate-200 bg-white p-4 transition-[background-color,border-color,transform] hover:border-indigo-300 hover:bg-slate-50 active:translate-y-px"
+    : "min-h-28 rounded-xl border border-slate-200 bg-white p-4";
   const inner = (
     <>
       <div className="text-xs text-slate-500 mb-1">{label}</div>

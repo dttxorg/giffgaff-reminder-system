@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/db";
 import { findSimByParam } from "@/lib/port-token-db";
+import { invalidatePublicSimCache } from "@/lib/public-sim-cache";
 
 const BodySchema = z.object({
   portedAt: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "日期格式 YYYY-MM-DD"),
@@ -62,6 +63,7 @@ export async function POST(req: Request, ctx: RouteContext) {
     where: { id: sim.id },
     data: { lastPortedAt: portedAt },
   });
+  invalidatePublicSimCache(sim);
 
   return NextResponse.json({ ok: true });
 }

@@ -64,7 +64,17 @@ export default async function UsersPage({ searchParams }: PageProps) {
       orderBy: { id: "desc" },
       skip,
       take: PAGE_SIZE,
-      include: { sims: { orderBy: { id: "asc" } }, _count: { select: { reminders: true } } },
+      select: {
+        id: true,
+        username: true,
+        passwordHash: true,
+        createdAt: true,
+        sims: {
+          orderBy: { id: "asc" },
+          select: { phoneNumber: true, channel: true },
+        },
+        _count: { select: { reminders: true } },
+      },
     }),
     prisma.user.count(),
     prisma.user.count({ where: { passwordHash: { not: null } } }),

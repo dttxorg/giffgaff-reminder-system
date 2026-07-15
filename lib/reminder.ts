@@ -33,35 +33,57 @@ export async function runReminderScan(opts: RunOptions): Promise<ReminderRunResu
   const hourOfDay = shanghaiParts(now).hour;
   const result: ReminderRunResult = { processed: 0, sent: 0, skipped: 0, failed: 0, details: [] };
 
-  // 1. 取所有 active sim(必须挂到 user,user 至少要登录过才有效)
-  // 渠道是 sim 自己的,不需要 join user.channel
-  const sims = await prisma.sim.findMany({
-    where: { status: "active", userId: { not: null } },
-    include: { user: true },
-  });
-
-  // 2. 取提醒模板
-  const setting = await prisma.setting.findUnique({ where: { key: "reminder_template" } });
+  // SIM 和模板互不依赖，同一轮加载；只读取发送真正需要的字段。
+  const [sims, setting] = await Promise.all([
+    prisma.sim.findMany({
+      where: { status: "active", userId: { not: null } },
+      select: {
+        id: true,
+        userId: true,
+        phoneNumber: true,
+        activatedAt: true,
+        lastPortedAt: true,
+        portToken: true,
+        channel: true,
+        channelKey: true,
+      },
+    }),
+    prisma.setting.findUnique({ where: { key: "reminder_template" } }),
+  ]);
   const template = setting?.value || DEFAULT_TEMPLATE;
 
-  for (const sim of sims) {
-    result.processed++;
-
-    // 3. 计算 dayOffset
+  const candidates = sims.flatMap((sim) => {
     const baseline = sim.lastPortedAt ?? sim.activatedAt;
     const dayOffset = dayOffsetFromBaseline(baseline, now);
-
-    // 4. 计算 bucket
     const plan = bucketForDay(dayOffset, hourOfDay);
-    if (!plan) continue;
+    return plan ? [{ sim, dayOffset, bucket: plan.bucket }] : [];
+  });
 
-    // 5. 幂等检查
-    const existing = await prisma.reminderSent.findUnique({
-      where: { simId_dayOffset_bucket: { simId: sim.id, dayOffset, bucket: plan.bucket } },
-    });
-    if (existing) {
+  // 所有候选只做一次幂等查询，避免提醒窗口内每张卡单独 round-trip。
+  const existingRows = candidates.length
+    ? await prisma.reminderSent.findMany({
+        where: {
+          OR: candidates.map(({ sim, dayOffset, bucket }) => ({
+            simId: sim.id,
+            dayOffset,
+            bucket,
+          })),
+        },
+        select: { simId: true, dayOffset: true, bucket: true },
+      })
+    : [];
+  const existingKeys = new Set(
+    existingRows.map(
+      (row) => `${row.simId}:${row.dayOffset}:${row.bucket}`
+    )
+  );
+
+  result.processed = sims.length;
+
+  for (const { sim, dayOffset, bucket } of candidates) {
+    if (existingKeys.has(`${sim.id}:${dayOffset}:${bucket}`)) {
       result.skipped++;
-      result.details.push({ simId: sim.id, dayOffset, bucket: plan.bucket, action: "skipped" });
+      result.details.push({ simId: sim.id, dayOffset, bucket, action: "skipped" });
       continue;
     }
 
@@ -71,7 +93,7 @@ export async function runReminderScan(opts: RunOptions): Promise<ReminderRunResu
     if (sim.portToken) {
       url = portUrl(opts.baseUrl, sim.portToken);
     } else {
-      const token = await ensureSimPortToken(sim.id);
+      const token = await ensureSimPortToken(sim.id, sim.portToken);
       url = token ? portUrl(opts.baseUrl, token) : portUrl(opts.baseUrl, sim.id);
     }
     const phoneDisplay = `**** ${sim.phoneNumber.slice(-4)}`;
@@ -84,7 +106,7 @@ export async function runReminderScan(opts: RunOptions): Promise<ReminderRunResu
 
     if (opts.dryRun) {
       result.sent++;
-      result.details.push({ simId: sim.id, dayOffset, bucket: plan.bucket, action: "sent" });
+      result.details.push({ simId: sim.id, dayOffset, bucket, action: "sent" });
       continue;
     }
 
@@ -99,7 +121,7 @@ export async function runReminderScan(opts: RunOptions): Promise<ReminderRunResu
           simId: sim.id,
           userId: sim.userId!,
           dayOffset,
-          bucket: plan.bucket,
+          bucket,
           channel,
           channelKey: sim.channelKey,
           status: sendResult.ok ? "success" : "failed",
@@ -112,7 +134,7 @@ export async function runReminderScan(opts: RunOptions): Promise<ReminderRunResu
       result.details.push({
         simId: sim.id,
         dayOffset,
-        bucket: plan.bucket,
+        bucket,
         action: "skipped",
         error: e instanceof Error ? e.message : String(e),
       });
@@ -121,13 +143,13 @@ export async function runReminderScan(opts: RunOptions): Promise<ReminderRunResu
 
     if (sendResult.ok) {
       result.sent++;
-      result.details.push({ simId: sim.id, dayOffset, bucket: plan.bucket, action: "sent" });
+      result.details.push({ simId: sim.id, dayOffset, bucket, action: "sent" });
     } else {
       result.failed++;
       result.details.push({
         simId: sim.id,
         dayOffset,
-        bucket: plan.bucket,
+        bucket,
         action: "failed",
         error: sendResult.errorMessage,
       });

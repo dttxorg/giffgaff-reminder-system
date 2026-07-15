@@ -2,12 +2,11 @@ import { describe, it, expect, vi } from "vitest";
 import { render } from "@testing-library/react";
 import type { ReactElement } from "react";
 
-// HomePage 用 prisma 做 social proof count,mock 掉
-vi.mock("@/lib/db", () => ({
-  prisma: {
-    sim: { count: vi.fn().mockResolvedValue(42) },
-    reminderSent: { count: vi.fn().mockResolvedValue(100) },
-  },
+// 统计组件单独测试；首页结构测试使用同步替身，避免测试环境执行 async RSC。
+vi.mock("@/app/_components/public-stats", () => ({
+  PublicStats: () => (
+    <p aria-label="服务使用数据">已守护 42 个号码 / 已送达 100 条提醒</p>
+  ),
 }));
 
 import HomePage from "../../app/page";
@@ -22,6 +21,53 @@ async function renderHome() {
 }
 
 describe("<HomePage />", () => {
+  describe("Round 226: 转化优先首屏", () => {
+    it("首屏同时包含价值说明、登录入口、卡密入口和推送预览", async () => {
+      const { container } = await renderHome();
+      const hero = container.querySelector("section[aria-labelledby='home-title']");
+
+      expect(hero).toBeInTheDocument();
+      expect(hero?.querySelector("#home-title")?.textContent).toContain("Giffgaff 保号");
+      expect(hero?.querySelector("a[href='/login']")?.textContent).toContain("登录并管理号码");
+      expect(hero?.querySelector("a[href='/redeem']")?.textContent).toContain("使用卡密开通");
+      expect(hero?.querySelector("#push-preview-title")?.textContent).toContain("这样的提醒");
+    });
+
+    it("推送预览说明收到提醒后的三步操作", async () => {
+      const { container } = await renderHome();
+      const steps = container.querySelector("ol[aria-label='收到提醒后的操作步骤']");
+
+      expect(steps).toBeInTheDocument();
+      expect(steps?.textContent).toContain("打开链接");
+      expect(steps?.textContent).toContain("更新日期");
+      expect(steps?.textContent).toContain("重新计时");
+    });
+
+    it("慢统计位于主操作之后，不会把按钮推离首屏", async () => {
+      const { container } = await renderHome();
+      const loginLink = container.querySelector("a[href='/login']");
+      const stats = container.querySelector("[aria-label='服务使用数据']");
+
+      expect(loginLink).toBeInTheDocument();
+      expect(stats).toBeInTheDocument();
+      expect(
+        loginLink?.compareDocumentPosition(stats as Node) ?? 0
+      ).toBeTruthy();
+      expect(
+        (loginLink?.compareDocumentPosition(stats as Node) ?? 0) &
+          Node.DOCUMENT_POSITION_FOLLOWING
+      ).toBeTruthy();
+    });
+
+    it("推送样例 URL 只是预览文本，不伪装成无 href 的交互链接", async () => {
+      const { container } = await renderHome();
+
+      expect(container.querySelectorAll("a:not([href])")).toHaveLength(0);
+      expect(container.textContent).toContain("baohao.681218.xyz/p/abc123");
+    });
+
+  });
+
   it("3 个 feature card 都用 SVG 图标(无 emoji)", async () => {
     const { container } = await renderHome();
     const featureTitles = ["从激活第 170 天起", "越临近越频繁", "Sever酱 / Bark 推送"];
@@ -43,12 +89,12 @@ describe("<HomePage />", () => {
     }
   });
 
-  it("H6:social proof 显示 42 个号码被守护,100 条提醒送达", async () => {
+  it("H6:social proof 显示已守护 42 个号码，100 条提醒送达", async () => {
     const { container } = await renderHome();
     const text = container.textContent ?? "";
     expect(text).toContain("42");
     expect(text).toContain("100");
-    expect(text).toContain("正在被守护");
+    expect(text).toContain("已守护");
   });
 
   describe("Round 219: 提醒频率时间线", () => {
@@ -75,9 +121,9 @@ describe("<HomePage />", () => {
       expect(text).toContain("10 次/天");
     });
 
-    it("标题:'170 天后,提醒自动开始'", async () => {
+    it("标题:'170 天后，提醒自动开始'", async () => {
       const { container } = await renderHome();
-      expect(container.textContent).toContain("170 天后,提醒自动开始");
+      expect(container.textContent).toContain("170 天后，提醒自动开始");
     });
 
     it("底部说明:过了 180 天系统停止提醒", async () => {
@@ -86,4 +132,3 @@ describe("<HomePage />", () => {
     });
   });
 });
-

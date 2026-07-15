@@ -68,3 +68,46 @@ details > summary .details-chevron {
 details[open] > summary .details-chevron {
   transform: rotate(180deg);
 }
+
+/* 页面切换反馈延迟显现：快速静态导航不闪烁，慢请求在 140ms 后给出明确响应。 */
+@keyframes route-loading-reveal {
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes route-loading-progress {
+  from {
+    transform: translateX(-120%);
+  }
+  to {
+    transform: translateX(260%);
+  }
+}
+
+.route-loading-content {
+  opacity: 0;
+  animation: route-loading-reveal 160ms ease-out 140ms forwards;
+}
+
+.route-loading-bar::after {
+  content: "";
+  display: block;
+  width: 36%;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--color-primary);
+  animation: route-loading-progress 1.1s cubic-bezier(0.45, 0, 0.2, 1) infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .route-loading-content {
+    opacity: 1;
+    animation: none;
+  }
+
+  .route-loading-bar::after {
+    width: 100%;
+    animation: none;
+  }
+}

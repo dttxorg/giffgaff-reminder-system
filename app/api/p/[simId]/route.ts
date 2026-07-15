@@ -1,6 +1,10 @@
 import { NextResponse } from "next/server";
 import { dayOffsetFromBaseline } from "@/lib/bucket";
 import { findSimByParam, ensureSimPortToken } from "@/lib/port-token-db";
+import {
+  getCachedPublicSim,
+  invalidatePublicSimCache,
+} from "@/lib/public-sim-cache";
 
 interface RouteContext {
   params: Promise<{ simId: string }>;
@@ -18,16 +22,22 @@ interface RouteContext {
 export async function GET(_req: Request, ctx: RouteContext) {
   const { simId } = await ctx.params;
 
-  const sim = await findSimByParam(simId);
+  const isLegacyNumericUrl = /^\d+$/.test(simId);
+  const sim = isLegacyNumericUrl
+    ? await findSimByParam(simId)
+    : await getCachedPublicSim(simId);
   if (!sim) {
     return NextResponse.json({ ok: false, error: "sim 不存在" }, { status: 404 });
   }
 
   // 仅当按 id 命中且没有 token 时,backfill 一个;按 token 命中说明已经有过 token
-  if (!sim.portToken && /^\d+$/.test(simId)) {
-    await ensureSimPortToken(sim.id).catch(() => {
+  let portToken = sim.portToken;
+  if (!portToken && isLegacyNumericUrl) {
+    portToken = await ensureSimPortToken(sim.id, sim.portToken).catch(() => {
       // backfill 失败不影响本次响应
+      return null;
     });
+    if (portToken) invalidatePublicSimCache({ id: sim.id, portToken });
   }
 
   const baseline = sim.lastPortedAt ?? sim.activatedAt;
@@ -39,6 +49,6 @@ export async function GET(_req: Request, ctx: RouteContext) {
     dayOffset,
     // 公开给 /p/[simId] page 用:旧 int URL 命中时,client 端 redirect 到 /p/[portToken]
     // 防止公开 URL 可枚举。这是安全修复(P6 修复)的一部分。
-    portToken: sim.portToken,
+    portToken,
   });
 }

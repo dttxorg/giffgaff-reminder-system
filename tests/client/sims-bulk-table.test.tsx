@@ -83,6 +83,40 @@ describe("<SimsBulkTable />", () => {
     ).toBeInTheDocument();
   });
 
+  it("移动端隐藏列的表头与数据单元格保持一一对应", () => {
+    const { container } = render(<SimsBulkTable sims={sampleSims} />);
+    const hiddenHeaders = container.querySelectorAll("thead th.hidden.md\\:table-cell");
+    const firstRowHiddenCells = container.querySelectorAll(
+      "tbody tr:first-child td.hidden.md\\:table-cell"
+    );
+
+    expect(hiddenHeaders).toHaveLength(6);
+    expect(firstRowHiddenCells).toHaveLength(6);
+  });
+
+  it("直接批量激活时显示具体动作进度", async () => {
+    const user = userEvent.setup();
+    let resolveRequest: ((value: unknown) => void) | undefined;
+    mockFetch.mockReturnValueOnce(
+      new Promise((resolve) => {
+        resolveRequest = resolve;
+      })
+    );
+
+    render(<SimsBulkTable sims={sampleSims} />);
+    await user.click(screen.getByLabelText("选择 sim 1"));
+    await user.click(screen.getByRole("button", { name: "激活" }));
+
+    expect(screen.getByRole("button", { name: "激活中…" })).toBeDisabled();
+    expect(screen.getByRole("status")).toHaveTextContent("正在激活 1 个号码");
+
+    resolveRequest?.({
+      ok: true,
+      json: async () => ({ ok: true, affected: 1 }),
+    });
+    expect(await screen.findByText("已激活 1 个号码")).toBeInTheDocument();
+  });
+
   it("全选 + 批量删除 → 弹 ConfirmModal → 确认后调 batch + 显示 success", async () => {
     const user = userEvent.setup();
     mockFetch.mockResolvedValueOnce({

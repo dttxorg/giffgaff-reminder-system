@@ -45,7 +45,15 @@ export async function POST(req: Request) {
 
   const user = await prisma.user.findUnique({
     where: { username },
-    include: { sims: { orderBy: { id: "asc" } } },
+    select: {
+      id: true,
+      passwordHash: true,
+      failedLoginCount: true,
+      lockedUntil: true,
+      _count: {
+        select: { sims: { where: { channelKey: "" } } },
+      },
+    },
   });
   if (!user) {
     return NextResponse.json(
@@ -93,14 +101,16 @@ export async function POST(req: Request) {
     );
   }
 
-  await prisma.user.update({
-    where: { id: user.id },
-    data: { failedLoginCount: 0, lockedUntil: null },
-  });
-
-  await createUserSession(user.id);
+  // 两项彼此独立，成功登录后并行收尾，少等待一次数据库往返。
+  await Promise.all([
+    prisma.user.update({
+      where: { id: user.id },
+      data: { failedLoginCount: 0, lockedUntil: null },
+    }),
+    createUserSession(user.id),
+  ]);
   // 任何一张 sim 还没设 channel 都提示去 /me/settings
-  const needSetupChannel = user.sims.some((s) => !s.channelKey);
+  const needSetupChannel = user._count.sims > 0;
   return NextResponse.json({
     ok: true,
     redirect: "/me",
