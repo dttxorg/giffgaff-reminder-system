@@ -4,6 +4,7 @@ import { prisma } from "@/lib/db";
 import { getAdminSession } from "@/lib/session";
 import { generatePortToken } from "@/lib/port-token";
 import { invalidatePublicSimCache } from "@/lib/public-sim-cache";
+import { mapWithConcurrency } from "@/lib/async-pool";
 
 const BodySchema = z.object({
   csv: z.string().min(1),
@@ -28,26 +29,6 @@ interface PhonePlan {
 }
 
 const WRITE_CONCURRENCY = 6;
-
-async function mapWithConcurrency<T, R>(
-  items: T[],
-  concurrency: number,
-  worker: (item: T) => Promise<R>
-): Promise<R[]> {
-  const results = new Array<R>(items.length);
-  let nextIndex = 0;
-  const workers = Array.from(
-    { length: Math.min(concurrency, items.length) },
-    async () => {
-      while (nextIndex < items.length) {
-        const index = nextIndex++;
-        results[index] = await worker(items[index]);
-      }
-    }
-  );
-  await Promise.all(workers);
-  return results;
-}
 
 /**
  * POST /api/admin/sims/import

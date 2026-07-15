@@ -3,6 +3,7 @@ import { z } from "zod";
 import { prisma } from "@/lib/db";
 import { getAdminSession } from "@/lib/session";
 import { sendPush } from "@/lib/channels";
+import { mapWithConcurrency } from "@/lib/async-pool";
 
 /**
  * POST /api/admin/sims/test-push
@@ -11,12 +12,14 @@ import { sendPush } from "@/lib/channels";
  * 给每张 sim 自己的推送渠道(channel/channelKey 在 sim 上)发测试消息。
  * 1:N 模型下,每张 sim 独立渠道。
  *
- * 不限制次数但每 sim 串行处理,失败不会中断其他 sim。
+ * 最多并发处理 5 个不同推送目标；同一渠道 Key 保持串行，避免渠道限流。
  */
 
 const BodySchema = z.object({
   simIds: z.array(z.number().int().positive()).min(1).max(50),
 });
+
+const PUSH_CONCURRENCY = 5;
 
 const channelNameMap: Record<string, string> = {
   serverchan: "Sever酱",
@@ -24,6 +27,38 @@ const channelNameMap: Record<string, string> = {
   pushplus: "pushplus",
   telegram: "Telegram",
 };
+
+interface TestPushSim {
+  id: number;
+  phoneNumber: string;
+  channel: "serverchan" | "bark" | "pushplus" | "telegram";
+  channelKey: string;
+}
+
+interface TestPushResult {
+  simId: number;
+  phoneNumber: string;
+  channel: string;
+  ok: boolean;
+  error?: string;
+}
+
+async function sendTestPush(sim: TestPushSim): Promise<TestPushResult> {
+  const channelName = channelNameMap[sim.channel] ?? sim.channel;
+  const result = await sendPush(
+    sim.channel,
+    sim.channelKey,
+    "Giffgaff 保号提醒 - 管理员测试",
+    `🛠️ 管理员触发的推送测试\n\n号码:${sim.phoneNumber}\n渠道:${channelName}\n\n如果您收到这条消息,说明 ${channelName} 配置正常。`
+  );
+  return {
+    simId: sim.id,
+    phoneNumber: sim.phoneNumber,
+    channel: sim.channel,
+    ok: result.ok,
+    error: result.ok ? undefined : result.errorMessage,
+  };
+}
 
 export async function POST(req: Request) {
   if (!(await getAdminSession())) {
@@ -43,23 +78,23 @@ export async function POST(req: Request) {
 
   const sims = await prisma.sim.findMany({
     where: { id: { in: parsed.data.simIds } },
+    select: {
+      id: true,
+      phoneNumber: true,
+      channel: true,
+      channelKey: true,
+    },
   });
 
   if (sims.length === 0) {
     return NextResponse.json({ ok: false, error: "未找到这些 sim" }, { status: 404 });
   }
 
-  const results: Array<{
-    simId: number;
-    phoneNumber: string;
-    channel: string;
-    ok: boolean;
-    error?: string;
-  }> = [];
-
+  const missingById = new Map<number, TestPushResult>();
+  const groupsByDestination = new Map<string, TestPushSim[]>();
   for (const sim of sims) {
     if (!sim.channelKey) {
-      results.push({
+      missingById.set(sim.id, {
         simId: sim.id,
         phoneNumber: sim.phoneNumber,
         channel: sim.channel,
@@ -68,21 +103,27 @@ export async function POST(req: Request) {
       });
       continue;
     }
-    const channelName = channelNameMap[sim.channel] ?? sim.channel;
-    const result = await sendPush(
-      sim.channel,
-      sim.channelKey,
-      "Giffgaff 保号提醒 - 管理员测试",
-      `🛠️ 管理员触发的推送测试\n\n号码:${sim.phoneNumber}\n渠道:${channelName}\n\n如果您收到这条消息,说明 ${channelName} 配置正常。`
-    );
-    results.push({
-      simId: sim.id,
-      phoneNumber: sim.phoneNumber,
-      channel: sim.channel,
-      ok: result.ok,
-      error: result.ok ? undefined : result.errorMessage,
-    });
+    const destination = `${sim.channel}:${sim.channelKey}`;
+    const group = groupsByDestination.get(destination) ?? [];
+    group.push(sim);
+    groupsByDestination.set(destination, group);
   }
+
+  const groupedResults = await mapWithConcurrency(
+    Array.from(groupsByDestination.values()),
+    PUSH_CONCURRENCY,
+    async (group) => {
+      const results: TestPushResult[] = [];
+      for (const sim of group) results.push(await sendTestPush(sim));
+      return results;
+    }
+  );
+  const sentById = new Map(
+    groupedResults.flat().map((result) => [result.simId, result])
+  );
+  const results = sims.map(
+    (sim) => missingById.get(sim.id) ?? sentById.get(sim.id)!
+  );
 
   const successCount = results.filter((r) => r.ok).length;
   const failCount = results.length - successCount;
