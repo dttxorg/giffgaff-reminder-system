@@ -6,6 +6,7 @@ import { SimTabs } from "./_components/sim-tabs";
 import { PortCountdownHero } from "./_components/port-countdown-hero";
 import { PortOverdueBanner } from "./_components/port-overdue-banner";
 import { ActionBar } from "./_components/action-bar";
+import { UserHeader } from "./_components/user-header";
 
 interface PageProps {
   searchParams: Promise<{ simId?: string }>;
@@ -27,18 +28,8 @@ export default async function MePage({ searchParams }: PageProps) {
 
   return (
     <div className="max-w-md mx-auto px-4 py-6 sm:py-8">
-      {/* 顶部欢迎:用账号(username),不用手机号(脱敏) */}
-      <div className="mb-3">
-        <p className="text-sm text-slate-500">欢迎</p>
-        <h1 className="text-2xl font-bold flex items-center gap-2 flex-wrap">
-          <span className="font-mono">{user.username}</span>
-          {simCount > 0 && (
-            <span className="text-base font-normal text-slate-500">
-              · {simCount} 张 SIM 卡
-            </span>
-          )}
-        </h1>
-      </div>
+      {/* Round 221: 顶部用户卡片(头像 + 用户名 + SIM 卡数 + 在线状态) */}
+      <UserHeader username={user.username} simCount={simCount} />
 
       {/* 0 张卡:提示去兑换 */}
       {simCount === 0 && (
