@@ -5,6 +5,7 @@ import { AdminShell } from "../../app/admin/_components/admin-shell";
 let mockPathname = "/admin";
 vi.mock("next/navigation", () => ({
   usePathname: () => mockPathname,
+  useRouter: () => ({ prefetch: vi.fn() }),
 }));
 
 describe("<AdminShell />", () => {

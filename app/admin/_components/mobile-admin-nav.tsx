@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { NavIcon } from "./nav-icon";
 
@@ -38,7 +38,12 @@ function isActive(itemHref: string, pathname: string): boolean {
  */
 export function MobileAdminNav() {
   const pathname = usePathname();
+  const router = useRouter();
   const [open, setOpen] = useState(false);
+
+  const prefetchOnIntent = (href: string) => {
+    if (href !== pathname) router.prefetch(href);
+  };
 
   // 路由变化 → 自动关(避免跳页后抽屉还开着)
   // 用 ref 记录上一个 pathname,只在真的变化时关抽屉(避免初次挂载也触发)
@@ -154,6 +159,9 @@ export function MobileAdminNav() {
                   <Link
                     key={item.href}
                     href={item.href}
+                    prefetch={false}
+                    onMouseEnter={() => prefetchOnIntent(item.href)}
+                    onFocus={() => prefetchOnIntent(item.href)}
                     className={`flex items-center gap-2 px-3 py-2 rounded transition-colors ${
                       active
                         ? "bg-indigo-600 text-white"

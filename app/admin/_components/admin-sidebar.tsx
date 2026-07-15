@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { NavIcon } from "./nav-icon";
 
 interface NavItem {
@@ -30,6 +30,11 @@ function isActive(itemHref: string, pathname: string): boolean {
 
 export function AdminSidebar() {
   const pathname = usePathname();
+  const router = useRouter();
+
+  const prefetchOnIntent = (href: string) => {
+    if (href !== pathname) router.prefetch(href);
+  };
 
   return (
     <aside className="hidden md:flex md:w-56 bg-slate-900 text-slate-100 md:min-h-screen md:sticky md:top-0 md:h-screen flex-col">
@@ -44,6 +49,9 @@ export function AdminSidebar() {
             <Link
               key={item.href}
               href={item.href}
+              prefetch={false}
+              onMouseEnter={() => prefetchOnIntent(item.href)}
+              onFocus={() => prefetchOnIntent(item.href)}
               aria-current={active ? "page" : undefined}
               className={`flex items-center gap-2 px-3 py-2 rounded transition-colors ${
                 active

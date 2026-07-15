@@ -4,8 +4,10 @@ import userEvent from "@testing-library/user-event";
 
 // next/navigation stub
 let mockPathname = "/admin";
+const mockPrefetch = vi.fn();
 vi.mock("next/navigation", () => ({
   usePathname: () => mockPathname,
+  useRouter: () => ({ prefetch: mockPrefetch }),
 }));
 
 // 动态 import 让 mock 先生效
@@ -15,6 +17,7 @@ const { MobileAdminNav } = await import(
 
 beforeEach(() => {
   mockPathname = "/admin";
+  mockPrefetch.mockReset();
   document.body.style.overflow = "";
 });
 
@@ -81,5 +84,15 @@ describe("<MobileAdminNav />", () => {
     // 当前 active 状态由父样式控制 — 验证链接在 DOM 即可
     expect(simsLink).toBeInTheDocument();
     // aria-current 不被我们设置(active 状态是视觉高亮,不是 aria)
+  });
+
+  it("打开抽屉不批量预取,悬停目标后才按意图预取", async () => {
+    const user = userEvent.setup();
+    render(<MobileAdminNav />);
+    await user.click(screen.getByLabelText("打开菜单"));
+
+    expect(mockPrefetch).not.toHaveBeenCalled();
+    await user.hover(screen.getByRole("link", { name: /号码管理/ }));
+    expect(mockPrefetch).toHaveBeenCalledWith("/admin/sims");
   });
 });
