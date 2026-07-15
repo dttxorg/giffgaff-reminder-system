@@ -7,30 +7,91 @@ const USER_COOKIE = "gg_user_session";
 const ADMIN_COOKIE = "gg_admin_session";
 const COOKIE_MAX_AGE = 60 * 60 * 24 * 7; // 7 天
 
-/** 用户中心首页需要的 Session + 完整卡片字段。 */
-const CURRENT_USER_SESSION_SELECT = {
-  expiresAt: true,
-  user: {
-    select: {
-      id: true,
-      username: true,
-      sims: {
-        orderBy: { id: "asc" as const },
-        select: {
-          id: true,
-          phoneNumber: true,
-          portToken: true,
-          activatedAt: true,
-          lastPortedAt: true,
-          status: true,
-          channel: true,
-          channelKey: true,
-          createdAt: true,
-        },
-      },
-    },
-  },
-};
+type DashboardChannel = "serverchan" | "bark" | "pushplus" | "telegram";
+
+interface CurrentUserDashboardRow {
+  expiresAt: Date;
+  username: string;
+  simId: number | null;
+  phoneNumber: string | null;
+  status: "active" | "paused" | null;
+  channel: DashboardChannel | null;
+  missingChannel: boolean | null;
+  dayOffset: number | null;
+  createdAt: Date | null;
+  isActive: boolean | null;
+  activePortToken: string | null;
+  activeActivatedAt: Date | null;
+  activeLastPortedAt: Date | null;
+  activeChannelKey: string | null;
+}
+
+export interface CurrentUserDashboardContext {
+  username: string;
+  sims: Array<{
+    id: number;
+    phoneNumber: string;
+    status: "active" | "paused";
+    channel: DashboardChannel;
+    missingChannel: boolean;
+    dayOffset: number;
+    createdAt: Date;
+  }>;
+  activeSim: {
+    id: number;
+    phoneNumber: string;
+    portToken: string | null;
+    activatedAt: Date;
+    lastPortedAt: Date | null;
+    status: "active" | "paused";
+    channel: DashboardChannel;
+    channelKey: string;
+  } | null;
+}
+
+export function summarizeCurrentUserDashboardRows(
+  rows: CurrentUserDashboardRow[]
+): CurrentUserDashboardContext | null {
+  const first = rows[0];
+  if (!first) return null;
+  const simRows = rows.filter(
+    (row): row is CurrentUserDashboardRow & {
+      simId: number;
+      phoneNumber: string;
+      status: "active" | "paused";
+      channel: DashboardChannel;
+      missingChannel: boolean;
+      dayOffset: number;
+      createdAt: Date;
+    } => row.simId !== null
+  );
+  const active = simRows.find((row) => row.isActive === true);
+
+  return {
+    username: first.username,
+    sims: simRows.map((row) => ({
+      id: row.simId,
+      phoneNumber: row.phoneNumber,
+      status: row.status,
+      channel: row.channel,
+      missingChannel: row.missingChannel,
+      dayOffset: row.dayOffset,
+      createdAt: row.createdAt,
+    })),
+    activeSim: active
+      ? {
+          id: active.simId,
+          phoneNumber: active.phoneNumber,
+          portToken: active.activePortToken,
+          activatedAt: active.activeActivatedAt!,
+          lastPortedAt: active.activeLastPortedAt,
+          status: active.status,
+          channel: active.channel,
+          channelKey: active.activeChannelKey!,
+        }
+      : null,
+  };
+}
 
 /**
  * 创建用户 session
@@ -52,29 +113,102 @@ export async function createUserSession(userId: number): Promise<string> {
 }
 
 /**
- * 获取当前登录用户
+ * 获取用户中心首屏上下文。
  *
- * 用 React cache() 包裹: 单次请求内多次调用只产生一次 DB 查询。
- *
- * cookies() 在一次请求内返回同样的值,所以 cache() 的去重是安全的。
- *
- * 返回 user.sims[] (1:N),按 id 升序;1 个账号下挂多张 SIM 卡。
+ * 单次 SQL 返回全部卡片摘要，并只为 URL 指定卡/最高优先级卡返回 token 与渠道密钥。
  */
-export const getCurrentUser = cache(async () => {
-  const jar = await cookies();
-  const sid = jar.get(USER_COOKIE)?.value;
-  if (!sid) return null;
-  const session = await prisma.userSession.findUnique({
-    where: { id: sid },
-    select: CURRENT_USER_SESSION_SELECT,
-  });
-  if (!session) return null;
-  if (session.expiresAt < new Date()) {
-    await prisma.userSession.delete({ where: { id: sid } }).catch(() => {});
-    return null;
+export const getCurrentUserDashboardContext = cache(
+  async (
+    requestedSimId: number | null
+  ): Promise<CurrentUserDashboardContext | null> => {
+    const jar = await cookies();
+    const sid = jar.get(USER_COOKIE)?.value;
+    if (!sid) return null;
+
+    const rows = await prisma.$queryRaw<CurrentUserDashboardRow[]>`
+      WITH current_session AS (
+        SELECT
+          session."expiresAt",
+          usr."id" AS "userId",
+          usr."username"
+        FROM "UserSession" session
+        INNER JOIN "User" usr ON usr."id" = session."userId"
+        WHERE session."id" = ${sid}
+      ),
+      sim_base AS (
+        SELECT
+          sim."id",
+          sim."phoneNumber",
+          sim."portToken",
+          sim."activatedAt",
+          sim."lastPortedAt",
+          sim."status",
+          sim."channel",
+          sim."channelKey",
+          sim."createdAt",
+          (sim."channelKey" = '') AS "missingChannel",
+          (
+            (CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Shanghai')::date
+            - (
+              COALESCE(sim."lastPortedAt", sim."activatedAt")
+              + INTERVAL '8 hours'
+            )::date
+          )::int AS "dayOffset"
+        FROM "Sim" sim
+        INNER JOIN current_session current
+          ON current."userId" = sim."userId"
+      ),
+      ranked_sims AS (
+        SELECT
+          sim_base.*,
+          ROW_NUMBER() OVER (
+            ORDER BY
+              CASE
+                WHEN ${requestedSimId}::int IS NOT NULL
+                  AND "id" = ${requestedSimId} THEN -1
+                WHEN "status" = 'paused' THEN 4
+                WHEN "dayOffset" > 180 THEN 0
+                WHEN "dayOffset" >= 170 THEN 1
+                WHEN "missingChannel" THEN 2
+                ELSE 3
+              END,
+              "dayOffset" DESC,
+              LENGTH("phoneNumber") ASC,
+              "phoneNumber" ASC
+          ) AS "simRank"
+        FROM sim_base
+      )
+      SELECT
+        current."expiresAt",
+        current."username",
+        ranked."id" AS "simId",
+        ranked."phoneNumber",
+        ranked."status"::text AS "status",
+        ranked."channel"::text AS "channel",
+        ranked."missingChannel",
+        ranked."dayOffset",
+        ranked."createdAt",
+        (ranked."simRank" = 1) AS "isActive",
+        CASE WHEN ranked."simRank" = 1 THEN ranked."portToken" END
+          AS "activePortToken",
+        CASE WHEN ranked."simRank" = 1 THEN ranked."activatedAt" END
+          AS "activeActivatedAt",
+        CASE WHEN ranked."simRank" = 1 THEN ranked."lastPortedAt" END
+          AS "activeLastPortedAt",
+        CASE WHEN ranked."simRank" = 1 THEN ranked."channelKey" END
+          AS "activeChannelKey"
+      FROM current_session current
+      LEFT JOIN ranked_sims ranked ON TRUE
+      ORDER BY ranked."id" ASC
+    `;
+    if (rows.length === 0) return null;
+    if (rows[0].expiresAt < new Date()) {
+      await prisma.userSession.delete({ where: { id: sid } }).catch(() => {});
+      return null;
+    }
+    return summarizeCurrentUserDashboardRows(rows);
   }
-  return session.user;
-});
+);
 
 /**
  * 只判断用户 session 是否有效，不加载 user.sims。

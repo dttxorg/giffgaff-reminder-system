@@ -1,8 +1,6 @@
 import { Suspense } from "react";
 import { redirect } from "next/navigation";
-import { getCurrentUser } from "@/lib/session";
-import { dayOffsetFromBaseline } from "@/lib/bucket";
-import { pickDefaultManagedSim } from "@/lib/sim-manager";
+import { getCurrentUserDashboardContext } from "@/lib/session";
 import { SimCard } from "./_components/sim-card";
 import { SimManager, type SimManagerItem } from "./_components/sim-manager";
 import { SimCardLoading } from "./_components/sim-card-loading";
@@ -17,10 +15,14 @@ interface PageProps {
 }
 
 export default async function MePage({ searchParams }: PageProps) {
-  const user = await getCurrentUser();
+  const { simId: simIdParam } = await searchParams;
+  const requestedSimId =
+    simIdParam && /^\d+$/.test(simIdParam) && String(Number(simIdParam)) === simIdParam
+      ? Number(simIdParam)
+      : null;
+  const user = await getCurrentUserDashboardContext(requestedSimId);
   if (!user) redirect("/login");
 
-  const { simId: simIdParam } = await searchParams;
   const sims = user.sims;
   const simCount = sims.length;
   // 同一请求内多 SimCard 共用一个 now,保证 timeline 一致
@@ -30,19 +32,15 @@ export default async function MePage({ searchParams }: PageProps) {
     id: sim.id,
     phoneNumber: sim.phoneNumber,
     status: sim.status,
-    missingChannel: !sim.channelKey,
-    dayOffset: dayOffsetFromBaseline(sim.lastPortedAt ?? sim.activatedAt, now),
+    missingChannel: sim.missingChannel,
+    dayOffset: sim.dayOffset,
     createdAt: sim.createdAt.toISOString(),
     channel: sim.channel,
     isPrimary: index === 0,
   }));
 
-  // URL 指定号码优先；没有指定时默认打开最需要处理的号码，而不是固定第一张卡。
-  const defaultManagedSim = pickDefaultManagedSim(managerSims);
-  const activeSim =
-    sims.find((s) => String(s.id) === simIdParam) ??
-    sims.find((s) => s.id === defaultManagedSim?.id) ??
-    null;
+  // URL 指定号码优先；否则 SQL 使用与列表一致的关注优先级选择当前卡。
+  const activeSim = user.activeSim;
 
   return (
     <div className={`${simCount > 1 ? "max-w-5xl" : "max-w-md"} mx-auto px-4 py-6 sm:px-6 sm:py-8`}>
