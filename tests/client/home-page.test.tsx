@@ -93,7 +93,7 @@ describe("<HomePage />", () => {
   });
 
   describe("Codex 会员代充推广", () => {
-    it("展示 Plus、5× Pro 和 20× Pro 三种代充方案", async () => {
+    it("展示 Plus、5× Pro 和 20× Pro 三种方案及价格", async () => {
       const { container } = await renderHome();
       const promotion = container.querySelector(
         "section[aria-labelledby='codex-membership-title']"
@@ -104,8 +104,11 @@ describe("<HomePage />", () => {
         "Codex 会员代充"
       );
       expect(promotion?.textContent).toContain("Plus");
+      expect(promotion?.textContent).toContain("¥130");
       expect(promotion?.textContent).toContain("5× Pro");
+      expect(promotion?.textContent).toContain("¥740");
       expect(promotion?.textContent).toContain("20× Pro");
+      expect(promotion?.textContent).toContain("¥1,200");
       expect(promotion?.textContent).toContain("官方渠道订阅");
       expect(promotion?.textContent).toContain("本人信用卡代付");
       expect(promotion?.textContent).toContain("30 天质保");

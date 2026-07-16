@@ -204,9 +204,27 @@ export default function HomePage() {
               >
                 Codex 会员代充
               </h2>
-              <p className="mt-2 text-lg font-medium text-indigo-100">Plus · 5× Pro · 20× Pro</p>
+              <ul
+                aria-label="会员订阅价格"
+                className="mt-4 grid grid-cols-3 divide-x divide-white/25 border-y border-white/25"
+              >
+                {[
+                  { name: "Plus", price: "¥130" },
+                  { name: "5× Pro", price: "¥740" },
+                  { name: "20× Pro", price: "¥1,200" },
+                ].map((plan) => (
+                  <li key={plan.name} className="py-2.5 text-center sm:py-3">
+                    <span className="block text-[11px] font-bold text-indigo-100 sm:text-xs">
+                      {plan.name}
+                    </span>
+                    <strong className="mt-0.5 block text-xl font-black tracking-tight text-white sm:text-2xl">
+                      {plan.price}
+                    </strong>
+                  </li>
+                ))}
+              </ul>
 
-              <ul className="mt-7 grid gap-4 sm:grid-cols-3" aria-label="会员代充服务保障">
+              <ul className="mt-6 grid gap-4 sm:grid-cols-3" aria-label="会员代充服务保障">
                 <li className="flex items-start gap-2.5">
                   <ShieldCheck size={25} weight="bold" aria-hidden="true" className="shrink-0 text-white" />
                   <div>

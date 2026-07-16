@@ -31,7 +31,7 @@
 - Spacing and layout rhythm: 桌面端使用接近全幅的 32px 外边距；首屏、200px 时间线、左 FAQ / 右会员服务区与参考图顺序一致。320px、390px 均无横向滚动。
 - Colors and visual tokens: 暖纸张底色、近黑文字、靛蓝主操作与橙红截止日强调均与参考方向一致；正文和交互元素对比清晰。
 - Image quality and asset fidelity: 使用独立生成并压缩的真实纸张纹理；微信二维码继续引用原始 660 × 660 PNG，未重绘、滤镜、裁圆或压缩，生产页加载完成。
-- Copy and content: 保留 Giffgaff 核心价值、登录/卡密入口、推送样例和 170–180 天节奏；会员服务明确为“官方渠道订阅、本人信用卡代付、30 天质保”，未再出现“第三方代充服务 / 非 Codex 官方渠道”。
+- Copy and content: 保留 Giffgaff 核心价值、登录/卡密入口、推送样例和 170–180 天节奏；会员服务明确为“官方渠道订阅、本人信用卡代付、30 天质保”，并展示 Plus ¥130、5× Pro ¥740、20× Pro ¥1,200；未再出现“第三方代充服务 / 非 Codex 官方渠道”。
 - Icons: 全部功能图标统一来自 Phosphor Icons SSR 包，无 emoji、手绘 SVG 或 CSS 图形替代。
 - Accessibility and behavior: 语义标题、区域标签、列表和二维码替代文本完整；按钮保持至少 44px 点击高度；FAQ 在 390px 视口点击后成功展开。
 
@@ -65,6 +65,14 @@ Fix made:
 - 生产模式页面无浏览器 console error / warning。
 - 生产模式二维码自然尺寸为 `660 × 660`，页面无横向溢出，隐私昵称和地区不在 DOM 中。
 
+### Pass 4 · scoped pricing update passed
+
+- User-directed change: 会员服务新增 Plus ¥130、5× Pro ¥740、20× Pro ¥1,200 三档价格。
+- Mobile evidence: `/tmp/giffgaff-prices-mobile-390.png`、`/tmp/giffgaff-prices-mobile-320.png`。
+- 390px 下每列宽约 `100–101px`；320px 下每列宽约 `77–78px`，各列 `scrollWidth === clientWidth`，页面无横向溢出。
+- 价格使用三列规则线分组，保持方案 3 的海报式信息层级；二维码尺寸与服务保障内容未受影响。
+- 最终生产模式复验：两档移动端截图均已刷新为 5× Pro ¥740；320px 下页面和价格列无溢出，二维码为原始 `660 × 660`，console 无 error / warning。
+
 ## Implementation Checklist
 
 - [x] 桌面端首屏、时间线、FAQ 与会员服务结构对齐
@@ -73,6 +81,7 @@ Fix made:
 - [x] 二维码加载、尺寸与隐私检查
 - [x] TypeScript、ESLint、全量测试和生产构建
 - [x] 生产模式 console 检查
+- [x] 三档会员价格与 320px / 390px 移动端价格带检查
 
 ## Follow-up Polish
 
