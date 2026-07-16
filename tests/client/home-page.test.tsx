@@ -97,6 +97,37 @@ describe("<HomePage />", () => {
     expect(text).toContain("已守护");
   });
 
+  describe("Codex 会员代充推广", () => {
+    it("展示 Plus、5× Pro 和 20× Pro 三种代充方案", async () => {
+      const { container } = await renderHome();
+      const promotion = container.querySelector(
+        "section[aria-labelledby='codex-membership-title']"
+      );
+
+      expect(promotion).toBeInTheDocument();
+      expect(promotion?.querySelector("#codex-membership-title")?.textContent).toContain(
+        "Codex 会员代充"
+      );
+      expect(promotion?.textContent).toContain("Plus");
+      expect(promotion?.textContent).toContain("5× Pro");
+      expect(promotion?.textContent).toContain("20× Pro");
+      expect(promotion?.textContent).toContain("第三方代充服务");
+    });
+
+    it("只展示裁剪后的微信二维码，不暴露微信资料", async () => {
+      const { container } = await renderHome();
+      const qrCode = container.querySelector(
+        "img[alt='微信二维码，用于咨询 Codex 会员代充']"
+      );
+      const text = container.textContent ?? "";
+
+      expect(qrCode).toBeInTheDocument();
+      expect(qrCode).toHaveAttribute("src", "/images/codex-wechat-qr.png");
+      expect(text).not.toContain("猫不肥");
+      expect(text).not.toContain("阿富汗");
+    });
+  });
+
   describe("Round 219: 提醒频率时间线", () => {
     it("渲染 5 个时间节点(170/175/178/179/180)", async () => {
       const { container } = await renderHome();

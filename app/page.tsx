@@ -1,3 +1,4 @@
+import Image from "next/image";
 import Link from "next/link";
 import { Suspense } from "react";
 import { PublicStats } from "@/app/_components/public-stats";
@@ -191,6 +192,61 @@ export default function HomePage() {
             <h3 className="mt-4 font-semibold text-slate-900">Sever酱 / Bark 推送</h3>
             <p className="mt-1 text-sm leading-6 text-slate-600">绑定一次，之后自动提醒</p>
           </div>
+        </div>
+      </section>
+
+      <section aria-labelledby="codex-membership-title" className="mb-14 sm:mb-16">
+        <div className="overflow-hidden rounded-[1.75rem] border border-slate-800 bg-slate-950 px-5 py-6 text-white shadow-[0_28px_70px_-38px_rgba(15,23,42,0.8)] sm:px-8 sm:py-8 lg:grid lg:grid-cols-[minmax(0,1fr)_260px] lg:items-center lg:gap-12 lg:px-10 lg:py-10">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-indigo-300">
+              会员服务 · 微信咨询
+            </p>
+            <h2
+              id="codex-membership-title"
+              className="mt-3 text-3xl font-bold tracking-[-0.025em] text-balance sm:text-4xl"
+            >
+              Codex 会员代充
+            </h2>
+            <p className="mt-3 max-w-xl text-base leading-7 text-pretty text-slate-300">
+              Plus、5× Pro、20× Pro 均可代充，微信扫码咨询具体方案与价格。
+            </p>
+
+            <ul
+              aria-label="可代充会员方案"
+              className="mt-7 grid grid-cols-3 divide-x divide-white/10 overflow-hidden rounded-xl border border-white/10 bg-white/[0.04]"
+            >
+              {["Plus", "5× Pro", "20× Pro"].map((plan) => (
+                <li
+                  key={plan}
+                  className="flex min-h-16 items-center justify-center px-2 text-center text-sm font-semibold tracking-wide text-white sm:text-base"
+                >
+                  {plan}
+                </li>
+              ))}
+            </ul>
+
+            <p className="mt-5 text-xs leading-5 text-slate-400">
+              第三方代充服务 · 非 Codex 官方渠道
+            </p>
+          </div>
+
+          <figure className="mx-auto mt-8 w-full max-w-[260px] lg:mt-0">
+            <div className="bg-white p-3 shadow-[0_18px_48px_-22px_rgba(0,0,0,0.9)]">
+              <Image
+                src="/images/codex-wechat-qr.png"
+                alt="微信二维码，用于咨询 Codex 会员代充"
+                width={660}
+                height={660}
+                sizes="(max-width: 1023px) 260px, 236px"
+                className="block h-auto w-full"
+                loading="eager"
+                unoptimized
+              />
+            </div>
+            <figcaption className="mt-3 text-center text-sm font-medium text-slate-200">
+              微信扫码咨询
+            </figcaption>
+          </figure>
         </div>
       </section>
 
