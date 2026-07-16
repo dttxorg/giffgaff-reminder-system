@@ -21,13 +21,14 @@ async function renderHome() {
 }
 
 describe("<HomePage />", () => {
-  describe("Round 226: 转化优先首屏", () => {
+  describe("Utility Poster 重构首屏", () => {
     it("首屏同时包含价值说明、登录入口、卡密入口和推送预览", async () => {
       const { container } = await renderHome();
       const hero = container.querySelector("section[aria-labelledby='home-title']");
 
       expect(hero).toBeInTheDocument();
-      expect(hero?.querySelector("#home-title")?.textContent).toContain("Giffgaff 保号");
+      expect(hero?.querySelector("#home-title")?.textContent).toContain("到期前");
+      expect(hero?.textContent).toContain("Giffgaff");
       expect(hero?.querySelector("a[href='/login']")?.textContent).toContain("登录并管理号码");
       expect(hero?.querySelector("a[href='/redeem']")?.textContent).toContain("使用卡密开通");
       expect(hero?.querySelector("#push-preview-title")?.textContent).toContain("这样的提醒");
@@ -68,25 +69,19 @@ describe("<HomePage />", () => {
 
   });
 
-  it("3 个 feature card 都用 SVG 图标(无 emoji)", async () => {
+  it("使用方案 3 的海报式设计方向并保留清晰内容顺序", async () => {
     const { container } = await renderHome();
-    const featureTitles = ["从激活第 170 天起", "越临近越频繁", "Sever酱 / Bark 推送"];
-    for (const title of featureTitles) {
-      const card =
-        Array.from(container.querySelectorAll("h3")).find((h) => h.textContent === title)?.parentElement;
-      expect(card, `card for "${title}" should exist`).toBeTruthy();
-      const svg = card?.querySelector("svg");
-      expect(svg, `card "${title}" should have SVG icon`).toBeTruthy();
-    }
-  });
+    const page = container.querySelector("[data-design-direction='utility-poster']");
+    const timeline = container.querySelector("section[aria-labelledby='reminder-timeline-title']");
+    const promotion = container.querySelector("section[aria-labelledby='codex-membership-title']");
 
-  it("SVG 使用 currentColor 描边,跟着父级 text-* 颜色", async () => {
-    const { container } = await renderHome();
-    const svgs = container.querySelectorAll("svg");
-    expect(svgs.length).toBeGreaterThanOrEqual(3);
-    for (const svg of Array.from(svgs).slice(0, 3)) {
-      expect(svg.getAttribute("stroke")).toBe("currentColor");
-    }
+    expect(page).toBeInTheDocument();
+    expect(timeline).toBeInTheDocument();
+    expect(promotion).toBeInTheDocument();
+    expect(
+      (timeline?.compareDocumentPosition(promotion as Node) ?? 0) &
+        Node.DOCUMENT_POSITION_FOLLOWING
+    ).toBeTruthy();
   });
 
   it("H6:social proof 显示已守护 42 个号码，100 条提醒送达", async () => {
@@ -111,7 +106,11 @@ describe("<HomePage />", () => {
       expect(promotion?.textContent).toContain("Plus");
       expect(promotion?.textContent).toContain("5× Pro");
       expect(promotion?.textContent).toContain("20× Pro");
-      expect(promotion?.textContent).toContain("第三方代充服务");
+      expect(promotion?.textContent).toContain("官方渠道订阅");
+      expect(promotion?.textContent).toContain("本人信用卡代付");
+      expect(promotion?.textContent).toContain("30 天质保");
+      expect(promotion?.textContent).not.toContain("第三方代充服务");
+      expect(promotion?.textContent).not.toContain("非 Codex 官方渠道");
     });
 
     it("只展示裁剪后的微信二维码，不暴露微信资料", async () => {
@@ -128,18 +127,18 @@ describe("<HomePage />", () => {
     });
   });
 
-  describe("Round 219: 提醒频率时间线", () => {
+  describe("海报式提醒频率时间线", () => {
     it("渲染 5 个时间节点(170/175/178/179/180)", async () => {
       const { container } = await renderHome();
       const ol = container.querySelector("ol[aria-label='保号提醒频率时间线']");
       expect(ol).toBeInTheDocument();
       const items = ol?.querySelectorAll("li");
       expect(items?.length).toBe(5);
-      expect(items?.[0]?.textContent).toContain("第 170 天");
-      expect(items?.[1]?.textContent).toContain("第 175 天");
-      expect(items?.[2]?.textContent).toContain("第 178 天");
-      expect(items?.[3]?.textContent).toContain("第 179 天");
-      expect(items?.[4]?.textContent).toContain("第 180 天");
+      expect(items?.[0]).toHaveAttribute("aria-label", "第 170 天，1 次/天");
+      expect(items?.[1]).toHaveAttribute("aria-label", "第 175 天，2 次/天");
+      expect(items?.[2]).toHaveAttribute("aria-label", "第 178 天，3 次/天");
+      expect(items?.[3]).toHaveAttribute("aria-label", "第 179 天，5 次/天");
+      expect(items?.[4]).toHaveAttribute("aria-label", "第 180 天，10 次/天");
     });
 
     it("每个节点显示提醒频率(1/2/3/5/10 次/天)", async () => {

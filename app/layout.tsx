@@ -22,11 +22,11 @@ export default function RootLayout({
     <html lang="zh-CN" className="h-full antialiased">
       <body className="min-h-full flex flex-col bg-gradient-to-br from-slate-50 via-white to-indigo-50 text-slate-900">
         <SkipToContent />
-        <header className="border-b border-slate-200 bg-white/80 backdrop-blur-sm sticky top-0 z-30">
-          <div className="max-w-5xl mx-auto px-4 sm:px-6 py-3 flex items-center justify-between">
+        <header className="site-header border-b border-slate-200 bg-white/80 backdrop-blur-sm sticky top-0 z-30">
+          <div className="site-header-inner max-w-5xl mx-auto px-4 sm:px-6 py-3 flex items-center justify-between">
             <Link
               href="/"
-              className="flex min-w-0 items-center gap-2 text-lg font-semibold text-indigo-600"
+              className="site-brand flex min-w-0 items-center gap-2 text-lg font-semibold text-indigo-600"
             >
               <span className="inline-block w-8 h-8 rounded-lg bg-indigo-600 text-white text-center leading-8">
                 G
@@ -42,7 +42,7 @@ export default function RootLayout({
           </div>
         </header>
         <main id="main-content" className="flex-1">{children}</main>
-        <footer className="border-t border-slate-200 bg-white/60 py-4 text-center text-xs text-slate-500">
+        <footer className="site-footer border-t border-slate-200 bg-white/60 py-4 text-center text-xs text-slate-500">
           <div className="max-w-5xl mx-auto px-4 flex items-center justify-center gap-3">
             <span>Giffgaff 保号提醒 · V1</span>
             <span className="text-slate-300">·</span>

@@ -1,350 +1,287 @@
 import Image from "next/image";
 import Link from "next/link";
 import { Suspense } from "react";
+import {
+  Bell,
+  CaretDown,
+  Circle,
+  CreditCard,
+  SealCheck,
+  ShieldCheck,
+  Ticket,
+  UserCircle,
+} from "@phosphor-icons/react/ssr";
 import { PublicStats } from "@/app/_components/public-stats";
 
 export const revalidate = 300;
 
-/** 首页 feature card 用的 SVG 图标 — H1 修复,从 emoji 改为一致品牌 */
-function HomeIcon({
-  name,
-  className = "text-indigo-600",
-}: {
-  name: "calendar" | "alert" | "bell";
-  className?: string;
-}) {
-  const common = {
-    width: 24,
-    height: 24,
-    viewBox: "0 0 24 24",
-    fill: "none",
-    stroke: "currentColor",
-    strokeWidth: 1.75,
-    strokeLinecap: "round" as const,
-    strokeLinejoin: "round" as const,
-    "aria-hidden": true,
-    className,
-  };
-  if (name === "calendar") {
-    return (
-      <svg {...common}>
-        <rect x="3" y="4" width="18" height="18" rx="2" />
-        <path d="M16 2v4M8 2v4M3 10h18" />
-      </svg>
-    );
-  }
-  if (name === "alert") {
-    return (
-      <svg {...common}>
-        <circle cx="12" cy="12" r="10" />
-        <path d="M12 6v6l4 2" />
-      </svg>
-    );
-  }
-  return (
-    <svg {...common}>
-      <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
-      <path d="M13.73 21a2 2 0 0 1-3.46 0" />
-    </svg>
-  );
-}
+const reminderSteps = [
+  { day: 170, label: "开始提醒", frequency: "1 次/天", color: "text-slate-400" },
+  { day: 175, label: "增强提醒", frequency: "2 次/天", color: "text-amber-500" },
+  { day: 178, label: "高频提醒", frequency: "3 次/天", color: "text-orange-500" },
+  { day: 179, label: "关键提醒", frequency: "5 次/天", color: "text-orange-600" },
+  { day: 180, label: "最后提醒", frequency: "10 次/天", color: "text-red-600" },
+];
+
+const faqItems = [
+  {
+    q: "Giffgaff 卡为什么要保号？",
+    a: "Giffgaff SIM 卡如果长期不活跃（不发起通话、短信或上网），运营商会在 6 个月后回收号码。保号就是通过一次付费活动让卡保持活跃。",
+  },
+  {
+    q: "保号提醒是怎么触发的？",
+    a: "从您的卡激活日起算，第 170 天系统开始提醒。越接近 180 天截止日，提醒频率越高；180 天当天提醒 10 次，之后停止。",
+  },
+  {
+    q: "推送渠道怎么选？",
+    a: "Sever酱适合大多数微信用户，Bark 适合 iOS 用户，Telegram Bot 适合跨平台使用；登录后可以随时修改。",
+  },
+  {
+    q: "账号忘了 / 想换推送渠道？",
+    a: "重新登录一次即可，登录时会更新您的渠道信息。原账号自动作废，新登录会覆盖旧设置。",
+  },
+  {
+    q: "我能在公众号 / Bark 看到什么？",
+    a: "推送会带一个保号时间更新链接。提交最近一次保号日期后，系统会从那天重新计时 170 天。",
+  },
+  {
+    q: "卡密是什么 / 怎么用？",
+    a: "卡密是 16 位字母数字销售凭证。在兑换页填写卡密、Giffgaff SIM 卡号与激活日期即可开通，一次性使用。",
+  },
+];
 
 export default function HomePage() {
   return (
-    <div className="mx-auto max-w-5xl px-4 py-8 sm:px-6 sm:py-12 lg:py-16">
-      {/* Round 226: 转化优先首屏 — 先讲价值、给入口，再用真实推送样例降低理解成本。 */}
+    <div className="home-poster text-slate-950" data-design-direction="utility-poster">
       <section
         aria-labelledby="home-title"
-        className="mb-14 grid gap-8 lg:mb-20 lg:grid-cols-[minmax(0,1.05fr)_minmax(360px,0.95fr)] lg:items-center lg:gap-12"
+        className="border-b border-slate-950/70"
       >
-        <div className="max-w-xl">
-          <p className="mb-4 flex items-center gap-2 text-sm font-medium text-indigo-700">
-            <span className="h-2 w-2 rounded-full bg-indigo-600" aria-hidden="true" />
-            稳定守护您的英国号码
-          </p>
-          <h1
-            id="home-title"
-            className="mb-4 text-4xl font-bold tracking-[-0.035em] text-balance text-slate-950 sm:text-5xl sm:leading-[1.12]"
-          >
-            到期前，自动提醒您完成 Giffgaff 保号
-          </h1>
-          <p className="max-w-lg text-lg leading-8 text-pretty text-slate-600">
-            录入号码和激活日期一次，系统会在第 170 天开始提醒；越接近 180 天截止日，提醒越及时。
-          </p>
+        <div className="mx-auto grid max-w-[1440px] gap-10 px-4 py-10 sm:px-6 sm:py-14 lg:min-h-[490px] lg:grid-cols-[minmax(0,1.12fr)_minmax(500px,0.88fr)] lg:items-center lg:gap-16 lg:px-8 lg:py-8">
+          <div>
+            <p className="mb-4 text-sm font-bold tracking-[0.12em] text-indigo-700">
+              稳定守护您的英国号码
+            </p>
+            <h1
+              id="home-title"
+              className="max-w-2xl text-[clamp(3.4rem,7vw,6.8rem)] font-black leading-[0.92] tracking-[-0.065em] text-balance"
+            >
+              到期前，
+              <span className="mt-2 block">自动提醒</span>
+            </h1>
+            <p className="mt-6 max-w-xl text-lg font-medium leading-8 text-pretty text-slate-800">
+              录入 Giffgaff 号码和激活日期一次，系统会在第
+              <strong className="mx-1 font-black text-orange-600">170 天</strong>
+              开始提醒；越接近
+              <strong className="mx-1 font-black text-orange-600">180 天</strong>
+              截止日，提醒越及时。
+            </p>
 
-          <div className="mt-6 grid gap-3 sm:grid-cols-2">
-            <Link
-              href="/login"
-              className="inline-flex min-h-12 items-center justify-center rounded-xl bg-indigo-600 px-5 py-3 font-semibold text-white shadow-sm transition-[background-color,transform] hover:bg-indigo-700 active:translate-y-px"
-            >
-              登录并管理号码
-            </Link>
-            <Link
-              href="/redeem"
-              className="inline-flex min-h-12 items-center justify-center rounded-xl border border-slate-300 bg-white px-5 py-3 font-semibold text-slate-800 shadow-sm transition-[background-color,border-color,color,transform] hover:border-indigo-300 hover:bg-indigo-50 hover:text-indigo-700 active:translate-y-px"
-            >
-              <svg
-                width={18}
-                height={18}
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth={2}
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                aria-hidden="true"
-                className="mr-2"
+            <div className="mt-7 grid gap-3 sm:max-w-xl sm:grid-cols-2">
+              <Link
+                href="/login"
+                className="inline-flex min-h-14 items-center justify-center gap-2 bg-indigo-700 px-5 py-3 font-bold text-white shadow-[0_10px_28px_-18px_rgba(67,56,202,0.9)] transition-[background-color,transform] hover:bg-indigo-800 active:translate-y-px"
               >
-                <path d="M3 9V7a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v2a2 2 0 0 0 0 4v2a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-2a2 2 0 0 0 0-4Z" />
-                <path d="M13 5v14" strokeDasharray="2 2" />
-              </svg>
-              使用卡密开通
-            </Link>
+                <UserCircle size={21} weight="bold" aria-hidden="true" />
+                登录并管理号码
+              </Link>
+              <Link
+                href="/redeem"
+                className="inline-flex min-h-14 items-center justify-center gap-2 border-2 border-indigo-700 bg-transparent px-5 py-3 font-bold text-indigo-800 transition-[background-color,color,transform] hover:bg-indigo-700 hover:text-white active:translate-y-px"
+              >
+                <Ticket size={21} weight="bold" aria-hidden="true" />
+                使用卡密开通
+              </Link>
+            </div>
+            <p className="mt-3 text-sm leading-6 text-slate-600">
+              已有账号可直接登录；卡密用于首次开通服务。
+            </p>
+            <Suspense fallback={null}>
+              <PublicStats />
+            </Suspense>
           </div>
-          <p className="mt-3 text-sm leading-6 text-slate-500">
-            已有账号可直接登录；卡密用于首次开通服务。
-          </p>
 
-          {/* 慢统计放到主操作之后，数据库冷启动不再把按钮推离首屏。 */}
-          <Suspense fallback={null}>
-            <PublicStats />
-          </Suspense>
-        </div>
+          <section aria-labelledby="push-preview-title" className="lg:pt-2">
+            <p className="mb-3 inline-flex bg-indigo-700 px-3 py-1.5 text-sm font-bold tracking-[0.08em] text-white">
+              录入一次，自动提醒
+            </p>
+            <div className="border border-slate-400/80 bg-white/55 p-4 shadow-[0_24px_70px_-48px_rgba(15,23,42,0.7)] backdrop-blur-[2px] sm:p-6">
+              <div className="flex items-start justify-between gap-4 border-b border-slate-400/50 pb-4">
+                <div className="flex min-w-0 items-center gap-3">
+                  <span className="flex h-12 w-12 shrink-0 items-center justify-center bg-indigo-700 text-white">
+                    <Bell size={25} weight="bold" aria-hidden="true" />
+                  </span>
+                  <div className="min-w-0">
+                    <p className="font-bold text-slate-950">Giffgaff 保号提醒</p>
+                    <p className="mt-0.5 text-sm text-slate-600">号码尾号 5611 · 已激活 175 天</p>
+                  </div>
+                </div>
+                <span className="shrink-0 text-sm text-slate-500">刚刚</span>
+              </div>
 
-        {/* Round 225 push preview 融入首屏，不再把主要操作下推。 */}
-        <section aria-labelledby="push-preview-title" className="lg:pl-2">
-          <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-[0_20px_60px_-32px_rgba(15,23,42,0.35)]">
-            <div className="flex items-center justify-between border-b border-slate-100 bg-slate-50/80 px-4 py-3 sm:px-5">
-              <div>
-                <p className="text-xs font-medium uppercase tracking-[0.16em] text-indigo-600">推送预览</p>
-                <h2 id="push-preview-title" className="mt-1 font-semibold text-slate-900">
+              <div className="mt-4 bg-white/80 px-4 py-4 ring-1 ring-inset ring-slate-300/80 sm:px-5">
+                <h2 id="push-preview-title" className="font-bold text-slate-950">
                   您会收到这样的提醒
                 </h2>
-              </div>
-              <span className="text-xs text-slate-400">刚刚</span>
-            </div>
-
-            <div className="p-4 sm:p-5">
-              <div className="flex items-start gap-3">
-                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-indigo-600 text-white shadow-sm">
-                  <HomeIcon name="bell" className="text-white" />
-                </div>
-                <div className="min-w-0 flex-1">
-                  <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
-                    <p className="font-semibold text-slate-900">Giffgaff 保号提醒</p>
-                    <p className="text-xs text-slate-400">Sever酱</p>
-                  </div>
-                  <p className="mt-1 text-xs text-slate-500">号码尾号 5611 · 已激活 175 天</p>
-                </div>
-              </div>
-
-              <div className="mt-4 rounded-xl bg-slate-50 px-4 py-3.5 ring-1 ring-inset ring-slate-200/80">
-                <p className="text-sm leading-6 text-slate-700">
+                <p className="mt-2 text-sm leading-6 text-slate-700">
                   您的号码 ****5611 已进入保号窗口，请尽快完成一次付费活动。
                 </p>
-                <span className="mt-2 block break-all text-sm font-medium text-indigo-600 underline decoration-indigo-200 underline-offset-4">
+                <span className="mt-2 block break-all text-sm font-bold text-indigo-700 underline decoration-indigo-300 underline-offset-4">
                   baohao.681218.xyz/p/abc123
                 </span>
               </div>
 
-              <ol className="mt-4 grid grid-cols-[1fr_auto_1fr_auto_1fr] items-center text-center text-xs text-slate-500" aria-label="收到提醒后的操作步骤">
-                <li>打开链接</li>
-                <li className="px-1 text-slate-300" aria-hidden="true">→</li>
-                <li>更新日期</li>
-                <li className="px-1 text-slate-300" aria-hidden="true">→</li>
-                <li>重新计时</li>
+              <ol
+                className="mt-4 grid grid-cols-3 divide-x divide-slate-300 text-center text-sm font-medium text-slate-700"
+                aria-label="收到提醒后的操作步骤"
+              >
+                <li className="px-1">打开链接</li>
+                <li className="px-1">更新日期</li>
+                <li className="px-1">重新计时</li>
               </ol>
             </div>
-
-            <p className="border-t border-slate-100 px-4 py-3 text-center text-xs leading-5 text-slate-500 sm:px-5">
+            <p className="mt-3 text-center text-sm text-slate-600">
               支持 Sever酱、Bark、Telegram 与 pushplus
             </p>
+          </section>
+        </div>
+      </section>
+
+      <section aria-labelledby="reminder-timeline-title" className="border-b border-slate-950/20">
+        <div className="mx-auto grid max-w-[1440px] gap-8 px-4 py-10 sm:px-6 lg:grid-cols-[240px_minmax(0,1fr)] lg:gap-12 lg:px-8 lg:py-4">
+          <div className="border-b border-slate-950/70 pb-6 lg:border-r lg:border-b-0 lg:pr-8 lg:pb-0">
+            <p className="text-sm font-black tracking-[0.12em] text-indigo-700">提醒节奏</p>
+            <h2 id="reminder-timeline-title" className="mt-3 text-3xl font-black leading-tight tracking-tight">
+              170 天后，
+              <span className="block">提醒自动开始</span>
+            </h2>
+            <p className="mt-3 text-sm leading-6 text-slate-600">越临近 180 天截止日，提醒越频繁。</p>
+          </div>
+
+          <div className="min-w-0">
+            <ol className="grid grid-cols-5" aria-label="保号提醒频率时间线">
+              {reminderSteps.map((step) => (
+                <li
+                  key={step.day}
+                  aria-label={`第 ${step.day} 天，${step.frequency}`}
+                  className="min-w-0 border-t border-slate-400 px-1 pt-4 text-center sm:px-2"
+                >
+                  <Circle
+                    size={18}
+                    weight="fill"
+                    aria-hidden="true"
+                    className={`mx-auto -mt-[25px] bg-[#f7f3ea] ${step.color}`}
+                  />
+                  <p className={`mt-3 text-2xl font-black tracking-[-0.04em] sm:text-4xl ${step.color}`}>
+                    {step.day}
+                    <span className="ml-1 text-xs tracking-normal text-slate-700 sm:text-sm">天</span>
+                  </p>
+                  <p className="mt-1 text-[11px] font-bold text-slate-800 sm:text-sm">{step.label}</p>
+                  <p className="mt-0.5 text-[10px] text-slate-500 sm:text-xs">{step.frequency}</p>
+                </li>
+              ))}
+            </ol>
+            <p className="mt-7 text-center text-xs leading-5 text-slate-500 sm:text-sm">
+              过了 180 天系统停止提醒，SIM 卡可能被运营商回收
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <section className="mx-auto grid max-w-[1440px] gap-6 px-4 py-10 sm:px-6 lg:grid-cols-[300px_minmax(0,1fr)] lg:items-start lg:px-8 lg:pt-0 lg:pb-9">
+        <section
+          aria-labelledby="codex-membership-title"
+          className="bg-indigo-700 p-5 text-white shadow-[0_24px_60px_-42px_rgba(49,46,129,0.9)] sm:p-6 lg:order-2"
+        >
+          <div className="grid gap-7 sm:grid-cols-[minmax(0,1fr)_190px] sm:items-center">
+            <div>
+              <p className="text-sm font-bold tracking-[0.08em] text-indigo-100">
+                官方渠道订阅 · 本人信用卡代付 · 30 天质保
+              </p>
+              <h2
+                id="codex-membership-title"
+                className="mt-3 whitespace-nowrap text-[2rem] font-black leading-tight tracking-[-0.035em] sm:text-5xl"
+              >
+                Codex 会员代充
+              </h2>
+              <p className="mt-2 text-lg font-medium text-indigo-100">Plus · 5× Pro · 20× Pro</p>
+
+              <ul className="mt-7 grid gap-4 sm:grid-cols-3" aria-label="会员代充服务保障">
+                <li className="flex items-start gap-2.5">
+                  <ShieldCheck size={25} weight="bold" aria-hidden="true" className="shrink-0 text-white" />
+                  <div>
+                    <p className="font-bold">官方渠道订阅</p>
+                    <p className="mt-0.5 text-xs leading-5 text-indigo-100">通过官方订阅渠道购买</p>
+                  </div>
+                </li>
+                <li className="flex items-start gap-2.5">
+                  <CreditCard size={25} weight="bold" aria-hidden="true" className="shrink-0 text-white" />
+                  <div>
+                    <p className="font-bold">本人信用卡代付</p>
+                    <p className="mt-0.5 text-xs leading-5 text-indigo-100">使用本人信用卡完成支付</p>
+                  </div>
+                </li>
+                <li className="flex items-start gap-2.5">
+                  <SealCheck size={25} weight="bold" aria-hidden="true" className="shrink-0 text-white" />
+                  <div>
+                    <p className="font-bold">30 天质保</p>
+                    <p className="mt-0.5 text-xs leading-5 text-indigo-100">订阅问题提供售后保障</p>
+                  </div>
+                </li>
+              </ul>
+            </div>
+
+            <figure className="mx-auto w-full max-w-[220px] sm:max-w-[190px]">
+              <div className="bg-white p-3">
+                <Image
+                  src="/images/codex-wechat-qr.png"
+                  alt="微信二维码，用于咨询 Codex 会员代充"
+                  width={660}
+                  height={660}
+                  sizes="(min-width: 640px) 190px, 220px"
+                  className="block h-auto w-full"
+                  loading="eager"
+                  unoptimized
+                />
+              </div>
+              <figcaption className="mt-2 text-center text-sm font-bold text-white">微信扫码咨询</figcaption>
+            </figure>
+          </div>
+        </section>
+
+        <section id="faq" aria-labelledby="faq-title" className="border-y border-slate-400/70 py-5 lg:order-1">
+          <div className="border-b border-slate-400/60 pb-4">
+            <p className="text-sm font-black tracking-[0.12em] text-indigo-700">开始前了解清楚</p>
+            <h2 id="faq-title" className="mt-1 text-2xl font-black tracking-tight">常见问题</h2>
+          </div>
+          <div className="divide-y divide-slate-300/80">
+            {faqItems.map((item, index) => (
+              <Faq key={item.q} q={item.q} a={item.a} defaultOpen={index === 0} />
+            ))}
           </div>
         </section>
       </section>
 
-      <section aria-labelledby="service-highlights-title" className="mb-12 sm:mb-14">
-        <div className="mb-5 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
-          <div>
-            <p className="mb-1 text-sm font-medium text-indigo-600">简单设置，自动运行</p>
-            <h2 id="service-highlights-title" className="text-2xl font-bold tracking-tight text-slate-900">
-              保号提醒如何工作
-            </h2>
-          </div>
-          <p className="max-w-md text-sm leading-6 text-slate-500 sm:text-right">
-            系统只负责在正确的时间提醒您，不会代替您执行付费活动。
-          </p>
-        </div>
-
-        <div className="grid gap-3 sm:grid-cols-3">
-          <div className="rounded-xl border border-slate-200 bg-white/80 p-5 shadow-sm">
-            <HomeIcon name="calendar" />
-            <h3 className="mt-4 font-semibold text-slate-900">从激活第 170 天起</h3>
-            <p className="mt-1 text-sm leading-6 text-slate-600">系统自动开始提醒您保号</p>
-          </div>
-          <div className="rounded-xl border border-slate-200 bg-white/80 p-5 shadow-sm">
-            <HomeIcon name="alert" />
-            <h3 className="mt-4 font-semibold text-slate-900">越临近越频繁</h3>
-            <p className="mt-1 text-sm leading-6 text-slate-600">第 178 天 3 次 / 179 天 5 次 / 180 天 10 次</p>
-          </div>
-          <div className="rounded-xl border border-slate-200 bg-white/80 p-5 shadow-sm">
-            <HomeIcon name="bell" />
-            <h3 className="mt-4 font-semibold text-slate-900">Sever酱 / Bark 推送</h3>
-            <p className="mt-1 text-sm leading-6 text-slate-600">绑定一次，之后自动提醒</p>
-          </div>
-        </div>
-      </section>
-
-      <section aria-labelledby="codex-membership-title" className="mb-14 sm:mb-16">
-        <div className="overflow-hidden rounded-[1.75rem] border border-slate-800 bg-slate-950 px-5 py-6 text-white shadow-[0_28px_70px_-38px_rgba(15,23,42,0.8)] sm:px-8 sm:py-8 lg:grid lg:grid-cols-[minmax(0,1fr)_260px] lg:items-center lg:gap-12 lg:px-10 lg:py-10">
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-indigo-300">
-              会员服务 · 微信咨询
-            </p>
-            <h2
-              id="codex-membership-title"
-              className="mt-3 text-3xl font-bold tracking-[-0.025em] text-balance sm:text-4xl"
-            >
-              Codex 会员代充
-            </h2>
-            <p className="mt-3 max-w-xl text-base leading-7 text-pretty text-slate-300">
-              Plus、5× Pro、20× Pro 均可代充，微信扫码咨询具体方案与价格。
-            </p>
-
-            <ul
-              aria-label="可代充会员方案"
-              className="mt-7 grid grid-cols-3 divide-x divide-white/10 overflow-hidden rounded-xl border border-white/10 bg-white/[0.04]"
-            >
-              {["Plus", "5× Pro", "20× Pro"].map((plan) => (
-                <li
-                  key={plan}
-                  className="flex min-h-16 items-center justify-center px-2 text-center text-sm font-semibold tracking-wide text-white sm:text-base"
-                >
-                  {plan}
-                </li>
-              ))}
-            </ul>
-
-            <p className="mt-5 text-xs leading-5 text-slate-400">
-              第三方代充服务 · 非 Codex 官方渠道
-            </p>
-          </div>
-
-          <figure className="mx-auto mt-8 w-full max-w-[260px] lg:mt-0">
-            <div className="bg-white p-3 shadow-[0_18px_48px_-22px_rgba(0,0,0,0.9)]">
-              <Image
-                src="/images/codex-wechat-qr.png"
-                alt="微信二维码，用于咨询 Codex 会员代充"
-                width={660}
-                height={660}
-                sizes="(max-width: 1023px) 260px, 236px"
-                className="block h-auto w-full"
-                loading="eager"
-                unoptimized
-              />
-            </div>
-            <figcaption className="mt-3 text-center text-sm font-medium text-slate-200">
-              微信扫码咨询
-            </figcaption>
-          </figure>
-        </div>
-      </section>
-
-      {/* Round 219: 提醒频率时间线 — 让用户一眼看出"170 天后才会推"的等待感 */}
-      <section className="mb-14 sm:mb-16">
-        <h2 className="mb-2 text-center text-2xl font-bold tracking-tight text-slate-900">170 天后，提醒自动开始</h2>
-        <p className="mb-5 text-center text-sm text-slate-500">越临近 180 天截止日，提醒越频繁</p>
-        <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-6">
-          {/* 时间轴:从 170 到 180 */}
-          <div className="relative pt-6 pb-2">
-            {/* 横向轴 */}
-            <div className="absolute top-9 left-0 right-0 h-0.5 bg-slate-200" aria-hidden="true" />
-            <ol className="relative grid grid-cols-5 gap-1" aria-label="保号提醒频率时间线">
-              {[
-                { day: 170, count: 1, label: "1 次/天", tone: "slate" },
-                { day: 175, count: 2, label: "2 次/天", tone: "amber" },
-                { day: 178, count: 3, label: "3 次/天", tone: "orange" },
-                { day: 179, count: 5, label: "5 次/天", tone: "red" },
-                { day: 180, count: 10, label: "10 次/天", tone: "rose" },
-              ].map((step) => {
-                const colorMap: Record<string, { bg: string; ring: string; text: string }> = {
-                  slate: { bg: "bg-slate-400", ring: "ring-slate-200", text: "text-slate-700" },
-                  amber: { bg: "bg-amber-500", ring: "ring-amber-200", text: "text-amber-700" },
-                  orange: { bg: "bg-orange-500", ring: "ring-orange-200", text: "text-orange-700" },
-                  red: { bg: "bg-red-500", ring: "ring-red-200", text: "text-red-700" },
-                  rose: { bg: "bg-rose-600", ring: "ring-rose-200", text: "text-rose-700" },
-                };
-                const c = colorMap[step.tone];
-                return (
-                  <li key={step.day} className="flex flex-col items-center">
-                    <div
-                      className={`w-5 h-5 rounded-full ${c.bg} ring-4 ring-white shadow-sm z-10 relative`}
-                      aria-hidden="true"
-                    />
-                    <div className="mt-2 text-center">
-                      <div className={`text-xs font-semibold ${c.text}`}>
-                        第 {step.day} 天
-                      </div>
-                      <div className="text-[10px] text-slate-500 mt-0.5">{step.label}</div>
-                    </div>
-                  </li>
-                );
-              })}
-            </ol>
-          </div>
-          <p className="mt-4 text-center text-xs leading-5 text-slate-500">
-            过了 180 天系统停止提醒，SIM 卡可能被运营商回收
-          </p>
-        </div>
-      </section>
-
-      <section id="faq" className="mx-auto max-w-3xl space-y-3">
-        <div className="mb-5 text-center">
-          <p className="mb-1 text-sm font-medium text-indigo-600">开始前了解清楚</p>
-          <h2 className="text-2xl font-bold tracking-tight text-slate-900">常见问题</h2>
-        </div>
-        <Faq
-          defaultOpen
-          q="Giffgaff 卡为什么要保号？"
-          a="Giffgaff SIM 卡如果长期不活跃(不发起通话/短信/上网),运营商会在 6 个月后回收号码。保号就是通过任何付费活动(发短信、打电话)让卡保持活跃。"
-        />
-        <Faq
-          defaultOpen
-          q="保号提醒是怎么触发的？"
-          a="从您的卡激活日起算,第 170 天系统开始给您发提醒。随着临近 180 天截止日,提醒频率自动增加。180 天当天会推 10 次,之后停止。"
-        />
-        <Faq
-          q="推送渠道怎么选？"
-          a="Sever酱(微信公众号)免费好用,适合大多数用户。Bark 适合 iOS 用户。Telegram Bot 适合能用 Telegram 的同学,免关注公众号、跨平台、即时送达。pushplus 现在实名要收费,新用户不建议(已付费实名的老用户仍可继续用)。任意选一个就行,登录后可以在「设置」里改。"
-        />
-        <Faq
-          q="账号忘了 / 想换推送渠道？"
-          a="重新登录一次就行,登录时会更新您的渠道信息。原账号自动作废,新登录会覆盖。"
-        />
-        <Faq
-          q="我能在公众号/Bark 看到什么内容？"
-          a="推送里会带一个链接,点进去就是保号时间更新页。选您最近一次保号的日期提交（不早于激活日期,不晚于今天）,系统就从那天重新计时 170 天。老用户（卡已用很久）可以补录很久以前的保号日期。"
-        />
-        <Faq
-          q="卡密是什么 / 怎么用?"
-          a="16 位字母数字的销售凭证。在兑换页填卡密 + 您的 Giffgaff SIM 卡号 + 激活日期即可绑定。一次性使用,详细步骤见登录页。"
-        />
-      </section>
+      <p className="mx-auto max-w-[1440px] px-4 pb-10 text-xs leading-5 text-slate-500 sm:px-6 lg:px-8">
+        本服务用于提醒您保持 Giffgaff 号码活跃，不替代运营商服务或实际付费活动。
+      </p>
     </div>
   );
 }
 
 function Faq({ q, a, defaultOpen = false }: { q: string; a: string; defaultOpen?: boolean }) {
   return (
-    <details
-      className="bg-white rounded-lg border border-slate-200 group"
-      open={defaultOpen}
-    >
-      <summary className="cursor-pointer px-4 py-3 font-medium text-slate-900 list-none flex items-center justify-between">
+    <details className="group py-3" open={defaultOpen}>
+      <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-3 font-bold text-slate-950">
         <span>{q}</span>
-        <span className="text-slate-400 group-open:rotate-180 transition-transform" aria-hidden="true">▾</span>
+        <CaretDown
+          size={18}
+          weight="bold"
+          aria-hidden="true"
+          className="details-chevron shrink-0 text-slate-500"
+        />
       </summary>
-      <div className="px-4 pb-3 text-slate-600 text-sm leading-relaxed">{a}</div>
+      <p className="pb-1 pr-6 text-sm leading-6 text-slate-600">{a}</p>
     </details>
   );
 }

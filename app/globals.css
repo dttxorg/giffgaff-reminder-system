@@ -12,6 +12,32 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
+/* 首页 Utility Poster 方向：真实纸张纹理 + 暖白页面外壳。 */
+.home-poster {
+  background-color: #f7f3ea;
+  background-image: url("/images/warm-paper-texture.jpg");
+  background-repeat: repeat;
+  background-size: 720px 720px;
+}
+
+body:has(.home-poster) {
+  background: #f7f3ea;
+}
+
+body:has(.home-poster) .site-header,
+body:has(.home-poster) .site-footer {
+  border-color: rgb(15 23 42 / 0.2);
+  background-color: rgb(247 243 234 / 0.94);
+}
+
+body:has(.home-poster) .site-header-inner {
+  max-width: 1440px;
+}
+
+body:has(.home-poster) .site-brand {
+  color: #020617;
+}
+
 /* 隐藏数字输入框的上下箭头 */
 input[type="number"]::-webkit-inner-spin-button,
 input[type="number"]::-webkit-outer-spin-button {
