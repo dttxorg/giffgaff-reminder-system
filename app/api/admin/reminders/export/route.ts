@@ -64,7 +64,9 @@ export async function GET(req: Request) {
       r.sentAt.toISOString().replace("T", " ").slice(0, 19),
       String(r.simId),
       csvEscape(r.aggregateDay ? "账号汇总" : r.sim.phoneNumber),
-      r.aggregateDay ? `汇总 ${r.aggregateDay}` : `d${r.dayOffset}/b${r.bucket}`,
+      r.aggregateDay
+        ? `汇总 ${r.aggregateDay} d${r.dayOffset}/b${r.bucket}`
+        : `d${r.dayOffset}/b${r.bucket}`,
       String(r.userId),
       r.aggregateDay ? "aggregate" : "single",
       String(r.aggregateSimCount),

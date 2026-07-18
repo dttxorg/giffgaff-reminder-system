@@ -263,7 +263,7 @@ export default async function AdminDashboard() {
                     </td>
                     <td className="px-3 py-2 font-mono text-xs whitespace-nowrap">
                       {r.aggregateDay
-                        ? `汇总 ${r.aggregateDay}`
+                        ? `汇总 ${r.aggregateDay} · d${r.dayOffset}/b${r.bucket}`
                         : `d${r.dayOffset}/b${r.bucket}`}
                     </td>
                     <td className="px-3 py-2 whitespace-nowrap">

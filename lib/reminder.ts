@@ -53,8 +53,6 @@ interface ReminderCandidate {
 
 function shanghaiDayIdentity(now: Date): {
   dayKey: string;
-  start: Date;
-  end: Date;
 } {
   const parts = shanghaiParts(now);
   const dayKey = [
@@ -62,14 +60,15 @@ function shanghaiDayIdentity(now: Date): {
     String(parts.month).padStart(2, "0"),
     String(parts.day).padStart(2, "0"),
   ].join("-");
-  const start = new Date(
-    Date.UTC(parts.year, parts.month - 1, parts.day) - 8 * 60 * 60 * 1000
-  );
-  return {
-    dayKey,
-    start,
-    end: new Date(start.getTime() + 24 * 60 * 60 * 1000),
-  };
+  return { dayKey };
+}
+
+function mostUrgentCandidate(
+  candidates: ReminderCandidate[]
+): ReminderCandidate {
+  return [...candidates].sort(
+    (a, b) => b.dayOffset - a.dayOffset || a.sim.id - b.sim.id
+  )[0];
 }
 
 function aggregateDetail(
@@ -77,9 +76,7 @@ function aggregateDetail(
   action: ReminderRunDetail["action"],
   error?: string
 ): ReminderRunDetail {
-  const representative = [...candidates].sort(
-    (a, b) => b.dayOffset - a.dayOffset || a.sim.id - b.sim.id
-  )[0];
+  const representative = mostUrgentCandidate(candidates);
   return {
     simId: representative.sim.id,
     userId: representative.sim.userId ?? undefined,
@@ -95,7 +92,7 @@ function aggregateDetail(
  * 执行一次提醒扫描。
  *
  * - 1–3 张活跃号码：保持逐号码、逐 bucket 提醒。
- * - 4 张及以上活跃号码：按账号每天最多一条汇总提醒，跳转账号后台处理。
+ * - 4 张及以上活跃号码：以最接近保号日期的号码决定频率，每个 bucket 一条汇总。
  */
 export async function runReminderScan(
   opts: RunOptions
@@ -170,14 +167,15 @@ export async function runReminderScan(
       dayOffset,
       bucket,
     })),
-    ...(aggregateUserIds.length
-      ? [
-          {
-            userId: { in: aggregateUserIds },
-            sentAt: { gte: day.start, lt: day.end },
-          },
-        ]
-      : []),
+    ...aggregateUserIds.map((userId) => {
+      const urgent = mostUrgentCandidate(aggregateGroups.get(userId)!);
+      return {
+        userId,
+        aggregateDay: day.dayKey,
+        dayOffset: urgent.dayOffset,
+        bucket: urgent.bucket,
+      };
+    }),
   ];
   const existingRows = idempotencyFilters.length
     ? await prisma.reminderSent.findMany({
@@ -187,7 +185,6 @@ export async function runReminderScan(
           userId: true,
           dayOffset: true,
           bucket: true,
-          sentAt: true,
           aggregateDay: true,
         },
       })
@@ -195,20 +192,20 @@ export async function runReminderScan(
   const existingKeys = new Set(
     existingRows.map((row) => `${row.simId}:${row.dayOffset}:${row.bucket}`)
   );
-  const usersAlreadyNotifiedToday = new Set(
+  const existingAggregateKeys = new Set(
     existingRows
-      .filter(
+      .filter((row) => row.aggregateDay !== null)
+      .map(
         (row) =>
-          aggregateGroups.has(row.userId) &&
-          row.sentAt >= day.start &&
-          row.sentAt < day.end
+          `${row.userId}:${row.aggregateDay}:${row.dayOffset}:${row.bucket}`
       )
-      .map((row) => row.userId)
   );
 
   // 大账号先按用户聚合；唯一索引在真正推送前完成占位，避免并发 cron 重复发送。
   for (const [userId, group] of aggregateGroups) {
-    if (usersAlreadyNotifiedToday.has(userId)) {
+    const representative = mostUrgentCandidate(group);
+    const aggregateKey = `${userId}:${day.dayKey}:${representative.dayOffset}:${representative.bucket}`;
+    if (existingAggregateKeys.has(aggregateKey)) {
       result.skipped += group.length;
       result.details.push(aggregateDetail(group, "skipped"));
       continue;
@@ -217,9 +214,6 @@ export async function runReminderScan(
     const userSims = simsByUser.get(userId) ?? [];
     const notificationSim =
       userSims.find((sim) => sim.channelKey.trim() !== "") ?? userSims[0];
-    const representative = [...group].sort(
-      (a, b) => b.dayOffset - a.dayOffset || a.sim.id - b.sim.id
-    )[0];
     const aggregateSimIds = group.map((candidate) => candidate.sim.id);
 
     if (opts.dryRun) {

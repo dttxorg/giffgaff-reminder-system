@@ -35,14 +35,14 @@ export function AccountReminderMode({ simCount }: { simCount: number }) {
               已开启账号汇总提醒
             </h2>
             <span className="rounded-full border border-indigo-200 bg-white px-2 py-0.5 text-[11px] font-medium text-indigo-700">
-              每日最多 1 条
+              按最紧急号码频率
             </span>
           </div>
           <p className="mt-1.5 text-sm leading-6 text-slate-600">
-            当前账号有 {simCount} 张活跃 SIM。进入保号期后，通知会汇总需要处理的尾号，登录后台即可统一完成保号。
+            当前账号有 {simCount} 张活跃 SIM。进入保号期后，通知会汇总需要处理的尾号，提醒频率由最接近保号日期的号码决定。
           </p>
           <div className="mt-3 flex flex-col gap-2 text-xs text-slate-500 sm:flex-row sm:items-center sm:justify-between">
-            <span>通知使用账号内第一张已配置的推送渠道</span>
+            <span>每个提醒时段只发一条汇总 · 使用第一张已配置渠道</span>
             <Link
               href="/me/settings"
               className="inline-flex min-h-9 items-center font-medium text-indigo-700 hover:text-indigo-900"

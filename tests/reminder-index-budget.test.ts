@@ -37,17 +37,19 @@ describe("提醒记录高频查询索引", () => {
     );
   });
 
-  it("多号码汇总提醒具有用户每日唯一索引", () => {
+  it("多号码汇总提醒具有用户日 + 紧急度 bucket 唯一索引", () => {
     const aggregateMigration = fs.readFileSync(
-      "prisma/migrations/20260718030000_add_account_reminder_aggregation/migration.sql",
+      "prisma/migrations/20260718040000_adjust_account_reminder_frequency/migration.sql",
       "utf8"
     );
-    expect(schema).toContain("@@unique([userId, aggregateDay])");
-    expect(aggregateMigration).toContain(
-      '"ReminderSent_userId_aggregateDay_key"'
+    expect(schema).toContain(
+      "@@unique([userId, aggregateDay, dayOffset, bucket])"
     );
     expect(aggregateMigration).toContain(
-      'ON "ReminderSent"("userId", "aggregateDay")'
+      '"ReminderSent_userId_aggregateDay_dayOffset_bucket_key"'
+    );
+    expect(aggregateMigration).toContain(
+      'ON "ReminderSent"("userId", "aggregateDay", "dayOffset", "bucket")'
     );
   });
 });

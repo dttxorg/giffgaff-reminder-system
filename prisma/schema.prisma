@@ -89,7 +89,7 @@ model ReminderSent {
   sentAt       DateTime   @default(now())
   status       SendStatus @default(success)
   errorMessage String?
-  // 多号码账号汇总提醒：同一用户同一上海日最多一条实际推送。
+  // 多号码账号汇总提醒：频率由最接近保号日的号码决定，同一 bucket 一条。
   aggregateDay      String?
   aggregateSimCount Int     @default(1)
 
@@ -97,7 +97,7 @@ model ReminderSent {
   sim  Sim  @relation(fields: [simId], references: [id], onDelete: Cascade)
 
   @@unique([simId, dayOffset, bucket]) // 同号同日同 bucket 唯一 → 幂等
-  @@unique([userId, aggregateDay]) // PostgreSQL 允许多条 NULL；汇总日期有值时每日唯一
+  @@unique([userId, aggregateDay, dayOffset, bucket]) // 汇总账号在同一紧急度 bucket 内唯一
   @@index([simId, sentAt])
   @@index([userId, sentAt])
   @@index([status, sentAt])

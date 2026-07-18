@@ -77,6 +77,7 @@ export async function POST(req: Request, ctx: RouteContext) {
   if (reminder.aggregateDay) {
     const message = buildAccountReminderResendMessage(
       reminder.aggregateSimCount,
+      reminder.dayOffset,
       baseUrl
     );
     title = message.title;

@@ -21,7 +21,8 @@ describe("账号汇总提醒文案", () => {
     expect(message.title).toContain("4 个号码");
     expect(message.body).toContain("尾号 5611");
     expect(message.body).not.toContain("07724215611");
-    expect(message.body).toContain("今天只发送这一条汇总提醒");
+    expect(message.body).toContain("账号提醒频率以它为准");
+    expect(message.body).toContain("同一提醒时段内只发送这一条账号汇总");
     expect(message.body).toContain("https://baohao.example/me");
     expect(message.body).not.toContain("/p/");
   });
@@ -41,9 +42,11 @@ describe("账号汇总提醒文案", () => {
   it("历史汇总重发只带计数与后台入口", () => {
     const message = buildAccountReminderResendMessage(
       6,
+      180,
       "https://baohao.example"
     );
     expect(message.title).toContain("6 个号码");
+    expect(message.body).toContain("已激活 180 天");
     expect(message.body).toContain("https://baohao.example/me");
   });
 });

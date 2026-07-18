@@ -212,7 +212,7 @@ export default async function RemindersPage({ searchParams }: PageProps) {
                       </td>
                       <td className="px-3 py-2 font-mono text-xs whitespace-nowrap hidden md:table-cell">
                         {r.aggregateDay
-                          ? `汇总 ${r.aggregateDay}`
+                          ? `汇总 ${r.aggregateDay} · d${r.dayOffset}/b${r.bucket}`
                           : `d${r.dayOffset}/b${r.bucket}`}
                       </td>
                       <td className="px-3 py-2 whitespace-nowrap">
