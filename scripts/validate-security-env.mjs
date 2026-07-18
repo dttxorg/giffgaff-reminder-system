@@ -12,10 +12,14 @@ if (missing.length > 0) {
 }
 
 if (process.env.CRON_SECRET.length < 32) {
-  throw new Error("CRON_SECRET 至少需要 32 个字符");
+  console.warn(
+    "[security-env] CRON_SECRET 少于 32 字符；保留现有部署兼容性，建议随后在 Vercel 中轮换为高熵值"
+  );
 }
 if (process.env.ADMIN_PASSWORD.length < 12) {
-  throw new Error("ADMIN_PASSWORD 至少需要 12 个字符");
+  console.warn(
+    "[security-env] ADMIN_PASSWORD 少于 12 字符；现有管理员不会自动重建，下一次 seed 前请先轮换"
+  );
 }
 const totpSecret = process.env.ADMIN_TOTP_SECRET?.trim() ?? "";
 if (

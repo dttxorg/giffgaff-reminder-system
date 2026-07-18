@@ -39,4 +39,22 @@ describe("生产安全环境校验脚本", () => {
     expect(result.status).not.toBe(0);
     expect(result.stderr).toContain("ADMIN_TOTP_SECRET");
   });
+
+  it("兼容已有的较短凭据并输出轮换提示", () => {
+    const result = spawnSync(process.execPath, ["scripts/validate-security-env.mjs"], {
+      cwd: process.cwd(),
+      env: {
+        ...requiredEnv,
+        CRON_SECRET: "legacy-cron",
+        ADMIN_PASSWORD: "legacy-pass",
+        ADMIN_TOTP_SECRET: "",
+        PUBLIC_BASE_URL: "",
+      },
+      encoding: "utf8",
+    });
+
+    expect(result.status).toBe(0);
+    expect(result.stderr).toContain("CRON_SECRET 少于 32 字符");
+    expect(result.stderr).toContain("ADMIN_PASSWORD 少于 12 字符");
+  });
 });
