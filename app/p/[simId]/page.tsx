@@ -3,6 +3,17 @@ import { looksLikeToken } from "@/lib/port-token";
 import { getCachedPublicSim } from "@/lib/public-sim-cache";
 import PortClient, { type SimInfo } from "./port-client";
 import { maskPhoneForPublic } from "@/lib/phone";
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  robots: {
+    index: false,
+    follow: false,
+    noarchive: true,
+    nosnippet: true,
+    noimageindex: true,
+  },
+};
 
 // Bearer token 页面包含号码和日期，不进入共享 Full Route Cache。
 export const dynamic = "force-dynamic";

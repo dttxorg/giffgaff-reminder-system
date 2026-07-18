@@ -37,7 +37,8 @@ export async function POST(req: Request) {
   const ip = getClientIp(req);
   const limited = await enforceRateLimits([
     { scope: "admin-login-ip", identifiers: [ip], limit: 10, windowMs: 15 * 60 * 1000 },
-    { scope: "admin-login-account", identifiers: [parsed.data.username], limit: 20, windowMs: 15 * 60 * 1000 },
+    { scope: "admin-login-account", identifiers: [parsed.data.username], limit: 5, windowMs: 15 * 60 * 1000 },
+    { scope: "admin-login-pair", identifiers: [ip, parsed.data.username], limit: 5, windowMs: 15 * 60 * 1000 },
   ]);
   if (!limited.allowed) return rateLimitResponse(limited);
 

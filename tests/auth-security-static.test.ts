@@ -14,10 +14,22 @@ describe("authentication security invariants", () => {
     expect(userLogin).not.toContain("账号已锁定");
     expect(userLogin).toContain("DUMMY_PASSWORD_HASH");
     expect(userLogin).toContain("user-login-ip");
+    expect(userLogin).toMatch(
+      /scope: "user-login-ip", identifiers: \[ip\], limit: 10/
+    );
+    expect(userLogin).toMatch(
+      /scope: "user-login-pair", identifiers: \[ip, username\], limit: 5/
+    );
   });
 
   it("管理员登录要求持久限流与 MFA，不自动创建账号", () => {
     expect(adminLogin).toContain("admin-login-ip");
+    expect(adminLogin).toMatch(
+      /scope: "admin-login-account", identifiers: \[parsed\.data\.username\], limit: 5/
+    );
+    expect(adminLogin).toMatch(
+      /scope: "admin-login-pair", identifiers: \[ip, parsed\.data\.username\], limit: 5/
+    );
     expect(adminLogin).toContain("verifyAdminTotp");
     expect(adminLogin).not.toContain("ensureDefaultAdmin");
   });

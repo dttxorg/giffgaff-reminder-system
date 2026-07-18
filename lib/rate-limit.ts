@@ -29,10 +29,17 @@ function normalizeIp(value: string): string | null {
 }
 
 export function getClientIp(request: Request): string {
-  const vercel = request.headers.get("x-vercel-forwarded-for");
-  if (vercel) {
-    const parsed = normalizeIp(vercel.split(",")[0]);
-    if (parsed) return parsed;
+  // Vercel 会重写转发头；在其运行环境中，第一项才是稳定的原始客户端 IP。
+  // 非 Vercel 环境继续取最右侧，避免直接信任客户端自行添加的第一项。
+  if (process.env.VERCEL === "1") {
+    for (const header of ["x-vercel-forwarded-for", "x-forwarded-for"]) {
+      const value = request.headers.get(header);
+      if (!value) continue;
+      const parsed = normalizeIp(value.split(",")[0]);
+      if (parsed) return parsed;
+    }
+    const realIp = normalizeIp(request.headers.get("x-real-ip") ?? "");
+    if (realIp) return realIp;
   }
   for (const header of ["cf-connecting-ip", "x-real-ip"]) {
     const parsed = normalizeIp(request.headers.get(header) ?? "");

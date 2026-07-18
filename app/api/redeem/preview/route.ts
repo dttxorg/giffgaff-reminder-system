@@ -10,21 +10,27 @@ import {
 } from "@/lib/rate-limit";
 
 export async function GET(req: Request) {
-  const limited = await enforceRateLimits([
-    {
-      scope: "redeem-preview-ip",
-      identifiers: [getClientIp(req)],
-      limit: 30,
-      windowMs: 60 * 1000,
-    },
-  ]);
-  if (!limited.allowed) return rateLimitResponse(limited);
   const { searchParams } = new URL(req.url);
   const code = searchParams.get("code") || "";
   const raw = normalizeCardCode(code);
   if (raw.length !== 16) {
     return NextResponse.json({ ok: false, error: "卡密格式不正确" }, { status: 400 });
   }
+  const limited = await enforceRateLimits([
+    {
+      scope: "redeem-preview-ip",
+      identifiers: [getClientIp(req)],
+      limit: 10,
+      windowMs: 60 * 1000,
+    },
+    {
+      scope: "redeem-preview-code",
+      identifiers: [raw],
+      limit: 3,
+      windowMs: 15 * 60 * 1000,
+    },
+  ]);
+  if (!limited.allowed) return rateLimitResponse(limited);
   const card = await prisma.cardKey.findUnique({ where: { code: raw } });
   if (!card) {
     return NextResponse.json({ ok: false, error: "卡密不存在" }, { status: 404 });

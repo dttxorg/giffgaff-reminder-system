@@ -1,13 +1,26 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { getClientIp } from "../lib/rate-limit";
 
 describe("getClientIp", () => {
-  it("优先使用 Vercel 注入的客户端地址", () => {
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
+  it("Vercel 环境优先使用平台注入地址的第一项", () => {
+    vi.stubEnv("VERCEL", "1");
     const req = new Request("https://example.com", {
       headers: {
-        "x-vercel-forwarded-for": "203.0.113.9",
+        "x-vercel-forwarded-for": "203.0.113.9, 198.51.100.7",
         "x-forwarded-for": "10.0.0.1",
       },
+    });
+    expect(getClientIp(req)).toBe("203.0.113.9");
+  });
+
+  it("Vercel 地址头缺失时使用 X-Forwarded-For 第一项", () => {
+    vi.stubEnv("VERCEL", "1");
+    const req = new Request("https://example.com", {
+      headers: { "x-forwarded-for": "203.0.113.9, 198.51.100.7" },
     });
     expect(getClientIp(req)).toBe("203.0.113.9");
   });

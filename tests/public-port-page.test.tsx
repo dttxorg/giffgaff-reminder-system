@@ -9,7 +9,7 @@ vi.mock("../lib/public-sim-cache", () => ({
   getCachedPublicSim: mocks.getCachedPublicSim,
 }));
 
-import PortPage from "../app/p/[simId]/page";
+import PortPage, { metadata } from "../app/p/[simId]/page";
 import type { SimInfo } from "../app/p/[simId]/port-client";
 
 const sim = {
@@ -47,5 +47,15 @@ describe("public port server page", () => {
     })) as ReactElement<{ simIdRaw: string; initialSim: SimInfo | null }>;
     expect(element.props.initialSim).toBeNull();
     expect(mocks.getCachedPublicSim).not.toHaveBeenCalled();
+  });
+
+  it("Bearer 页面输出 noindex robots metadata", () => {
+    expect(metadata.robots).toMatchObject({
+      index: false,
+      follow: false,
+      noarchive: true,
+      nosnippet: true,
+      noimageindex: true,
+    });
   });
 });

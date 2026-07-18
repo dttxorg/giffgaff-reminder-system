@@ -50,7 +50,7 @@ export async function POST(req: Request) {
 
   const ip = getClientIp(req);
   const limited = await enforceRateLimits([
-    { scope: "user-login-ip", identifiers: [ip], limit: 20, windowMs: LOGIN_WINDOW_MS },
+    { scope: "user-login-ip", identifiers: [ip], limit: 10, windowMs: LOGIN_WINDOW_MS },
     { scope: "user-login-account", identifiers: [username], limit: 50, windowMs: LOGIN_WINDOW_MS },
     { scope: "user-login-pair", identifiers: [ip, username], limit: 5, windowMs: LOGIN_WINDOW_MS },
   ]);

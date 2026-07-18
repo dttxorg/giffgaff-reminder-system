@@ -25,4 +25,22 @@ describe("全局安全响应头", () => {
       });
     }
   });
+
+  it("API、Bearer 页面和敏感入口禁止搜索引擎收录", async () => {
+    const rules = await nextConfig.headers!();
+    for (const source of [
+      "/api/:path*",
+      "/p/:path*",
+      "/me/:path*",
+      "/admin/:path*",
+      "/login",
+      "/redeem",
+    ]) {
+      const rule = rules.find((candidate) => candidate.source === source)!;
+      expect(rule.headers).toContainEqual({
+        key: "X-Robots-Tag",
+        value: "noindex, nofollow, noarchive, nosnippet, noimageindex",
+      });
+    }
+  });
 });

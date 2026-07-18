@@ -35,6 +35,13 @@ const securityHeaders = [
   },
 ];
 
+const noIndexHeaders = [
+  {
+    key: "X-Robots-Tag",
+    value: "noindex, nofollow, noarchive, nosnippet, noimageindex",
+  },
+];
+
 const nextConfig: NextConfig = {
   poweredByHeader: false,
   async headers() {
@@ -50,6 +57,7 @@ const nextConfig: NextConfig = {
             key: "Cache-Control",
             value: "private, no-store, max-age=0, must-revalidate",
           },
+          ...noIndexHeaders,
         ],
       },
       {
@@ -59,8 +67,12 @@ const nextConfig: NextConfig = {
             key: "Cache-Control",
             value: "private, no-store, max-age=0, must-revalidate",
           },
+          ...noIndexHeaders,
         ],
       },
+      ...["/me/:path*", "/admin/:path*", "/login", "/redeem"].map(
+        (source) => ({ source, headers: noIndexHeaders })
+      ),
     ];
   },
 };
