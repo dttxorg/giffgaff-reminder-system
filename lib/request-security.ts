@@ -1,3 +1,5 @@
+import { getPublicBaseUrl } from "./public-base-url";
+
 const SAFE_METHODS = new Set(["GET", "HEAD", "OPTIONS"]);
 
 function parseOrigin(value: string | null): string | null {
@@ -12,9 +14,22 @@ function parseOrigin(value: string | null): string | null {
 function trustedOrigins(request: Request): Set<string> {
   const configured = parseOrigin(process.env.PUBLIC_BASE_URL ?? null);
   if (configured) return new Set([configured]);
-  // 生产域名必须来自显式配置，不能把可能受 Host 头影响的 request.url 当作信任根。
-  if (process.env.NODE_ENV === "production") return new Set();
-  return new Set([new URL(request.url).origin]);
+  if (process.env.NODE_ENV !== "production") {
+    return new Set([new URL(request.url).origin]);
+  }
+
+  // 生产环境使用代码内固定正式域名；额外接受 Vercel 注入的部署域名，
+  // 但不从请求 Host 派生信任来源。
+  const origins = new Set<string>();
+  const publicOrigin = parseOrigin(getPublicBaseUrl());
+  if (publicOrigin) origins.add(publicOrigin);
+  for (const name of ["VERCEL_PROJECT_PRODUCTION_URL", "VERCEL_URL"] as const) {
+    const host = process.env[name]?.trim().toLowerCase();
+    if (host && /^[a-z0-9.-]+$/.test(host)) {
+      origins.add(`https://${host}`);
+    }
+  }
+  return origins;
 }
 
 /**

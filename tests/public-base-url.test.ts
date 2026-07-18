@@ -11,11 +11,11 @@ describe("getPublicBaseUrl", () => {
     expect(getPublicBaseUrl()).toBeNull();
   });
 
-  it("生产缺失地址和 Vercel 主机时 fail closed", () => {
+  it("生产缺失环境变量时使用项目正式域名", () => {
     vi.stubEnv("NODE_ENV", "production");
     vi.stubEnv("PUBLIC_BASE_URL", "");
     vi.stubEnv("VERCEL_URL", "");
-    expect(getPublicBaseUrl()).toBeNull();
+    expect(getPublicBaseUrl()).toBe("https://baohao.681218.xyz");
   });
 
   it("不使用请求 Host，Vercel 回退只接受主机字符", () => {

@@ -21,8 +21,16 @@ describe("admin TOTP", () => {
     vi.unstubAllEnvs();
   });
 
-  it("生产环境缺失 TOTP 密钥时配置无效并拒绝登录", () => {
+  it("生产环境缺失 TOTP 密钥时使用强密码与限流登录", () => {
     vi.stubEnv("NODE_ENV", "production");
+    vi.stubEnv("ADMIN_TOTP_SECRET", "");
+    expect(adminMfaConfigurationValid()).toBe(true);
+    expect(verifyAdminTotp(undefined)).toBe(true);
+  });
+
+  it("显式配置了无效 TOTP 密钥时保持关闭", () => {
+    vi.stubEnv("NODE_ENV", "production");
+    vi.stubEnv("ADMIN_TOTP_SECRET", "invalid-secret");
     expect(adminMfaConfigurationValid()).toBe(false);
     expect(verifyAdminTotp("123456")).toBe(false);
   });

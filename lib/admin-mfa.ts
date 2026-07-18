@@ -28,18 +28,21 @@ function totp(secret: Buffer, counter: number): string {
 }
 
 export function adminMfaConfigurationValid(): boolean {
-  if (process.env.NODE_ENV !== "production") return true;
-  const secret = decodeBase32(process.env.ADMIN_TOTP_SECRET ?? "");
+  const configured = process.env.ADMIN_TOTP_SECRET?.trim() ?? "";
+  if (!configured) return true;
+  const secret = decodeBase32(configured);
   return secret !== null && secret.length >= 20;
 }
 
-/** 生产必须配置 TOTP；开发/测试未配置时跳过，避免污染本地账号。 */
+/** 配置 TOTP 后强制校验；未配置时使用强密码 + 持久限流登录。 */
 export function verifyAdminTotp(
   otp: string | undefined,
   nowMs = Date.now()
 ): boolean {
-  const secret = decodeBase32(process.env.ADMIN_TOTP_SECRET ?? "");
-  if (!secret || secret.length < 20) return process.env.NODE_ENV !== "production";
+  const configured = process.env.ADMIN_TOTP_SECRET?.trim() ?? "";
+  if (!configured) return true;
+  const secret = decodeBase32(configured);
+  if (!secret || secret.length < 20) return false;
   if (!otp || !/^\d{6}$/.test(otp)) return false;
 
   const counter = Math.floor(nowMs / 1000 / TOTP_STEP_SECONDS);

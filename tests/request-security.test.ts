@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { isTrustedMutationRequest } from "../lib/request-security";
 
 function request(headers: Record<string, string> = {}, method = "POST") {
@@ -11,6 +11,7 @@ function request(headers: Record<string, string> = {}, method = "POST") {
 describe("isTrustedMutationRequest", () => {
   afterEach(() => {
     delete process.env.PUBLIC_BASE_URL;
+    vi.unstubAllEnvs();
   });
 
   it("允许安全方法", () => {
@@ -63,5 +64,15 @@ describe("isTrustedMutationRequest", () => {
       headers: { origin: "https://attacker-controlled-host.example" },
     });
     expect(isTrustedMutationRequest(req)).toBe(false);
+  });
+
+  it("生产缺少覆盖变量时信任项目固定正式域名", () => {
+    vi.stubEnv("NODE_ENV", "production");
+    vi.stubEnv("PUBLIC_BASE_URL", "");
+    const req = new Request("https://baohao.681218.xyz/api/me/password", {
+      method: "POST",
+      headers: { origin: "https://baohao.681218.xyz" },
+    });
+    expect(isTrustedMutationRequest(req)).toBe(true);
   });
 });

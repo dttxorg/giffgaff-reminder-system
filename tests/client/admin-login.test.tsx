@@ -85,6 +85,6 @@ describe("<AdminLoginPage />", () => {
     render(<AdminLoginPage />);
     expect(screen.getByText(/不会自动创建默认账号/)).toBeInTheDocument();
     expect(screen.queryByText(/admin123/)).not.toBeInTheDocument();
-    expect(screen.getByLabelText("动态验证码")).toBeInTheDocument();
+    expect(screen.getByLabelText("动态验证码（可选）")).toBeInTheDocument();
   });
 });

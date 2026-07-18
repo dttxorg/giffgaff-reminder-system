@@ -54,7 +54,7 @@ export default function AdminLoginPage() {
       </div>
       <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 sm:p-8 w-full max-w-sm">
         <h1 className="text-2xl font-bold mb-1">管理员登录</h1>
-        <p className="text-slate-600 text-sm mb-6">请输入管理员凭据与动态验证码</p>
+        <p className="text-slate-600 text-sm mb-6">请输入管理员凭据；启用 MFA 后填写动态验证码</p>
 
         {error && (
           <div className="mb-4 p-3 rounded-lg bg-rose-50 border border-rose-200 text-rose-700 text-sm">
@@ -76,7 +76,7 @@ export default function AdminLoginPage() {
             />
           </div>
           <div>
-            <label htmlFor="admin-otp" className="block text-sm font-medium mb-1.5">动态验证码</label>
+            <label htmlFor="admin-otp" className="block text-sm font-medium mb-1.5">动态验证码（可选）</label>
             <input
               id="admin-otp"
               type="text"

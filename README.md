@@ -92,10 +92,10 @@
    - Vercel 会自动创建 Neon 项目并注入 `DATABASE_URL` 环境变量
 5. 手动添加其他环境变量:
    - `CRON_SECRET`:至少 32 字符的独立随机字符串,例 `openssl rand -hex 32`
-   - **`PUBLIC_BASE_URL`**:`https://baohao.681218.xyz`（必填 HTTPS 正式域名）
+   - **`PUBLIC_BASE_URL`**:`https://baohao.681218.xyz`（可选；默认已使用该正式域名）
    - `ADMIN_USERNAME`:显式配置的管理员账号（没有默认值）
    - `ADMIN_PASSWORD`:至少 12 位的强管理员密码（没有默认值）
-   - `ADMIN_TOTP_SECRET`:管理员验证器使用的 Base32 TOTP 密钥
+   - `ADMIN_TOTP_SECRET`:可选的管理员 Base32 TOTP 密钥；配置后登录强制 MFA
 
 ### 3. 部署
 
@@ -117,7 +117,7 @@ npx vercel env pull .env.production
 DATABASE_URL='<从 .env.production 读>' npm run db:seed
 ```
 
-管理员不会在登录请求中自动创建。将同一 `ADMIN_TOTP_SECRET` 添加到验证器应用，可使用：
+管理员不会在登录请求中自动创建。需要启用 MFA 时，将 `ADMIN_TOTP_SECRET` 添加到验证器应用，可使用：
 
 ```text
 otpauth://totp/Giffgaff:ADMIN_USERNAME?secret=ADMIN_TOTP_SECRET&issuer=Giffgaff
@@ -148,8 +148,8 @@ DATABASE_URL='postgresql://...'
 CRON_SECRET='至少 32 字符的本地随机值'  # 缺失时 cron 接口拒绝执行
 ADMIN_USERNAME='本地管理员账号'
 ADMIN_PASSWORD='至少 12 位的强密码'
-ADMIN_TOTP_SECRET='Base32 密钥'
-PUBLIC_BASE_URL='https://你的正式域名'
+ADMIN_TOTP_SECRET='可选的 Base32 密钥'
+PUBLIC_BASE_URL='可选；其他正式域名部署时填写'
 ```
 
 ### 初始化数据库
@@ -173,10 +173,10 @@ npm run dev
 |---|---|---|
 | `DATABASE_URL` | 是 | Postgres 连接串。运行时优先级: `POSTGRES_PRISMA_URL`(池化) → `DATABASE_URL` → `POSTGRES_URL` → `POSTGRES_URL_NON_POOLING` |
 | `CRON_SECRET` | 是 | cron 路由 Bearer token，至少 32 字符；缺失时 fail closed |
-| `PUBLIC_BASE_URL` | 是 | 推送链接的 HTTPS 正式域名 |
+| `PUBLIC_BASE_URL` | 否 | 推送链接的 HTTPS 正式域名；默认 `https://baohao.681218.xyz` |
 | `ADMIN_USERNAME` | 是 | 管理员账号，无默认值 |
 | `ADMIN_PASSWORD` | 是 | 至少 12 位强密码，无默认值 |
-| `ADMIN_TOTP_SECRET` | 是 | 管理员 TOTP 的 Base32 密钥；生产缺失时后台登录保持关闭 |
+| `ADMIN_TOTP_SECRET` | 否 | 管理员 TOTP 的 Base32 密钥；配置后后台登录强制 MFA |
 | `BARK_ALLOWED_HOSTS` | 否 | 自建 Bark HTTPS 主机白名单；默认仅 `api.day.app` |
 | `SEED_SAMPLE_DATA` | 否 | 仅本地需要样例 SIM 时设 `true` |
 
