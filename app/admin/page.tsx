@@ -248,15 +248,23 @@ export default async function AdminDashboard() {
                       </div>
                     </td>
                     <td className="px-3 py-2 font-mono whitespace-nowrap">
-                      <Link
-                        href={`/admin/sims/${r.simId}`}
-                        className="text-indigo-600 hover:underline"
-                      >
-                        {r.sim.phoneNumber}
-                      </Link>
+                      {r.aggregateDay ? (
+                        <span className="font-sans text-indigo-700">
+                          账号汇总 · {r.aggregateSimCount} 个号码
+                        </span>
+                      ) : (
+                        <Link
+                          href={`/admin/sims/${r.simId}`}
+                          className="text-indigo-600 hover:underline"
+                        >
+                          {r.sim.phoneNumber}
+                        </Link>
+                      )}
                     </td>
                     <td className="px-3 py-2 font-mono text-xs whitespace-nowrap">
-                      d{r.dayOffset}/b{r.bucket}
+                      {r.aggregateDay
+                        ? `汇总 ${r.aggregateDay}`
+                        : `d${r.dayOffset}/b${r.bucket}`}
                     </td>
                     <td className="px-3 py-2 whitespace-nowrap">
                       <span

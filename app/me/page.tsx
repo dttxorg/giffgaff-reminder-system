@@ -9,6 +9,8 @@ import { PortOverdueBanner } from "./_components/port-overdue-banner";
 import { ActionBar } from "./_components/action-bar";
 import { UserHeader } from "./_components/user-header";
 import { EmptySims } from "./_components/empty-sims";
+import { AccountReminderMode } from "./_components/account-reminder-mode";
+import { MULTI_SIM_AGGREGATE_THRESHOLD } from "@/lib/account-reminder";
 
 interface PageProps {
   searchParams: Promise<{ simId?: string }>;
@@ -25,6 +27,7 @@ export default async function MePage({ searchParams }: PageProps) {
 
   const sims = user.sims;
   const simCount = sims.length;
+  const activeSimCount = sims.filter((sim) => sim.status === "active").length;
   // 同一请求内多 SimCard 共用一个 now,保证 timeline 一致
   const now = new Date();
 
@@ -46,6 +49,10 @@ export default async function MePage({ searchParams }: PageProps) {
     <div className={`${simCount > 1 ? "max-w-5xl" : "max-w-md"} mx-auto px-4 py-6 sm:px-6 sm:py-8`}>
       {/* Round 221: 顶部用户卡片(头像 + 用户名 + SIM 卡数 + 在线状态) */}
       <UserHeader username={user.username} simCount={simCount} />
+
+      {activeSimCount > MULTI_SIM_AGGREGATE_THRESHOLD && (
+        <AccountReminderMode simCount={activeSimCount} />
+      )}
 
       {/* Round 222: 0 张卡的友好空状态 */}
       {simCount === 0 && <EmptySims />}

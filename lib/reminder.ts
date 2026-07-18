@@ -1,16 +1,30 @@
 // 提醒引擎：根据当前时间扫描所有 sim，发送提醒
 import { prisma } from "./db";
 import { bucketForDay, dayOffsetFromBaseline, shanghaiParts } from "./bucket";
-import { sendPush, type ChannelType } from "./channels";
+import { sendPush, type ChannelType, type SendResult } from "./channels";
 import { DEFAULT_TEMPLATE, portUrl, renderTemplate } from "./template";
 import { ensureSimPortToken } from "./port-token-db";
+import {
+  buildAccountReminderMessage,
+  MULTI_SIM_AGGREGATE_THRESHOLD,
+} from "./account-reminder";
+
+export interface ReminderRunDetail {
+  simId: number;
+  dayOffset: number;
+  bucket: number;
+  action: "sent" | "skipped" | "failed";
+  error?: string;
+  userId?: number;
+  aggregateSimIds?: number[];
+}
 
 export interface ReminderRunResult {
   processed: number;
   sent: number;
   skipped: number;
   failed: number;
-  details: Array<{ simId: number; dayOffset: number; bucket: number; action: "sent" | "skipped" | "failed"; error?: string }>;
+  details: ReminderRunDetail[];
 }
 
 interface RunOptions {
@@ -20,23 +34,87 @@ interface RunOptions {
   dryRun?: boolean;
 }
 
-/**
- * 执行一次提醒扫描
- *
- * 渠道从每张 sim 自己的 channel/channelKey 拿(1:N 模型)
- * ReminderSent 写时快照 channel/channelKey,即使后来改了也不影响历史日志
- */
-export async function runReminderScan(opts: RunOptions): Promise<ReminderRunResult> {
-  const now = opts.now ?? new Date();
-  // 用北京时间算小时,bucket 窗口才跟用户预期对齐
-  // (Vercel serverless 在 UTC,getUTCHours 会让 0-8 点的 sim 全部错位)
-  const hourOfDay = shanghaiParts(now).hour;
-  const result: ReminderRunResult = { processed: 0, sent: 0, skipped: 0, failed: 0, details: [] };
+interface ScanSim {
+  id: number;
+  userId: number | null;
+  phoneNumber: string;
+  activatedAt: Date;
+  lastPortedAt: Date | null;
+  portToken: string | null;
+  channel: ChannelType;
+  channelKey: string;
+}
 
-  // SIM 和模板互不依赖，同一轮加载；只读取发送真正需要的字段。
+interface ReminderCandidate {
+  sim: ScanSim;
+  dayOffset: number;
+  bucket: number;
+}
+
+function shanghaiDayIdentity(now: Date): {
+  dayKey: string;
+  start: Date;
+  end: Date;
+} {
+  const parts = shanghaiParts(now);
+  const dayKey = [
+    parts.year,
+    String(parts.month).padStart(2, "0"),
+    String(parts.day).padStart(2, "0"),
+  ].join("-");
+  const start = new Date(
+    Date.UTC(parts.year, parts.month - 1, parts.day) - 8 * 60 * 60 * 1000
+  );
+  return {
+    dayKey,
+    start,
+    end: new Date(start.getTime() + 24 * 60 * 60 * 1000),
+  };
+}
+
+function aggregateDetail(
+  candidates: ReminderCandidate[],
+  action: ReminderRunDetail["action"],
+  error?: string
+): ReminderRunDetail {
+  const representative = [...candidates].sort(
+    (a, b) => b.dayOffset - a.dayOffset || a.sim.id - b.sim.id
+  )[0];
+  return {
+    simId: representative.sim.id,
+    userId: representative.sim.userId ?? undefined,
+    dayOffset: representative.dayOffset,
+    bucket: representative.bucket,
+    action,
+    error,
+    aggregateSimIds: candidates.map((candidate) => candidate.sim.id),
+  };
+}
+
+/**
+ * 执行一次提醒扫描。
+ *
+ * - 1–3 张活跃号码：保持逐号码、逐 bucket 提醒。
+ * - 4 张及以上活跃号码：按账号每天最多一条汇总提醒，跳转账号后台处理。
+ */
+export async function runReminderScan(
+  opts: RunOptions
+): Promise<ReminderRunResult> {
+  const now = opts.now ?? new Date();
+  const hourOfDay = shanghaiParts(now).hour;
+  const day = shanghaiDayIdentity(now);
+  const result: ReminderRunResult = {
+    processed: 0,
+    sent: 0,
+    skipped: 0,
+    failed: 0,
+    details: [],
+  };
+
   const [sims, setting] = await Promise.all([
     prisma.sim.findMany({
       where: { status: "active", userId: { not: null } },
+      orderBy: { id: "asc" },
       select: {
         id: true,
         userId: true,
@@ -50,45 +128,189 @@ export async function runReminderScan(opts: RunOptions): Promise<ReminderRunResu
     }),
     prisma.setting.findUnique({ where: { key: "reminder_template" } }),
   ]);
+  const scanSims = sims as ScanSim[];
   const template = setting?.value || DEFAULT_TEMPLATE;
+  result.processed = scanSims.length;
 
-  const candidates = sims.flatMap((sim) => {
+  const simsByUser = new Map<number, ScanSim[]>();
+  for (const sim of scanSims) {
+    if (sim.userId === null) continue;
+    const owned = simsByUser.get(sim.userId) ?? [];
+    owned.push(sim);
+    simsByUser.set(sim.userId, owned);
+  }
+
+  const candidates: ReminderCandidate[] = scanSims.flatMap((sim) => {
     const baseline = sim.lastPortedAt ?? sim.activatedAt;
     const dayOffset = dayOffsetFromBaseline(baseline, now);
     const plan = bucketForDay(dayOffset, hourOfDay);
     return plan ? [{ sim, dayOffset, bucket: plan.bucket }] : [];
   });
 
-  // 所有候选只做一次幂等查询，避免提醒窗口内每张卡单独 round-trip。
-  const existingRows = candidates.length
+  const directCandidates: ReminderCandidate[] = [];
+  const aggregateGroups = new Map<number, ReminderCandidate[]>();
+  for (const candidate of candidates) {
+    const userId = candidate.sim.userId!;
+    if (
+      (simsByUser.get(userId)?.length ?? 0) >
+      MULTI_SIM_AGGREGATE_THRESHOLD
+    ) {
+      const group = aggregateGroups.get(userId) ?? [];
+      group.push(candidate);
+      aggregateGroups.set(userId, group);
+    } else {
+      directCandidates.push(candidate);
+    }
+  }
+
+  const aggregateUserIds = Array.from(aggregateGroups.keys());
+  const idempotencyFilters = [
+    ...directCandidates.map(({ sim, dayOffset, bucket }) => ({
+      simId: sim.id,
+      dayOffset,
+      bucket,
+    })),
+    ...(aggregateUserIds.length
+      ? [
+          {
+            userId: { in: aggregateUserIds },
+            sentAt: { gte: day.start, lt: day.end },
+          },
+        ]
+      : []),
+  ];
+  const existingRows = idempotencyFilters.length
     ? await prisma.reminderSent.findMany({
-        where: {
-          OR: candidates.map(({ sim, dayOffset, bucket }) => ({
-            simId: sim.id,
-            dayOffset,
-            bucket,
-          })),
+        where: { OR: idempotencyFilters },
+        select: {
+          simId: true,
+          userId: true,
+          dayOffset: true,
+          bucket: true,
+          sentAt: true,
+          aggregateDay: true,
         },
-        select: { simId: true, dayOffset: true, bucket: true },
       })
     : [];
   const existingKeys = new Set(
-    existingRows.map(
-      (row) => `${row.simId}:${row.dayOffset}:${row.bucket}`
-    )
+    existingRows.map((row) => `${row.simId}:${row.dayOffset}:${row.bucket}`)
+  );
+  const usersAlreadyNotifiedToday = new Set(
+    existingRows
+      .filter(
+        (row) =>
+          aggregateGroups.has(row.userId) &&
+          row.sentAt >= day.start &&
+          row.sentAt < day.end
+      )
+      .map((row) => row.userId)
   );
 
-  result.processed = sims.length;
+  // 大账号先按用户聚合；唯一索引在真正推送前完成占位，避免并发 cron 重复发送。
+  for (const [userId, group] of aggregateGroups) {
+    if (usersAlreadyNotifiedToday.has(userId)) {
+      result.skipped += group.length;
+      result.details.push(aggregateDetail(group, "skipped"));
+      continue;
+    }
 
-  for (const { sim, dayOffset, bucket } of candidates) {
+    const userSims = simsByUser.get(userId) ?? [];
+    const notificationSim =
+      userSims.find((sim) => sim.channelKey.trim() !== "") ?? userSims[0];
+    const representative = [...group].sort(
+      (a, b) => b.dayOffset - a.dayOffset || a.sim.id - b.sim.id
+    )[0];
+    const aggregateSimIds = group.map((candidate) => candidate.sim.id);
+
+    if (opts.dryRun) {
+      result.sent++;
+      result.details.push(aggregateDetail(group, "sent"));
+      continue;
+    }
+
+    let reservation: { id: number };
+    try {
+      reservation = await prisma.reminderSent.create({
+        data: {
+          simId: notificationSim.id,
+          userId,
+          dayOffset: representative.dayOffset,
+          bucket: representative.bucket,
+          channel: notificationSim.channel,
+          channelKey: "",
+          status: "failed",
+          errorMessage: "汇总提醒发送处理中",
+          aggregateDay: day.dayKey,
+          aggregateSimCount: group.length,
+        },
+        select: { id: true },
+      });
+    } catch {
+      result.skipped += group.length;
+      result.details.push(
+        aggregateDetail(group, "skipped", "汇总提醒已由其他任务处理")
+      );
+      continue;
+    }
+
+    const message = buildAccountReminderMessage(
+      group.map(({ sim, dayOffset }) => ({
+        id: sim.id,
+        phoneNumber: sim.phoneNumber,
+        dayOffset,
+      })),
+      opts.baseUrl
+    );
+    const sendResult: SendResult = notificationSim.channelKey.trim()
+      ? await sendPush(
+          notificationSim.channel,
+          notificationSim.channelKey,
+          message.title,
+          message.body
+        )
+      : { ok: false, errorMessage: "账号主通知渠道未配置" };
+
+    try {
+      await prisma.reminderSent.update({
+        where: { id: reservation.id },
+        data: {
+          status: sendResult.ok ? "success" : "failed",
+          errorMessage: sendResult.ok
+            ? null
+            : sendResult.errorMessage || "未知错误",
+          sentAt: now,
+        },
+      });
+    } catch {
+      result.failed++;
+      result.details.push(
+        aggregateDetail(group, "failed", "汇总提醒日志更新失败")
+      );
+      continue;
+    }
+
+    if (sendResult.ok) {
+      result.sent++;
+      result.details.push({
+        ...aggregateDetail(group, "sent"),
+        aggregateSimIds,
+      });
+    } else {
+      result.failed++;
+      result.details.push(
+        aggregateDetail(group, "failed", sendResult.errorMessage)
+      );
+    }
+  }
+
+  // 小账号保持原来的逐号码提醒策略。
+  for (const { sim, dayOffset, bucket } of directCandidates) {
     if (existingKeys.has(`${sim.id}:${dayOffset}:${bucket}`)) {
       result.skipped++;
       result.details.push({ simId: sim.id, dayOffset, bucket, action: "skipped" });
       continue;
     }
 
-    // 6. 渲染文案（隐私：sim 号码只显示后 4 位;URL 用不可枚举 token）
-    // 老 sim 没有 portToken 时 lazy-backfill(确保下次提醒也是 token URL)
     let url: string;
     if (sim.portToken) {
       url = portUrl(opts.baseUrl, sim.portToken);
@@ -96,14 +318,19 @@ export async function runReminderScan(opts: RunOptions): Promise<ReminderRunResu
       const token = await ensureSimPortToken(sim.id, sim.portToken);
       if (!token) {
         result.failed++;
-        result.details.push({ simId: sim.id, dayOffset, bucket, action: "failed", error: "公开 token 生成失败" });
+        result.details.push({
+          simId: sim.id,
+          dayOffset,
+          bucket,
+          action: "failed",
+          error: "公开 token 生成失败",
+        });
         continue;
       }
       url = portUrl(opts.baseUrl, token);
     }
-    const phoneDisplay = `**** ${sim.phoneNumber.slice(-4)}`;
     const body = renderTemplate(template, {
-      phone: phoneDisplay,
+      phone: `**** ${sim.phoneNumber.slice(-4)}`,
       days: dayOffset,
       port_url: url,
     });
@@ -115,11 +342,8 @@ export async function runReminderScan(opts: RunOptions): Promise<ReminderRunResu
       continue;
     }
 
-    // 7. 推送 — 渠道从 sim 自己拿
     const channel = sim.channel as ChannelType;
     const sendResult = await sendPush(channel, sim.channelKey, title, body);
-
-    // 8. 写日志。渠道类型可用于统计，但不把可重放的推送密钥复制到历史表。
     try {
       await prisma.reminderSent.create({
         data: {
@@ -133,15 +357,14 @@ export async function runReminderScan(opts: RunOptions): Promise<ReminderRunResu
           errorMessage: sendResult.errorMessage,
         },
       });
-    } catch (e) {
-      // 唯一约束冲突说明并发时其他进程已写 → skip
+    } catch {
       result.skipped++;
       result.details.push({
         simId: sim.id,
         dayOffset,
         bucket,
         action: "skipped",
-        error: e instanceof Error ? e.message : String(e),
+        error: "提醒已由其他任务处理",
       });
       continue;
     }

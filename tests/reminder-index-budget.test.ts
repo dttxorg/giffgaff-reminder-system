@@ -36,4 +36,18 @@ describe("提醒记录高频查询索引", () => {
       'ON "ReminderSent"("channel", "sentAt")'
     );
   });
+
+  it("多号码汇总提醒具有用户每日唯一索引", () => {
+    const aggregateMigration = fs.readFileSync(
+      "prisma/migrations/20260718030000_add_account_reminder_aggregation/migration.sql",
+      "utf8"
+    );
+    expect(schema).toContain("@@unique([userId, aggregateDay])");
+    expect(aggregateMigration).toContain(
+      '"ReminderSent_userId_aggregateDay_key"'
+    );
+    expect(aggregateMigration).toContain(
+      'ON "ReminderSent"("userId", "aggregateDay")'
+    );
+  });
 });

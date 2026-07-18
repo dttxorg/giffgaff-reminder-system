@@ -45,6 +45,8 @@ function reminder(portToken: string | null) {
     id: 42,
     channel: "bark",
     channelKey: "",
+    aggregateDay: null,
+    aggregateSimCount: 1,
     sim: {
       id: 7,
       phoneNumber: "07724215611",
@@ -128,5 +130,31 @@ describe("POST /api/admin/reminders/[id]/resend", () => {
         sentAt: expect.any(Date),
       },
     });
+  });
+
+  it("汇总提醒重发保持账号级文案并跳转后台", async () => {
+    mocks.reminderFindUnique.mockResolvedValue({
+      ...reminder("existing-token"),
+      aggregateDay: "2026-07-15",
+      aggregateSimCount: 6,
+    });
+    mocks.sendPush.mockResolvedValue({ ok: true });
+
+    const response = await POST(
+      new Request("http://localhost/api/admin/reminders/42/resend", {
+        method: "POST",
+      }),
+      context(42)
+    );
+
+    expect(response.status).toBe(200);
+    expect(mocks.ensureSimPortToken).not.toHaveBeenCalled();
+    expect(mocks.sendPush).toHaveBeenCalledWith(
+      "bark",
+      "https://api.day.app/current-key",
+      expect.stringContaining("6 个号码"),
+      expect.stringContaining("http://localhost:3000/me")
+    );
+    expect(mocks.sendPush.mock.calls[0][3]).not.toContain("/p/");
   });
 });

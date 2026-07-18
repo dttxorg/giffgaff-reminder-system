@@ -81,6 +81,8 @@ export default async function RemindersPage({ searchParams }: PageProps) {
         bucket: true,
         status: true,
         errorMessage: true,
+        aggregateDay: true,
+        aggregateSimCount: true,
         sim: { select: { phoneNumber: true } },
       },
     }),
@@ -194,16 +196,24 @@ export default async function RemindersPage({ searchParams }: PageProps) {
                         </div>
                       </td>
                       <td className="px-3 py-2 font-mono whitespace-nowrap">
-                        <Link
-                          href={`/admin/sims/${r.simId}`}
-                          prefetch={false}
-                          className="text-indigo-600 hover:underline"
-                        >
-                          {r.sim.phoneNumber}
-                        </Link>
+                        {r.aggregateDay ? (
+                          <span className="font-sans text-indigo-700">
+                            账号汇总 · {r.aggregateSimCount} 个号码
+                          </span>
+                        ) : (
+                          <Link
+                            href={`/admin/sims/${r.simId}`}
+                            prefetch={false}
+                            className="text-indigo-600 hover:underline"
+                          >
+                            {r.sim.phoneNumber}
+                          </Link>
+                        )}
                       </td>
                       <td className="px-3 py-2 font-mono text-xs whitespace-nowrap hidden md:table-cell">
-                        d{r.dayOffset}/b{r.bucket}
+                        {r.aggregateDay
+                          ? `汇总 ${r.aggregateDay}`
+                          : `d${r.dayOffset}/b${r.bucket}`}
                       </td>
                       <td className="px-3 py-2 whitespace-nowrap">
                         <span

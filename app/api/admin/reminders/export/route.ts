@@ -52,18 +52,22 @@ export async function GET(req: Request) {
       userId: true,
       status: true,
       errorMessage: true,
+      aggregateDay: true,
+      aggregateSimCount: true,
       sim: { select: { phoneNumber: true } },
     },
   });
 
-  const header = "时间UTC, simId, 号码, day/bucket, 用户ID, 状态, 错误\n";
+  const header = "时间UTC,simId,号码,day/bucket,用户ID,提醒类型,汇总号码数,状态,错误\n";
   const lines = reminders.map((r) =>
     [
       r.sentAt.toISOString().replace("T", " ").slice(0, 19),
       String(r.simId),
-      csvEscape(r.sim.phoneNumber),
-      `d${r.dayOffset}/b${r.bucket}`,
+      csvEscape(r.aggregateDay ? "账号汇总" : r.sim.phoneNumber),
+      r.aggregateDay ? `汇总 ${r.aggregateDay}` : `d${r.dayOffset}/b${r.bucket}`,
       String(r.userId),
+      r.aggregateDay ? "aggregate" : "single",
+      String(r.aggregateSimCount),
       r.status,
       csvEscape(r.errorMessage),
     ].join(",")

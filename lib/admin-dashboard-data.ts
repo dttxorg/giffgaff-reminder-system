@@ -303,6 +303,8 @@ export async function getAdminDashboardData(now: Date) {
         bucket: true,
         status: true,
         errorMessage: true,
+        aggregateDay: true,
+        aggregateSimCount: true,
         sim: { select: { phoneNumber: true } },
       },
     }),

@@ -12,6 +12,7 @@ import {
   rateLimitResponse,
 } from "@/lib/rate-limit";
 import { getPublicBaseUrl } from "@/lib/public-base-url";
+import { buildAccountReminderResendMessage } from "@/lib/account-reminder";
 
 interface RouteContext {
   params: Promise<{ id: string }>;
@@ -64,8 +65,6 @@ export async function POST(req: Request, ctx: RouteContext) {
     );
   }
 
-  const baseline = reminder.sim.lastPortedAt ?? reminder.sim.activatedAt;
-  const days = dayOffsetFromBaseline(baseline);
   const baseUrl = getPublicBaseUrl();
   if (!baseUrl) {
     return NextResponse.json(
@@ -73,30 +72,43 @@ export async function POST(req: Request, ctx: RouteContext) {
       { status: 503 }
     );
   }
-  let url: string;
-  if (reminder.sim.portToken) {
-    url = portUrl(baseUrl, reminder.sim.portToken);
-  } else {
-    // 已知当前值为空，避免 ensureSimPortToken 再查一次 SIM。
-    const token = await ensureSimPortToken(
-      reminder.sim.id,
-      reminder.sim.portToken
+  let title: string;
+  let body: string;
+  if (reminder.aggregateDay) {
+    const message = buildAccountReminderResendMessage(
+      reminder.aggregateSimCount,
+      baseUrl
     );
-    if (!token) {
-      return NextResponse.json(
-        { ok: false, error: "公开链接生成失败" },
-        { status: 503 }
+    title = message.title;
+    body = message.body;
+  } else {
+    const baseline = reminder.sim.lastPortedAt ?? reminder.sim.activatedAt;
+    const days = dayOffsetFromBaseline(baseline);
+    let url: string;
+    if (reminder.sim.portToken) {
+      url = portUrl(baseUrl, reminder.sim.portToken);
+    } else {
+      // 已知当前值为空，避免 ensureSimPortToken 再查一次 SIM。
+      const token = await ensureSimPortToken(
+        reminder.sim.id,
+        reminder.sim.portToken
       );
+      if (!token) {
+        return NextResponse.json(
+          { ok: false, error: "公开链接生成失败" },
+          { status: 503 }
+        );
+      }
+      url = portUrl(baseUrl, token);
     }
-    url = portUrl(baseUrl, token);
+    const template = setting?.value || DEFAULT_TEMPLATE;
+    title = "Giffgaff 保号提醒";
+    body = renderTemplate(template, {
+      phone: reminder.sim.phoneNumber,
+      days,
+      port_url: url,
+    });
   }
-  const template = setting?.value || DEFAULT_TEMPLATE;
-  const title = "Giffgaff 保号提醒";
-  const body = renderTemplate(template, {
-    phone: reminder.sim.phoneNumber,
-    days,
-    port_url: url,
-  });
 
   const result = await sendPush(
     reminder.sim.channel,
