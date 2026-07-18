@@ -15,8 +15,13 @@ export function generateSecurePassword(
   length: number = 12,
   alphabet: string = DEFAULT_ALPHABET
 ): string {
-  if (length < 1) throw new Error("length must be >= 1");
+  if (!Number.isSafeInteger(length) || length < 1 || length > 4096) {
+    throw new Error("length must be an integer between 1 and 4096");
+  }
   if (alphabet.length < 2) throw new Error("alphabet must have >= 2 chars");
+  if (alphabet.length > 256) {
+    throw new Error("alphabet must have <= 256 chars");
+  }
 
   // 拒绝不安全的随机源降级:直接抛错而不是 fallback 到 Math.random
   const len = alphabet.length;
@@ -24,24 +29,16 @@ export function generateSecurePassword(
   // 用 rejection sampling 避免 modulo bias:如果取到的值 >= 256 - 256 % len 则丢弃重抽。
   const maxUnbiased = Math.floor(256 / len) * len;
 
-  const bytes = new Uint8Array(length * 2); // 多取一些以应对 rejection
-  crypto.getRandomValues(bytes);
-
   let out = "";
-  let i = 0;
-  while (out.length < length && i < bytes.length) {
-    const b = bytes[i++];
-    if (b < maxUnbiased) {
-      out += alphabet[b % len];
-    }
-  }
-  // 极端情况下（极小概率）丢弃太多,补一次:再取一批
-  if (out.length < length) {
-    const extra = new Uint8Array(length);
-    crypto.getRandomValues(extra);
-    for (let j = 0; j < length - out.length && j < extra.length; j++) {
-      if (extra[j] < maxUnbiased) {
-        out += alphabet[extra[j] % len];
+  // 持续补充随机批次，直到达到要求长度；拒绝采样再多也不会返回短密码。
+  while (out.length < length) {
+    const remaining = length - out.length;
+    const bytes = new Uint8Array(Math.min(remaining * 2, 8192));
+    crypto.getRandomValues(bytes);
+    for (const b of bytes) {
+      if (b < maxUnbiased) {
+        out += alphabet[b % len];
+        if (out.length === length) break;
       }
     }
   }

@@ -24,16 +24,9 @@ export function renderTemplate(
  * 构造保号页完整 URL
  *
  * @param baseUrl 站点基础 URL
- * @param portTokenOrId 优先传 portToken(不可枚举的安全版本);
- *                     兼容旧调用,如果传 number 会用 int id(已弃用,会在控制台 warn)。
+ * @param portToken 仅接受不可枚举的公开 token。
  */
-export function portUrl(baseUrl: string, portTokenOrId: string | number): string {
+export function portUrl(baseUrl: string, portToken: string): string {
   const base = baseUrl.replace(/\/+$/, "");
-  // 强类型警告:开发者还在传 int id(老的可枚举形式)
-  if (typeof portTokenOrId === "number") {
-    console.warn(
-      "[portUrl] 传 number 仍然能工作但会生成可枚举 URL,请改用 portToken(字符串)"
-    );
-  }
-  return `${base}/p/${portTokenOrId}`;
+  return `${base}/p/${portToken}`;
 }

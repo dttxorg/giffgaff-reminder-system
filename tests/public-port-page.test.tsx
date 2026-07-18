@@ -2,17 +2,9 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { ReactElement } from "react";
 
 const mocks = vi.hoisted(() => ({
-  redirect: vi.fn(),
-  findSimByParam: vi.fn(),
-  ensureSimPortToken: vi.fn(),
   getCachedPublicSim: vi.fn(),
 }));
 
-vi.mock("next/navigation", () => ({ redirect: mocks.redirect }));
-vi.mock("../lib/port-token-db", () => ({
-  findSimByParam: mocks.findSimByParam,
-  ensureSimPortToken: mocks.ensureSimPortToken,
-}));
 vi.mock("../lib/public-sim-cache", () => ({
   getCachedPublicSim: mocks.getCachedPublicSim,
 }));
@@ -31,9 +23,6 @@ const sim = {
 describe("public port server page", () => {
   beforeEach(() => {
     Object.values(mocks).forEach((mock) => mock.mockReset());
-    mocks.redirect.mockImplementation((href: string) => {
-      throw new Error(`redirect:${href}`);
-    });
   });
 
   it("token 路径在服务端读取缓存并传入首屏数据", async () => {
@@ -46,31 +35,17 @@ describe("public port server page", () => {
     expect(mocks.getCachedPublicSim).toHaveBeenCalledWith(sim.portToken);
     expect(element.props.simIdRaw).toBe(sim.portToken);
     expect(element.props.initialSim).toMatchObject({
-      phoneNumber: sim.phoneNumber,
+      phoneNumber: "****** 5611",
       activatedAt: "2026-01-01",
       dayOffset: expect.any(Number),
     });
   });
 
-  it("旧数字路径在服务端直接重定向到已有 token", async () => {
-    mocks.findSimByParam.mockResolvedValueOnce(sim);
-
-    await expect(
-      PortPage({ params: Promise.resolve({ simId: "42" }) })
-    ).rejects.toThrow(`redirect:/p/${sim.portToken}`);
-
+  it("数字路径直接返回失效状态，不查询或泄露 token", async () => {
+    const element = (await PortPage({
+      params: Promise.resolve({ simId: "42" }),
+    })) as ReactElement<{ simIdRaw: string; initialSim: SimInfo | null }>;
+    expect(element.props.initialSim).toBeNull();
     expect(mocks.getCachedPublicSim).not.toHaveBeenCalled();
-    expect(mocks.ensureSimPortToken).not.toHaveBeenCalled();
-  });
-
-  it("旧数据缺少 token 时先回填再重定向", async () => {
-    mocks.findSimByParam.mockResolvedValueOnce({ ...sim, portToken: null });
-    mocks.ensureSimPortToken.mockResolvedValueOnce("generated-token-123456");
-
-    await expect(
-      PortPage({ params: Promise.resolve({ simId: "42" }) })
-    ).rejects.toThrow("redirect:/p/generated-token-123456");
-
-    expect(mocks.ensureSimPortToken).toHaveBeenCalledWith(42, null);
   });
 });

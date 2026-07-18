@@ -4,6 +4,7 @@ const mocks = vi.hoisted(() => ({
   getAdminSession: vi.fn(),
   findMany: vi.fn(),
   sendPush: vi.fn(),
+  enforceRateLimits: vi.fn(),
 }));
 
 vi.mock("../lib/session", () => ({
@@ -13,6 +14,11 @@ vi.mock("../lib/db", () => ({
   prisma: { sim: { findMany: mocks.findMany } },
 }));
 vi.mock("../lib/channels", () => ({ sendPush: mocks.sendPush }));
+vi.mock("../lib/rate-limit", () => ({
+  enforceRateLimits: mocks.enforceRateLimits,
+  getClientIp: () => "203.0.113.9",
+  rateLimitResponse: vi.fn(),
+}));
 
 import { POST } from "../app/api/admin/sims/test-push/route";
 
@@ -29,6 +35,10 @@ describe("POST /api/admin/sims/test-push", () => {
     Object.values(mocks).forEach((mock) => mock.mockReset());
     mocks.getAdminSession.mockResolvedValue(true);
     mocks.sendPush.mockResolvedValue({ ok: true });
+    mocks.enforceRateLimits.mockResolvedValue({
+      allowed: true,
+      retryAfterSeconds: 0,
+    });
   });
 
   it("保留查询顺序并隔离未配置与渠道失败结果", async () => {

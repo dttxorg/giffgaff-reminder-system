@@ -126,7 +126,7 @@ describe("<PortCountdownHero />", () => {
     expect(link).toHaveAttribute("href", "/p/myToken123");
   });
 
-  it("portToken 缺失时回退到 /p/<simId>", () => {
+  it("portToken 缺失时引导回账号设置，不生成数字公开链接", () => {
     render(
       <PortCountdownHero
         baseline={baselineForOffset(180)}
@@ -136,7 +136,7 @@ describe("<PortCountdownHero />", () => {
       />
     );
     const link = screen.getByRole("link", { name: /立即去保号/ });
-    expect(link).toHaveAttribute("href", "/p/42");
+    expect(link).toHaveAttribute("href", "/me/settings?simId=42");
   });
 
   it("进度条 180/180 = 100%", () => {

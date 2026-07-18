@@ -4,12 +4,15 @@ import { prisma } from "@/lib/db";
 import { getCurrentUserId, getCurrentUserSessionId } from "@/lib/session";
 import { sendPush } from "@/lib/channels";
 import { updateCurrentUserSimChannel } from "@/lib/user-sim-writes";
+import {
+  enforceRateLimits,
+  getClientIp,
+  rateLimitResponse,
+} from "@/lib/rate-limit";
 
 const BodySchema = z.object({
   channel: z.enum(["serverchan", "bark", "pushplus", "telegram"]),
-  channelKey: z.string().min(1, "请填写渠道 Key"),
-  /** 客户端先用 test-push 验证过,true 才允许保存 */
-  verified: z.boolean().optional().default(false),
+  channelKey: z.string().min(1, "请填写渠道 Key").max(2048),
   /** 要更新哪张 sim 的渠道(多卡场景必传) */
   simId: z.number().int().positive().optional(),
 });
@@ -22,8 +25,7 @@ const BodySchema = z.object({
  * 账号下可以统一用同一渠道(每张都设相同的),
  * 也可以各 sim 用不同渠道(分别设)。
  *
- * 安全:要求前端先调 /api/me/channel/test-push 验证 key,
- * 避免保存错的 key 导致后续推送失败。
+   * 安全:服务端每次保存前都独立验证 key，不信任客户端的“已验证”状态。
  */
 export async function POST(req: Request) {
   const sessionId = await getCurrentUserSessionId();
@@ -42,35 +44,9 @@ export async function POST(req: Request) {
     return NextResponse.json({ ok: false, error: "参数错误" }, { status: 400 });
   }
 
-  const { channel, channelKey, verified, simId: requestedSimId } = parsed.data;
+  const { channel, channelKey, simId: requestedSimId } = parsed.data;
 
-  // 设置页已经完成测试推送时，归属校验与写入合并为一次查询。
-  if (verified && requestedSimId !== undefined) {
-    const outcome = await updateCurrentUserSimChannel(
-      sessionId,
-      requestedSimId,
-      channel,
-      channelKey
-    );
-    if (!outcome.authenticated) {
-      return NextResponse.json({ ok: false, error: "未登录" }, { status: 401 });
-    }
-    if (outcome.sim) {
-      return NextResponse.json({ ok: true, simId: outcome.sim.id });
-    }
-    if (!outcome.hasSims) {
-      return NextResponse.json(
-        { ok: false, error: "您还没绑定任何 SIM 卡" },
-        { status: 400 }
-      );
-    }
-    return NextResponse.json(
-      { ok: false, error: "无权修改该 SIM 卡的渠道" },
-      { status: 403 }
-    );
-  }
-
-  // 兼容旧客户端不传 simId，以及未先测试推送的请求。
+  // 在任何外部推送发生前先确认账号和 SIM 归属，防止越权请求被当成开放中继。
   const userId = await getCurrentUserId();
   if (!userId) {
     return NextResponse.json({ ok: false, error: "未登录" }, { status: 401 });
@@ -84,44 +60,62 @@ export async function POST(req: Request) {
     select: { id: true },
   });
   if (!targetSim) {
-    if (requestedSimId !== undefined) {
-      const firstOwnedSim = await prisma.sim.findFirst({
-        where: { userId },
-        select: { id: true },
-      });
-      if (firstOwnedSim) {
-        return NextResponse.json(
-          { ok: false, error: "无权修改该 SIM 卡的渠道" },
-          { status: 403 }
-        );
-      }
-    }
+    const hasOwnedSim = await prisma.sim.findFirst({
+      where: { userId },
+      select: { id: true },
+    });
     return NextResponse.json(
-      { ok: false, error: "您还没绑定任何 SIM 卡" },
-      { status: 400 }
+      {
+        ok: false,
+        error: hasOwnedSim ? "无权修改该 SIM 卡的渠道" : "您还没绑定任何 SIM 卡",
+      },
+      { status: hasOwnedSim ? 403 : 400 }
     );
   }
 
-  // 没验证过 key → 服务端再验证一次
-  if (!verified) {
-    const result = await sendPush(
-      channel,
-      channelKey,
-      "Giffgaff 保号提醒 - 渠道验证",
-      "正在保存您的通知渠道配置。如果收到此消息,说明配置正确。"
+  const limited = await enforceRateLimits([
+    {
+      scope: "save-channel-session",
+      identifiers: [sessionId],
+      limit: 10,
+      windowMs: 10 * 60 * 1000,
+    },
+    {
+      scope: "save-channel-ip",
+      identifiers: [getClientIp(req)],
+      limit: 20,
+      windowMs: 10 * 60 * 1000,
+    },
+  ]);
+  if (!limited.allowed) return rateLimitResponse(limited);
+
+  const verification = await sendPush(
+    channel,
+    channelKey,
+    "Giffgaff 保号提醒 - 渠道验证",
+    "正在保存您的通知渠道配置。如果收到此消息,说明配置正确。"
+  );
+  if (!verification.ok) {
+    return NextResponse.json(
+      { ok: false, error: "渠道验证失败，请检查地址或密钥" },
+      { status: 502 }
     );
-    if (!result.ok) {
-      return NextResponse.json(
-        { ok: false, error: `渠道验证失败: ${result.errorMessage}` },
-        { status: 502 }
-      );
-    }
   }
 
-  await prisma.sim.update({
-    where: { id: targetSim.id },
-    data: { channel, channelKey },
-  });
-
-  return NextResponse.json({ ok: true, simId: targetSim.id });
+  const outcome = await updateCurrentUserSimChannel(
+    sessionId,
+    targetSim.id,
+    channel,
+    channelKey
+  );
+  if (!outcome.authenticated) {
+    return NextResponse.json({ ok: false, error: "未登录" }, { status: 401 });
+  }
+  if (!outcome.sim) {
+    return NextResponse.json(
+      { ok: false, error: "SIM 卡归属已发生变化，请刷新后重试" },
+      { status: 409 }
+    );
+  }
+  return NextResponse.json({ ok: true, simId: outcome.sim.id });
 }

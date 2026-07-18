@@ -3,8 +3,22 @@
 import { NextResponse } from "next/server";
 import { normalizeCardCode } from "@/lib/card-key";
 import { prisma } from "@/lib/db";
+import {
+  enforceRateLimits,
+  getClientIp,
+  rateLimitResponse,
+} from "@/lib/rate-limit";
 
 export async function GET(req: Request) {
+  const limited = await enforceRateLimits([
+    {
+      scope: "redeem-preview-ip",
+      identifiers: [getClientIp(req)],
+      limit: 30,
+      windowMs: 60 * 1000,
+    },
+  ]);
+  if (!limited.allowed) return rateLimitResponse(limited);
   const { searchParams } = new URL(req.url);
   const code = searchParams.get("code") || "";
   const raw = normalizeCardCode(code);

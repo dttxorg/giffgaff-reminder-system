@@ -89,7 +89,7 @@ describe("<PortOverdueBanner />", () => {
     expect(link).toHaveAttribute("href", "/p/myToken");
   });
 
-  it("portToken 缺失时回退 /p/<simId>", () => {
+  it("portToken 缺失时引导回账号设置，不生成数字公开链接", () => {
     render(
       <PortOverdueBanner
         baseline={baselineForOffset(200)}
@@ -99,7 +99,7 @@ describe("<PortOverdueBanner />", () => {
       />
     );
     const link = screen.getByRole("link", { name: /立即去保号/ });
-    expect(link).toHaveAttribute("href", "/p/42");
+    expect(link).toHaveAttribute("href", "/me/settings?simId=42");
   });
 
   it("1:N 多卡场景:每张卡独立判断(过期的 sim 才显示)", () => {

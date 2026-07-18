@@ -55,7 +55,7 @@
 │   ├── auth.ts              # scrypt 密码哈希 + cron secret 校验
 │   ├── session.ts           # cookie session 管理
 │   ├── admin-guard.ts       # 管理员鉴权
-│   ├── admin-bootstrap.ts   # 首次启动自动创建默认 admin 账号
+│   ├── admin-bootstrap.ts   # 管理员环境变量强度校验（无默认账号）
 │   ├── bucket.ts            # 提醒规则计算(day → bucket 分布)
 │   ├── channels.ts          # 4 渠道推送实现 + sendPush router
 │   ├── template.ts          # 提醒文案模板渲染
@@ -91,10 +91,11 @@
 4. **关键步骤:在 "Storage" 区域点击 "Create Database" → 选 "Postgres" → Region 选离你近的(如 Singapore)**
    - Vercel 会自动创建 Neon 项目并注入 `DATABASE_URL` 环境变量
 5. 手动添加其他环境变量:
-   - `CRON_SECRET`:一段长随机字符串,例 `openssl rand -hex 32`
-   - **`PUBLIC_BASE_URL`**:`https://baohao.681218.xyz`(你绑定的自定义域名,**强烈推荐设置** — 不设的话推送里给客户的保号链接会变成 `*.vercel.app`,看起来不像你的产品)
-   - `ADMIN_USERNAME`:管理员账号(默认 `admin`,生产建议改)
-   - `ADMIN_PASSWORD`:管理员密码(首次访问 `/admin/login` 时会用这个密码自动建账号,生产必改)
+   - `CRON_SECRET`:至少 32 字符的独立随机字符串,例 `openssl rand -hex 32`
+   - **`PUBLIC_BASE_URL`**:`https://baohao.681218.xyz`（必填 HTTPS 正式域名）
+   - `ADMIN_USERNAME`:显式配置的管理员账号（没有默认值）
+   - `ADMIN_PASSWORD`:至少 12 位的强管理员密码（没有默认值）
+   - `ADMIN_TOTP_SECRET`:管理员验证器使用的 Base32 TOTP 密钥
 
 ### 3. 部署
 
@@ -107,7 +108,7 @@
 
 ### 4. 跑 seed(可选,创建测试数据 + 默认管理员)
 
-部署完成后,在 Vercel 项目 → Settings → Functions → 找 `prisma/seed.ts`,或者用本地 Vercel CLI:
+部署完成后运行一次 seed 创建或轮换管理员。seed 不再自动创建样例号码，并会撤销旧管理员会话：
 
 ```bash
 # 拉 Vercel 环境变量到本地
@@ -116,7 +117,11 @@ npx vercel env pull .env.production
 DATABASE_URL='<从 .env.production 读>' npm run db:seed
 ```
 
-或者直接在 Vercel 创建一个临时 Function exec 入口跑 seed。本项目 V1 可以不跑 seed,直接到 `/admin/login` 用环境变量 `ADMIN_USERNAME` / `ADMIN_PASSWORD` 登录即可(代码会自动建管理员)。
+管理员不会在登录请求中自动创建。将同一 `ADMIN_TOTP_SECRET` 添加到验证器应用，可使用：
+
+```text
+otpauth://totp/Giffgaff:ADMIN_USERNAME?secret=ADMIN_TOTP_SECRET&issuer=Giffgaff
+```
 
 ### 5. 配置外部 cron
 
@@ -140,7 +145,11 @@ npm install
 
 ```bash
 DATABASE_URL='postgresql://...'
-CRON_SECRET='dev-local-secret'  # 本地可省略,代码会用 dev 默认值
+CRON_SECRET='至少 32 字符的本地随机值'  # 缺失时 cron 接口拒绝执行
+ADMIN_USERNAME='本地管理员账号'
+ADMIN_PASSWORD='至少 12 位的强密码'
+ADMIN_TOTP_SECRET='Base32 密钥'
+PUBLIC_BASE_URL='https://你的正式域名'
 ```
 
 ### 初始化数据库
@@ -163,10 +172,13 @@ npm run dev
 | 变量 | 必填 | 说明 |
 |---|---|---|
 | `DATABASE_URL` | 是 | Postgres 连接串。运行时优先级: `POSTGRES_PRISMA_URL`(池化) → `DATABASE_URL` → `POSTGRES_URL` → `POSTGRES_URL_NON_POOLING` |
-| `CRON_SECRET` | 是 | cron 路由 Bearer token(本地调试可省略) |
-| `PUBLIC_BASE_URL` | **强烈推荐** | 推送给用户的保号链接域名,例 `https://baohao.681218.xyz`。不设会 fallback 到 Vercel 默认域名 `*.vercel.app` |
-| `ADMIN_USERNAME` | 否 | 管理员账号(默认 `admin`) |
-| `ADMIN_PASSWORD` | 否 | 管理员密码(默认 `admin123`,生产必改) |
+| `CRON_SECRET` | 是 | cron 路由 Bearer token，至少 32 字符；缺失时 fail closed |
+| `PUBLIC_BASE_URL` | 是 | 推送链接的 HTTPS 正式域名 |
+| `ADMIN_USERNAME` | 是 | 管理员账号，无默认值 |
+| `ADMIN_PASSWORD` | 是 | 至少 12 位强密码，无默认值 |
+| `ADMIN_TOTP_SECRET` | 是 | 管理员 TOTP 的 Base32 密钥；生产缺失时后台登录保持关闭 |
+| `BARK_ALLOWED_HOSTS` | 否 | 自建 Bark HTTPS 主机白名单；默认仅 `api.day.app` |
+| `SEED_SAMPLE_DATA` | 否 | 仅本地需要样例 SIM 时设 `true` |
 
 ## 提醒规则(冻结)
 
@@ -248,7 +260,7 @@ npm run dev
 - **时区**:全部用 UTC 存储和计算,文案展示按浏览器本地时区(管理员端额外显示上海时间)
 - **CSV 导入**:首行可带表头 `phone_number,activated_at`,UTF-8 编码
 - **删除 sim**:会级联删除 user 和 reminders_sent(注意:channel key 不会删)
-- **保号链接**:公开 `/p/{token}` 用了 32 字符不可枚举 token(老 sim lazy-backfill),防止 `/p/1` `/p/2` 这种可枚举 URL 泄露手机号
+- **保号链接**:公开 `/p/{token}` 使用 32–64 字符高熵 token；迁移会补齐历史数据，数字 ID 永远返回 404，成功提交后旧 token 立即失效
 - **保号提醒触发**:在已激活(或上次保号) 170-180 天窗口期,cron 每小时扫一次,按 day→bucket 分布发(170-172: 1 次/天,180: 10 次/天)
 
 ## 开发工作流

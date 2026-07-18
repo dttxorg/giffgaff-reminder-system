@@ -5,9 +5,9 @@ describe("公开保号页缓存与首屏数据预算", () => {
   const page = fs.readFileSync("app/p/[simId]/page.tsx", "utf8");
   const client = fs.readFileSync("app/p/[simId]/port-client.tsx", "utf8");
 
-  it("服务端按 token 读取缓存数据，并保留按路径缓存", () => {
-    expect(page).toContain('dynamic = "force-static"');
-    expect(page).toContain("generateStaticParams");
+  it("服务端按 token 读取数据，但 Bearer 页面不进入共享缓存", () => {
+    expect(page).toContain('dynamic = "force-dynamic"');
+    expect(page).toContain("revalidate = 0");
     expect(page).toContain("await params");
     expect(page).toContain("getCachedPublicSim(simId)");
     expect(page).toContain("initialSim={initialSim}");
@@ -22,9 +22,10 @@ describe("公开保号页缓存与首屏数据预算", () => {
     expect(client).toContain("/port`");
   });
 
-  it("旧数字 URL 在服务端回填 token 并重定向", () => {
-    expect(page).toContain("findSimByParam(simId)");
-    expect(page).toContain("ensureSimPortToken(sim.id, sim.portToken)");
-    expect(page).toContain("redirect(`/p/${portToken}`)");
+  it("数字 ID 不再进入公开查询或重定向流程", () => {
+    expect(page).toContain("looksLikeToken(simId)");
+    expect(page).not.toContain("findSimByParam(simId)");
+    expect(page).not.toContain("ensureSimPortToken");
+    expect(page).not.toContain("redirect(");
   });
 });

@@ -14,6 +14,9 @@ const mocks = vi.hoisted(() => ({
   hashPassword: vi.fn(),
   sendPush: vi.fn(),
   invalidatePublicSimCache: vi.fn(),
+  enforceRateLimits: vi.fn(),
+  transaction: vi.fn(),
+  sessionDeleteMany: vi.fn(),
 }));
 
 vi.mock("../lib/session", () => ({
@@ -37,6 +40,8 @@ vi.mock("../lib/db", () => ({
       update: mocks.simUpdate,
       updateManyAndReturn: mocks.simUpdateManyAndReturn,
     },
+    userSession: { deleteMany: mocks.sessionDeleteMany },
+    $transaction: mocks.transaction,
   },
 }));
 
@@ -51,6 +56,12 @@ vi.mock("../lib/channels", () => ({
 
 vi.mock("../lib/public-sim-cache", () => ({
   invalidatePublicSimCache: mocks.invalidatePublicSimCache,
+}));
+
+vi.mock("../lib/rate-limit", () => ({
+  enforceRateLimits: mocks.enforceRateLimits,
+  getClientIp: () => "203.0.113.9",
+  rateLimitResponse: vi.fn(),
 }));
 
 import { POST as changePassword } from "../app/api/me/password/route";
@@ -74,13 +85,21 @@ describe("用户设置写接口", () => {
     mocks.verifyPassword.mockResolvedValue(true);
     mocks.hashPassword.mockResolvedValue("new-hash");
     mocks.sendPush.mockResolvedValue({ ok: true });
+    mocks.enforceRateLimits.mockResolvedValue({
+      allowed: true,
+      retryAfterSeconds: 0,
+    });
+    mocks.sessionDeleteMany.mockResolvedValue({ count: 0 });
+    mocks.transaction.mockImplementation(async (operations) =>
+      Promise.all(operations)
+    );
   });
 
   it("修改密码只查询哈希并使用 Session userId 更新", async () => {
     const response = await changePassword(
       jsonRequest("/api/me/password", "POST", {
         oldPassword: "old-password",
-        newPassword: "new-password",
+        newPassword: "New-Pass_2026!",
       })
     );
 
@@ -215,7 +234,8 @@ describe("用户设置写接口", () => {
     expect(mocks.invalidatePublicSimCache).not.toHaveBeenCalled();
   });
 
-  it("已测试的渠道保存只需一次带归属条件的写入", async () => {
+  it("渠道保存先校验归属和服务端推送，再执行带归属条件的写入", async () => {
+    mocks.simFindFirst.mockResolvedValueOnce({ id: 23 });
     mocks.updateCurrentUserSimChannel.mockResolvedValue({
       authenticated: true,
       hasSims: true,
@@ -227,7 +247,6 @@ describe("用户设置写接口", () => {
         simId: 23,
         channel: "bark",
         channelKey: "https://api.day.app/example",
-        verified: true,
       })
     );
     const payload = await response.json();
@@ -240,43 +259,38 @@ describe("用户设置写接口", () => {
       "bark",
       "https://api.day.app/example"
     );
-    expect(mocks.simFindFirst).not.toHaveBeenCalled();
-    expect(mocks.sendPush).not.toHaveBeenCalled();
+    expect(mocks.simFindFirst).toHaveBeenCalledWith(
+      expect.objectContaining({ where: { id: 23, userId: 7 } })
+    );
+    expect(mocks.sendPush).toHaveBeenCalledOnce();
   });
 
   it("渠道保存无法越权修改其他用户的 SIM", async () => {
-    mocks.updateCurrentUserSimChannel.mockResolvedValue({
-      authenticated: true,
-      hasSims: true,
-      sim: null,
-    });
+    mocks.simFindFirst
+      .mockResolvedValueOnce(null)
+      .mockResolvedValueOnce({ id: 11 });
 
     const response = await changeChannel(
       jsonRequest("/api/me/channel", "POST", {
         simId: 99,
         channel: "serverchan",
         channelKey: "send-key",
-        verified: true,
       })
     );
 
     expect(response.status).toBe(403);
-    expect(mocks.simUpdate).not.toHaveBeenCalled();
+    expect(mocks.updateCurrentUserSimChannel).not.toHaveBeenCalled();
+    expect(mocks.sendPush).not.toHaveBeenCalled();
   });
 
   it("账号没有 SIM 时保存渠道仍返回 400", async () => {
-    mocks.updateCurrentUserSimChannel.mockResolvedValue({
-      authenticated: true,
-      hasSims: false,
-      sim: null,
-    });
+    mocks.simFindFirst.mockResolvedValue(null);
 
     const response = await changeChannel(
       jsonRequest("/api/me/channel", "POST", {
         simId: 23,
         channel: "serverchan",
         channelKey: "send-key",
-        verified: true,
       })
     );
 
@@ -284,6 +298,7 @@ describe("用户设置写接口", () => {
   });
 
   it("渠道保存遇到过期 Session 时返回 401", async () => {
+    mocks.simFindFirst.mockResolvedValueOnce({ id: 23 });
     mocks.updateCurrentUserSimChannel.mockResolvedValue({
       authenticated: false,
       hasSims: false,
@@ -295,7 +310,6 @@ describe("用户设置写接口", () => {
         simId: 23,
         channel: "serverchan",
         channelKey: "send-key",
-        verified: true,
       })
     );
 
@@ -312,7 +326,6 @@ describe("用户设置写接口", () => {
         simId: 99,
         channel: "serverchan",
         channelKey: "send-key",
-        verified: false,
       })
     );
 

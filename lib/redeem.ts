@@ -12,6 +12,7 @@ import { prisma } from "./db";
 import { normalizeCardCode } from "./card-key";
 import { hashPassword, normalizeUsername, usernameError } from "./auth";
 import { parseISOCalendarDate } from "./date";
+import { generatePortToken } from "./port-token";
 import type { Prisma } from "./generated/prisma/client";
 
 export type RedeemInput = {
@@ -134,15 +135,8 @@ export async function redeemCard(
     const existing = await db.user.findUnique({ where: { username } });
     if (existing) return { ok: false, error: "USERNAME_TAKEN" };
 
-    const passwordHash = await hashPassword(input.password);
-    const created = await db.user.create({
-      data: {
-        username,
-        passwordHash,
-      },
-    });
-    // 删掉占位字段(新 schema 上 User 没有 channel/channelKey)
-    userId = created.id;
+    // 真正创建用户放在原子占用卡密之后，避免并发失败时留下孤立账号。
+    userId = 0;
     isNewUser = true;
   } else {
     // 追加卡流程
@@ -161,10 +155,32 @@ export async function redeemCard(
     }
   }
 
+  // 先以 used=false 为条件原子占用卡密。并发请求中只有一个事务能成功；
+  // 后续任一步失败都会随外层事务一起回滚，不会消耗卡密。
+  const claimed = await db.cardKey.updateMany({
+    where: { id: card.id, used: false },
+    data: { used: true, usedAt: new Date() },
+  });
+  if (claimed.count !== 1) {
+    return { ok: false, error: "ALREADY_USED" };
+  }
+
+  if (currentUserId === undefined) {
+    const passwordHash = await hashPassword(input.password!);
+    const created = await db.user.create({
+      data: {
+        username: normalizeUsername(input.username!),
+        passwordHash,
+      },
+    });
+    userId = created.id;
+  }
+
   // 创建 sim
   const sim = await db.sim.create({
     data: {
       phoneNumber,
+      portToken: generatePortToken(),
       activatedAt,
       status: "active",
       channel: defaultChannel,

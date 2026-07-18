@@ -147,7 +147,6 @@ export default async function MeSettingsPage({ searchParams }: PageProps) {
               )
             )}
             portToken={selectedSim.portToken}
-            simIdFallback={selectedSim.id}
           />
         </Suspense>
       </details>

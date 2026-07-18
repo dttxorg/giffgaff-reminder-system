@@ -15,11 +15,10 @@ import PortClient, {
 } from "../../app/p/[simId]/port-client";
 
 const sim: SimInfo = {
-  phoneNumber: "07724215611",
+  phoneNumber: "****** 5611",
   activatedAt: "2025-01-01",
   lastPortedAt: null,
   dayOffset: 100,
-  portToken: "abc123def456ghi789jkl012mno345pq",
 };
 
 describe("<PortClient /> initial data", () => {
@@ -36,7 +35,7 @@ describe("<PortClient /> initial data", () => {
       />
     );
 
-    expect(screen.getByText("07724 215611")).toBeInTheDocument();
+    expect(screen.getByText("****** 5611")).toBeInTheDocument();
     expect(screen.getByText("100")).toBeInTheDocument();
     expect(mockFetch).not.toHaveBeenCalled();
   });

@@ -43,4 +43,10 @@ describe("generateSecurePassword", () => {
     expect(() => generateSecurePassword(8, "a")).toThrow();
     expect(() => generateSecurePassword(8, "")).toThrow();
   });
+
+  it("拒绝非整数、过大长度和超过单字节采样范围的字母表", () => {
+    expect(() => generateSecurePassword(1.5)).toThrow();
+    expect(() => generateSecurePassword(4097)).toThrow();
+    expect(() => generateSecurePassword(8, "a".repeat(257))).toThrow();
+  });
 });

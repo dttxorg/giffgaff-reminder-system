@@ -4,15 +4,20 @@ import { prisma } from "@/lib/db";
 import { normalizeUsername } from "@/lib/auth";
 import { createUserSession } from "@/lib/session";
 import { verifyPassword } from "@/lib/auth";
+import {
+  enforceRateLimits,
+  getClientIp,
+  rateLimitResponse,
+} from "@/lib/rate-limit";
 
 const BodySchema = z.object({
-  username: z.string().min(1, "请输入账号"),
-  password: z.string().min(1, "请输入密码"),
+  username: z.string().min(1, "请输入账号").max(64),
+  password: z.string().min(1, "请输入密码").max(128),
 });
 
-// 登录限流参数
-const MAX_FAILED_ATTEMPTS = 5;
-const LOCK_DURATION_MS = 15 * 60 * 1000; // 15 分钟
+const LOGIN_WINDOW_MS = 15 * 60 * 1000;
+const DUMMY_PASSWORD_HASH =
+  "scrypt$16384$8$1$MDEyMzQ1Njc4OWFiY2RlZg==$GxO2F58+LClsnJu/DQccjtLEu6LrjzahHZuQTXhgedLQqO0Mb6Uwhd5Qd7Kxxbn/Q33EWa9atX0xW8xckF5nOw==";
 
 /**
  * POST /api/auth/login
@@ -43,60 +48,31 @@ export async function POST(req: Request) {
     return NextResponse.json({ ok: false, error: "账号不合法" }, { status: 400 });
   }
 
+  const ip = getClientIp(req);
+  const limited = await enforceRateLimits([
+    { scope: "user-login-ip", identifiers: [ip], limit: 20, windowMs: LOGIN_WINDOW_MS },
+    { scope: "user-login-account", identifiers: [username], limit: 50, windowMs: LOGIN_WINDOW_MS },
+    { scope: "user-login-pair", identifiers: [ip, username], limit: 5, windowMs: LOGIN_WINDOW_MS },
+  ]);
+  if (!limited.allowed) return rateLimitResponse(limited);
+
   const user = await prisma.user.findUnique({
     where: { username },
     select: {
       id: true,
       passwordHash: true,
-      failedLoginCount: true,
-      lockedUntil: true,
       _count: {
         select: { sims: { where: { channelKey: "" } } },
       },
     },
   });
-  if (!user) {
+  const ok = await verifyPassword(
+    parsed.data.password,
+    user?.passwordHash ?? DUMMY_PASSWORD_HASH
+  );
+  if (!user || !user.passwordHash || !ok) {
     return NextResponse.json(
       { ok: false, error: "账号或密码错误" },
-      { status: 401 }
-    );
-  }
-
-  if (user.lockedUntil && user.lockedUntil > new Date()) {
-    const minutesLeft = Math.ceil((user.lockedUntil.getTime() - Date.now()) / 60000);
-    return NextResponse.json(
-      { ok: false, error: `账号已锁定,请 ${minutesLeft} 分钟后再试` },
-      { status: 429 }
-    );
-  }
-
-  if (!user.passwordHash) {
-    return NextResponse.json(
-      { ok: false, error: "账号未升级密码登录,请联系管理员在后台重置密码" },
-      { status: 401 }
-    );
-  }
-
-  const ok = await verifyPassword(parsed.data.password, user.passwordHash);
-  if (!ok) {
-    const newCount = user.failedLoginCount + 1;
-    const shouldLock = newCount >= MAX_FAILED_ATTEMPTS;
-    await prisma.user.update({
-      where: { id: user.id },
-      data: {
-        failedLoginCount: shouldLock ? 0 : newCount,
-        lockedUntil: shouldLock ? new Date(Date.now() + LOCK_DURATION_MS) : null,
-      },
-    });
-    if (shouldLock) {
-      return NextResponse.json(
-        { ok: false, error: `密码错误次数过多,账号已锁定 ${LOCK_DURATION_MS / 60000} 分钟` },
-        { status: 429 }
-      );
-    }
-    const remaining = MAX_FAILED_ATTEMPTS - newCount;
-    return NextResponse.json(
-      { ok: false, error: `账号或密码错误,还可尝试 ${remaining} 次` },
       { status: 401 }
     );
   }

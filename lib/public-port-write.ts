@@ -1,16 +1,19 @@
 import { prisma } from "./db";
 import { Prisma } from "./generated/prisma/client";
 import { looksLikeToken } from "./port-token";
+import { generatePortToken } from "./port-token";
 
 interface PublicPortWriteRow {
   found: boolean;
   simId: number | null;
   portToken: string | null;
+  previousPortToken: string | null;
 }
 
 export interface PublicPortWriteOutcome {
   found: boolean;
   sim: { id: number; portToken: string | null } | null;
+  previousPortToken: string | null;
 }
 
 /**
@@ -21,14 +24,11 @@ export async function updatePublicSimPortDate(
   param: string,
   portedAt: Date
 ): Promise<PublicPortWriteOutcome> {
-  let targetFilter: Prisma.Sql;
-  if (looksLikeToken(param)) {
-    targetFilter = Prisma.sql`"portToken" = ${param}`;
-  } else {
-    const id = parseInt(param, 10);
-    if (!Number.isFinite(id) || id <= 0) return { found: false, sim: null };
-    targetFilter = Prisma.sql`"id" = ${id}`;
+  if (!looksLikeToken(param)) {
+    return { found: false, sim: null, previousPortToken: null };
   }
+  const nextPortToken = generatePortToken();
+  const targetFilter = Prisma.sql`"portToken" = ${param}`;
 
   const [row] = await prisma.$queryRaw<PublicPortWriteRow[]>`
     WITH target AS (
@@ -41,6 +41,7 @@ export async function updatePublicSimPortDate(
       UPDATE "Sim" sim
       SET
         "lastPortedAt" = ${portedAt},
+        "portToken" = ${nextPortToken},
         "updatedAt" = CURRENT_TIMESTAMP
       FROM target
       WHERE sim."id" = target."id"
@@ -50,15 +51,17 @@ export async function updatePublicSimPortDate(
     SELECT
       EXISTS(SELECT 1 FROM target) AS "found",
       (SELECT "id" FROM updated) AS "simId",
-      (SELECT "portToken" FROM updated) AS "portToken"
+      (SELECT "portToken" FROM updated) AS "portToken",
+      (SELECT "portToken" FROM target) AS "previousPortToken"
   `;
 
-  if (!row) return { found: false, sim: null };
+  if (!row) return { found: false, sim: null, previousPortToken: null };
   return {
     found: row.found,
     sim:
       row.simId === null
         ? null
         : { id: row.simId, portToken: row.portToken },
+    previousPortToken: row.previousPortToken,
   };
 }

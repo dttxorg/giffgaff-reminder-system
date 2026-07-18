@@ -1,10 +1,128 @@
 // 推送渠道：Sever酱 / Bark / pushplus / Telegram
 
+import { isIP } from "node:net";
+
 export type ChannelType = "serverchan" | "bark" | "pushplus" | "telegram";
 
 export interface SendResult {
   ok: boolean;
   errorMessage?: string;
+}
+
+const PUSH_TIMEOUT_MS = 10_000;
+const MAX_PUSH_RESPONSE_BYTES = 64 * 1024;
+
+class PushResponseTooLargeError extends Error {}
+
+async function readJsonResponse<T>(response: Response): Promise<T> {
+  const declaredLength = Number(response.headers.get("content-length"));
+  if (
+    Number.isFinite(declaredLength) &&
+    declaredLength > MAX_PUSH_RESPONSE_BYTES
+  ) {
+    throw new PushResponseTooLargeError();
+  }
+
+  if (!response.body) {
+    throw new SyntaxError("empty response body");
+  }
+
+  const reader = response.body.getReader();
+  const chunks: Uint8Array[] = [];
+  let received = 0;
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    received += value.byteLength;
+    if (received > MAX_PUSH_RESPONSE_BYTES) {
+      await reader.cancel().catch(() => {});
+      throw new PushResponseTooLargeError();
+    }
+    chunks.push(value);
+  }
+
+  const body = new Uint8Array(received);
+  let offset = 0;
+  for (const chunk of chunks) {
+    body.set(chunk, offset);
+    offset += chunk.byteLength;
+  }
+  return JSON.parse(new TextDecoder().decode(body)) as T;
+}
+
+function pushRequestFailure(error: unknown): SendResult {
+  if (error instanceof PushResponseTooLargeError) {
+    return { ok: false, errorMessage: "推送响应过大" };
+  }
+  if (error instanceof SyntaxError) {
+    return { ok: false, errorMessage: "推送响应格式错误" };
+  }
+  if (
+    error instanceof Error &&
+    (error.name === "AbortError" || error.name === "TimeoutError")
+  ) {
+    return { ok: false, errorMessage: "推送请求超时" };
+  }
+  // fetch 的底层异常可能包含完整 URL（其中带有推送密钥），不得回传或写入日志。
+  return { ok: false, errorMessage: "推送请求失败" };
+}
+
+function outboundRequestInit(init: RequestInit): RequestInit {
+  return {
+    ...init,
+    redirect: "error",
+    signal: AbortSignal.timeout(PUSH_TIMEOUT_MS),
+  };
+}
+
+function isPublicHostnameSyntax(hostname: string): boolean {
+  const host = hostname.toLowerCase();
+  if (!host || host.length > 253 || isIP(host) !== 0) return false;
+  if (
+    host === "localhost" ||
+    host.endsWith(".localhost") ||
+    [".local", ".internal", ".lan", ".home", ".test", ".invalid"].some(
+      (suffix) => host.endsWith(suffix)
+    )
+  ) {
+    return false;
+  }
+  const labels = host.split(".");
+  return (
+    labels.length >= 2 &&
+    labels.every(
+      (label) =>
+        label.length >= 1 &&
+        label.length <= 63 &&
+        /^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$/.test(label)
+    )
+  );
+}
+
+function allowedBarkHosts(): Set<string> {
+  const configured = (process.env.BARK_ALLOWED_HOSTS ?? "")
+    .split(",")
+    .map((host) => host.trim().toLowerCase())
+    .filter(isPublicHostnameSyntax);
+  return new Set(["api.day.app", ...configured]);
+}
+
+/** 只接受 HTTPS、无认证信息、无自定义端口且主机在显式白名单内的 Bark 地址。 */
+export function normalizeBarkEndpoint(input: string): string | null {
+  let url: URL;
+  try {
+    url = new URL(input.trim());
+  } catch {
+    return null;
+  }
+  if (url.protocol !== "https:") return null;
+  if (url.username || url.password || url.port) return null;
+  if (url.search || url.hash) return null;
+  const hostname = url.hostname.toLowerCase();
+  if (!isPublicHostnameSyntax(hostname)) return null;
+  if (!allowedBarkHosts().has(hostname)) return null;
+  if (url.pathname === "/" || url.pathname === "") return null;
+  return `${url.origin}${url.pathname.replace(/\/+$/, "")}`;
 }
 
 /**
@@ -19,21 +137,21 @@ export async function sendServerChan(
 ): Promise<SendResult> {
   const url = `https://sctapi.ftqq.com/${sendKey}.send`;
   try {
-    const resp = await fetch(url, {
+    const resp = await fetch(url, outboundRequestInit({
       method: "POST",
       headers: { "Content-Type": "application/x-www-form-urlencoded" },
       body: new URLSearchParams({ title, desp: body }).toString(),
-    });
+    }));
     if (!resp.ok) {
       return { ok: false, errorMessage: `Sever酱 HTTP ${resp.status}` };
     }
-    const data = (await resp.json()) as { code?: number; message?: string; errno?: number };
+    const data = await readJsonResponse<{ code?: number; message?: string; errno?: number }>(resp);
     if (data.code !== 0 && data.errno !== 0) {
       return { ok: false, errorMessage: data.message || "Sever酱 返回非 0" };
     }
     return { ok: true };
-  } catch (e) {
-    return { ok: false, errorMessage: e instanceof Error ? e.message : String(e) };
+  } catch (error) {
+    return pushRequestFailure(error);
   }
 }
 
@@ -47,24 +165,25 @@ export async function sendBark(
   title: string,
   body: string
 ): Promise<SendResult> {
-  // barkUrl 形如 https://api.day.app/abc123xyz
-  // 去掉尾部 /
-  const base = barkUrl.replace(/\/+$/, "");
+  const base = normalizeBarkEndpoint(barkUrl);
+  if (!base) {
+    return { ok: false, errorMessage: "Bark 地址必须是已允许的 HTTPS 地址" };
+  }
   // Bark 的 URL 路径是 /{title}/{body}
   // title 和 body 需要 URL encode
   const url = `${base}/${encodeURIComponent(title)}/${encodeURIComponent(body)}`;
   try {
-    const resp = await fetch(url, { method: "GET" });
+    const resp = await fetch(url, outboundRequestInit({ method: "GET" }));
     if (!resp.ok) {
       return { ok: false, errorMessage: `Bark HTTP ${resp.status}` };
     }
-    const data = (await resp.json()) as { code?: number; message?: string };
+    const data = await readJsonResponse<{ code?: number; message?: string }>(resp);
     if (data.code !== 200) {
       return { ok: false, errorMessage: data.message || "Bark 返回非 200" };
     }
     return { ok: true };
-  } catch (e) {
-    return { ok: false, errorMessage: e instanceof Error ? e.message : String(e) };
+  } catch (error) {
+    return pushRequestFailure(error);
   }
 }
 
@@ -93,7 +212,7 @@ export async function sendPushPlus(
   }
   const url = "https://www.pushplus.plus/send";
   try {
-    const resp = await fetch(url, {
+    const resp = await fetch(url, outboundRequestInit({
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -103,21 +222,21 @@ export async function sendPushPlus(
         template: "markdown",
         channel: "wechat",
       }),
-    });
+    }));
     if (!resp.ok) {
       return { ok: false, errorMessage: `pushplus HTTP ${resp.status}` };
     }
-    const data = (await resp.json()) as {
+    const data = await readJsonResponse<{
       code?: number;
       msg?: string;
       data?: string | null;
-    };
+    }>(resp);
     if (data.code !== 200) {
       return { ok: false, errorMessage: data.msg || `pushplus 返回 code=${data.code}` };
     }
     return { ok: true };
-  } catch (e) {
-    return { ok: false, errorMessage: e instanceof Error ? e.message : String(e) };
+  } catch (error) {
+    return pushRequestFailure(error);
   }
 }
 
@@ -163,7 +282,7 @@ export async function sendTelegram(
   const text = `<b>${escapeHtml(title)}</b>\n\n${escapeHtml(body)}`;
 
   try {
-    const resp = await fetch(url, {
+    const resp = await fetch(url, outboundRequestInit({
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -172,7 +291,7 @@ export async function sendTelegram(
         parse_mode: "HTML",
         disable_web_page_preview: true,
       }),
-    });
+    }));
     if (!resp.ok) {
       return { ok: false, errorMessage: `Telegram HTTP ${resp.status}` };
     }
@@ -181,8 +300,8 @@ export async function sendTelegram(
       return { ok: false, errorMessage: data.description || `Telegram 返回 error_code=${data.error_code}` };
     }
     return { ok: true };
-  } catch (e) {
-    return { ok: false, errorMessage: e instanceof Error ? e.message : String(e) };
+  } catch (error) {
+    return pushRequestFailure(error);
   }
 }
 

@@ -4,9 +4,14 @@ import { prisma } from "@/lib/db";
 import { getAdminSession } from "@/lib/session";
 import { hashPassword } from "@/lib/auth";
 import { parsePositiveIntParam } from "@/lib/route-params";
+import { passwordStrength } from "@/lib/password-strength";
 
 const BodySchema = z.object({
-  newPassword: z.string().min(8, "新密码至少 8 位"),
+  newPassword: z
+    .string()
+    .min(8, "新密码至少 8 位")
+    .max(128, "新密码过长")
+    .refine((value) => passwordStrength(value) !== "weak", "新密码强度过低"),
 });
 
 /**
@@ -48,14 +53,17 @@ export async function POST(
   }
 
   const newHash = await hashPassword(parsed.data.newPassword);
-  await prisma.user.update({
-    where: { id: userId },
-    data: {
-      passwordHash: newHash,
-      failedLoginCount: 0,
-      lockedUntil: null,
-    },
-  });
+  await prisma.$transaction([
+    prisma.user.update({
+      where: { id: userId },
+      data: {
+        passwordHash: newHash,
+        failedLoginCount: 0,
+        lockedUntil: null,
+      },
+    }),
+    prisma.userSession.deleteMany({ where: { userId } }),
+  ]);
 
   return NextResponse.json({ ok: true });
 }

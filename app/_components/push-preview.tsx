@@ -11,7 +11,6 @@ interface PushPreviewProps {
   /** portToken(用于构造 port_url,虽然预览不一定有,fallback 到 PUBLIC_BASE_URL) */
   portToken: string | null;
   /** 预览用 sim id,fallback */
-  simIdFallback: number;
   /** 父组件已经加载模板时直接传入，避免重复数据库查询 */
   templateOverride?: string;
 }
@@ -27,7 +26,6 @@ export async function PushPreview({
   phoneNumber,
   days,
   portToken,
-  simIdFallback,
   templateOverride,
 }: PushPreviewProps) {
   // 父组件可把模板与其它查询并行预载；独立使用时仍保持原有 fallback。
@@ -43,13 +41,13 @@ export async function PushPreview({
     if (!known.has(name)) unknown.add(name);
   }
 
-  // 构造预览用 URL — 用 portToken 优先,fallback 到 id(并标注"此 URL 是示例")
+  // 缺 token 时只显示不可访问的安全占位，不回退为可枚举数字 ID。
   const baseUrl =
     process.env.PUBLIC_BASE_URL || "https://example.com";
   const url =
     portToken !== null
       ? portUrl(baseUrl, portToken)
-      : `${baseUrl}/p/${simIdFallback}`;
+      : `${baseUrl}/p/<secure-token-pending>`;
   const isSampleUrl = portToken === null;
 
   const phoneDisplay = formatPhoneForDisplay(phoneNumber);

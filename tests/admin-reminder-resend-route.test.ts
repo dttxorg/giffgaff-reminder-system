@@ -7,6 +7,7 @@ const mocks = vi.hoisted(() => ({
   settingFindUnique: vi.fn(),
   ensureSimPortToken: vi.fn(),
   sendPush: vi.fn(),
+  enforceRateLimits: vi.fn(),
 }));
 
 vi.mock("../lib/session", () => ({
@@ -27,6 +28,11 @@ vi.mock("../lib/port-token-db", () => ({
 vi.mock("../lib/channels", () => ({
   sendPush: mocks.sendPush,
 }));
+vi.mock("../lib/rate-limit", () => ({
+  enforceRateLimits: mocks.enforceRateLimits,
+  getClientIp: () => "203.0.113.9",
+  rateLimitResponse: vi.fn(),
+}));
 
 import { POST } from "../app/api/admin/reminders/[id]/resend/route";
 
@@ -38,13 +44,15 @@ function reminder(portToken: string | null) {
   return {
     id: 42,
     channel: "bark",
-    channelKey: "snapshot-key",
+    channelKey: "",
     sim: {
       id: 7,
       phoneNumber: "07724215611",
       activatedAt: new Date("2026-01-01T00:00:00.000Z"),
       lastPortedAt: null,
       portToken,
+      channel: "bark",
+      channelKey: "https://api.day.app/current-key",
     },
   };
 }
@@ -57,6 +65,10 @@ describe("POST /api/admin/reminders/[id]/resend", () => {
       value: "号码 {{phone}}，链接 {{port_url}}",
     });
     mocks.reminderUpdate.mockResolvedValue({});
+    mocks.enforceRateLimits.mockResolvedValue({
+      allowed: true,
+      retryAfterSeconds: 0,
+    });
   });
 
   it("旧 SIM 复用已读取的空 token 状态并仅执行补写", async () => {
@@ -76,7 +88,7 @@ describe("POST /api/admin/reminders/[id]/resend", () => {
     expect(mocks.ensureSimPortToken).toHaveBeenCalledWith(7, null);
     expect(mocks.sendPush).toHaveBeenCalledWith(
       "bark",
-      "snapshot-key",
+      "https://api.day.app/current-key",
       "Giffgaff 保号提醒",
       expect.stringContaining("http://localhost:3000/p/secure-token")
     );

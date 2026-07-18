@@ -5,7 +5,7 @@ function publicSimTag(param: string | number): string {
   return `public-sim:${param}`;
 }
 
-/** 安全 token 的公开 SIM 数据缓存；旧数字 URL 迁移流程不使用它。 */
+/** 安全 token 的公开 SIM 数据缓存；数字 ID 永远不会进入该查询。 */
 export function getCachedPublicSim(param: string) {
   return unstable_cache(
     () => findSimByParam(param),
@@ -15,11 +15,14 @@ export function getCachedPublicSim(param: string) {
 }
 
 /** 数据写入后立即过期 id/token 两种可能的缓存键。 */
-export function invalidatePublicSimCache(sim: {
-  id: number;
-  portToken: string | null;
-}) {
+export function invalidatePublicSimCache(
+  sim: { id: number; portToken: string | null },
+  previousPortToken?: string | null
+) {
   revalidateTag(publicSimTag(sim.id), { expire: 0 });
+  if (previousPortToken) {
+    revalidateTag(publicSimTag(previousPortToken), { expire: 0 });
+  }
   if (sim.portToken) {
     revalidateTag(publicSimTag(sim.portToken), { expire: 0 });
   }

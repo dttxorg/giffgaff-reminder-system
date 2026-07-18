@@ -33,14 +33,10 @@ export function generatePortToken(): string {
 }
 
 /**
- * 判断一个字符串是否像 URL token(字母数字 + - + _,长度 16-64)
- * 用于区分 URL 中的"老 int id" vs "新 token"
- *
- * 注意: 纯数字串(老 int id)会被判为 false,这样 findSimByParam
- * 会走 id 查询分支,保持向后兼容。
+ * 判断一个字符串是否是公开 URL token。数字 ID 永远不作为公开凭据接受。
  */
 export function looksLikeToken(s: string): boolean {
   if (!/^[A-Za-z0-9_-]+$/.test(s)) return false;
   if (/^\d+$/.test(s)) return false;
-  return s.length >= 16 && s.length <= 64;
+  return s.length >= 32 && s.length <= 64;
 }

@@ -10,7 +10,7 @@ interface PortCountdownHeroProps {
   baseline: Date;
   /** sim.portToken,保号链接用 */
   portToken: string | null;
-  /** sim.id,fallback link */
+  /** sim.id，仅用于 token 异常时引导回账号设置，不生成公开数字链接 */
   simId: number;
   /** 客户端"现在",从父组件传入保证 SSR 一致 */
   now: Date;
@@ -52,7 +52,9 @@ export function PortCountdownHero({
   const sentToday = plan ? plan.bucket + 1 : 0;
   const totalToday = plan ? plan.count : 0;
 
-  const portUrl = portToken ?? String(simId);
+  const portHref = portToken
+    ? `/p/${portToken}`
+    : `/me/settings?simId=${simId}`;
 
   return (
     <div
@@ -106,7 +108,7 @@ export function PortCountdownHero({
         )}
 
         <Link
-          href={`/p/${portUrl}`}
+          href={portHref}
           className={`inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-white text-slate-900 text-sm font-semibold shadow-sm hover:shadow transition-shadow ${ring}`}
         >
           立即去保号

@@ -18,6 +18,8 @@ describe("公开保号提交查询预算", () => {
   it("更新只返回缓存失效所需的 id 与 token", () => {
     expect(write).toContain('RETURNING sim."id", sim."portToken"');
     expect(write).not.toContain('"phoneNumber"');
-    expect(route).toContain("invalidatePublicSimCache(outcome.sim)");
+    expect(route).toContain(
+      "invalidatePublicSimCache(outcome.sim, outcome.previousPortToken)"
+    );
   });
 });

@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { todayLocalISODate } from "@/lib/date";
 import { PasswordInput } from "@/app/_components/password-input";
+import { passwordStrength } from "@/lib/password-strength";
 import { LoadingButton } from "@/app/_components/loading-button";
 import { ExternalLink } from "@/app/_components/external-link";
 
@@ -217,7 +218,7 @@ export function MeSettingsClient({
       const resp = await fetch("/api/me/channel", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ channel, channelKey, verified: true, simId }),
+        body: JSON.stringify({ channel, channelKey, simId }),
       });
       const data = await resp.json();
       if (!data.ok) {
@@ -868,7 +869,8 @@ function PasswordSection() {
   );
   const [message, setMessage] = useState<string | null>(null);
 
-  const newPwValid = newPassword.length >= 8;
+  const newPwValid =
+    newPassword.length >= 8 && passwordStrength(newPassword) !== "weak";
   const match = newPassword === newPasswordConfirm;
   const canSubmit =
     oldPassword.length > 0 && newPwValid && match && status !== "saving";
@@ -924,13 +926,20 @@ function PasswordSection() {
             placeholder="至少 8 位"
             autoComplete="new-password"
             minLength={8}
-            invalid={!!(newPassword && newPassword.length < 8)}
+            invalid={!!(newPassword && !newPwValid)}
           />
           {newPassword && newPassword.length < 8 && (
             <p className="text-xs text-rose-600 mt-1.5">
               密码至少 8 位（当前 {newPassword.length} 位）
             </p>
           )}
+          {newPassword &&
+            newPassword.length >= 8 &&
+            passwordStrength(newPassword) === "weak" && (
+              <p className="text-xs text-rose-600 mt-1.5">
+                请混合大小写字母、数字或符号，避免常见及连续密码
+              </p>
+            )}
         </div>
         <div>
           <label className="block text-sm font-medium mb-1.5">

@@ -3,9 +3,16 @@ import { cache } from "react";
 import { cookies } from "next/headers";
 import { prisma } from "./db";
 
-const USER_COOKIE = "gg_user_session";
-const ADMIN_COOKIE = "gg_admin_session";
-const COOKIE_MAX_AGE = 60 * 60 * 24 * 7; // 7 天
+const USER_COOKIE =
+  process.env.NODE_ENV === "production"
+    ? "__Host-gg_user_session"
+    : "gg_user_session";
+const ADMIN_COOKIE =
+  process.env.NODE_ENV === "production"
+    ? "__Host-gg_admin_session"
+    : "gg_admin_session";
+const USER_COOKIE_MAX_AGE = 60 * 60 * 24 * 7; // 7 天
+const ADMIN_COOKIE_MAX_AGE = 60 * 60 * 12; // 管理会话 12 小时
 
 type DashboardChannel = "serverchan" | "bark" | "pushplus" | "telegram";
 
@@ -97,7 +104,7 @@ export function summarizeCurrentUserDashboardRows(
  * 创建用户 session
  */
 export async function createUserSession(userId: number): Promise<string> {
-  const expiresAt = new Date(Date.now() + COOKIE_MAX_AGE * 1000);
+  const expiresAt = new Date(Date.now() + USER_COOKIE_MAX_AGE * 1000);
   const session = await prisma.userSession.create({
     data: { userId, expiresAt },
   });
@@ -105,8 +112,8 @@ export async function createUserSession(userId: number): Promise<string> {
   jar.set(USER_COOKIE, session.id, {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
-    sameSite: "lax",
-    maxAge: COOKIE_MAX_AGE,
+    sameSite: "strict",
+    maxAge: USER_COOKIE_MAX_AGE,
     path: "/",
   });
   return session.id;
@@ -421,13 +428,14 @@ export async function destroyUserSession() {
     await prisma.userSession.delete({ where: { id: sid } }).catch(() => {});
   }
   jar.delete(USER_COOKIE);
+  jar.delete("gg_user_session");
 }
 
 /**
  * 创建管理员 session
  */
 export async function createAdminSession(): Promise<string> {
-  const expiresAt = new Date(Date.now() + COOKIE_MAX_AGE * 1000);
+  const expiresAt = new Date(Date.now() + ADMIN_COOKIE_MAX_AGE * 1000);
   const session = await prisma.adminSession.create({
     data: { expiresAt },
   });
@@ -435,8 +443,8 @@ export async function createAdminSession(): Promise<string> {
   jar.set(ADMIN_COOKIE, session.id, {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
-    sameSite: "lax",
-    maxAge: COOKIE_MAX_AGE,
+    sameSite: "strict",
+    maxAge: ADMIN_COOKIE_MAX_AGE,
     path: "/",
   });
   return session.id;
@@ -468,4 +476,5 @@ export async function destroyAdminSession() {
     await prisma.adminSession.delete({ where: { id: sid } }).catch(() => {});
   }
   jar.delete(ADMIN_COOKIE);
+  jar.delete("gg_admin_session");
 }

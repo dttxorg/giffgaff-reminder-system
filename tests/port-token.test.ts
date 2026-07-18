@@ -43,8 +43,8 @@ describe("looksLikeToken", () => {
     expect(looksLikeToken("1234567890")).toBe(false);
   });
 
-  it("字母 + 数字 长度 16+ → true", () => {
-    expect(looksLikeToken("abc123def456ghi7")).toBe(true);
+  it("字母 + 数字 长度 32+ → true", () => {
+    expect(looksLikeToken("abc123def456ghi789jkl012mno345pq")).toBe(true);
     expect(looksLikeToken("ABCDEFGHIJKLMNOPQRSTUVWXYZ123456")).toBe(true);
   });
 
@@ -60,7 +60,7 @@ describe("looksLikeToken", () => {
     expect(looksLikeToken("abc@def456ghi789")).toBe(false);
   });
 
-  it("太短(< 16 字符)→ false", () => {
+  it("太短(< 32 字符)→ false", () => {
     expect(looksLikeToken("abc123")).toBe(false);
     expect(looksLikeToken("")).toBe(false);
   });
@@ -70,14 +70,14 @@ describe("looksLikeToken", () => {
     expect(looksLikeToken(long)).toBe(false);
   });
 
-  it("边界长度(16 / 64)→ true", () => {
-    expect(looksLikeToken("a".repeat(16))).toBe(true);
+  it("边界长度(32 / 64)→ true", () => {
+    expect(looksLikeToken("a".repeat(32))).toBe(true);
     expect(looksLikeToken("a".repeat(64))).toBe(true);
   });
 
   it("含横线 / 下划线 → true", () => {
-    expect(looksLikeToken("abc-def_ghi7890123")).toBe(true);
-    expect(looksLikeToken("________________")).toBe(true);
+    expect(looksLikeToken("abc-def_ghi7890123456789012345678")).toBe(true);
+    expect(looksLikeToken("_".repeat(32))).toBe(true);
   });
 
   it("空字符串 → false", () => {

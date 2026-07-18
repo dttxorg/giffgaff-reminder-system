@@ -1,6 +1,5 @@
 // 鉴权工具：密码哈希/校验（纯函数，不依赖 DB）
-// ensureDefaultAdmin 在 ./admin-bootstrap.ts 里（依赖 DB）
-import { randomBytes, scrypt, timingSafeEqual } from "node:crypto";
+import { randomBytes, randomInt, scrypt, timingSafeEqual } from "node:crypto";
 
 const SCRYPT_N = 16384;
 const SCRYPT_r = 8;
@@ -31,11 +30,11 @@ export async function verifyPassword(password: string, stored: string): Promise<
   const salt = Buffer.from(parts[4], "base64");
   const expected = Buffer.from(parts[5], "base64");
   if (
-    !Number.isFinite(N) ||
-    !Number.isFinite(r) ||
-    !Number.isFinite(p) ||
-    salt.length === 0 ||
-    expected.length === 0
+    N !== SCRYPT_N ||
+    r !== SCRYPT_r ||
+    p !== SCRYPT_p ||
+    salt.length !== 16 ||
+    expected.length !== SCRYPT_KEYLEN
   ) {
     return false;
   }
@@ -62,15 +61,16 @@ export function checkCronAuth(req: Request): boolean {
   const auth = req.headers.get("authorization") || "";
   const expected = process.env.CRON_SECRET;
   if (!expected) {
-    console.warn("[cron] CRON_SECRET 未设置，跳过鉴权（仅用于本地调试）");
-    return true;
+    console.error("[cron] CRON_SECRET 未设置，拒绝执行提醒任务");
+    return false;
   }
-  return auth === `Bearer ${expected}`;
+  const supplied = Buffer.from(auth);
+  const wanted = Buffer.from(`Bearer ${expected}`);
+  return supplied.length === wanted.length && timingSafeEqual(supplied, wanted);
 }
 
 export function generateVerificationCode(): string {
-  // 6 位数字
-  return Math.floor(100000 + Math.random() * 900000).toString();
+  return randomInt(100000, 1000000).toString();
 }
 
 export function generateId(): string {

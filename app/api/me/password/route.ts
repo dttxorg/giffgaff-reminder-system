@@ -1,12 +1,17 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/db";
-import { getCurrentUserId } from "@/lib/session";
+import { getCurrentUserId, getCurrentUserSessionId } from "@/lib/session";
 import { hashPassword, verifyPassword } from "@/lib/auth";
+import { passwordStrength } from "@/lib/password-strength";
 
 const BodySchema = z.object({
-  oldPassword: z.string().min(1, "请输入当前密码"),
-  newPassword: z.string().min(8, "新密码至少 8 位"),
+  oldPassword: z.string().min(1, "请输入当前密码").max(128),
+  newPassword: z
+    .string()
+    .min(8, "新密码至少 8 位")
+    .max(128, "新密码过长")
+    .refine((value) => passwordStrength(value) !== "weak", "新密码强度过低"),
 });
 
 /**
@@ -17,8 +22,11 @@ const BodySchema = z.object({
  * - 清空失败计数
  */
 export async function POST(req: Request) {
-  const userId = await getCurrentUserId();
-  if (!userId) {
+  const [userId, sessionId] = await Promise.all([
+    getCurrentUserId(),
+    getCurrentUserSessionId(),
+  ]);
+  if (!userId || !sessionId) {
     return NextResponse.json({ ok: false, error: "未登录" }, { status: 401 });
   }
 
@@ -53,14 +61,19 @@ export async function POST(req: Request) {
   }
 
   const newHash = await hashPassword(parsed.data.newPassword);
-  await prisma.user.update({
-    where: { id: userId },
-    data: {
-      passwordHash: newHash,
-      failedLoginCount: 0,
-      lockedUntil: null,
-    },
-  });
+  await prisma.$transaction([
+    prisma.user.update({
+      where: { id: userId },
+      data: {
+        passwordHash: newHash,
+        failedLoginCount: 0,
+        lockedUntil: null,
+      },
+    }),
+    prisma.userSession.deleteMany({
+      where: { userId, id: { not: sessionId } },
+    }),
+  ]);
 
   return NextResponse.json({ ok: true });
 }

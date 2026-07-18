@@ -8,18 +8,28 @@ import { prisma } from "@/lib/db";
 import { redeemCard } from "@/lib/redeem";
 import { createUserSession, getCurrentUserId } from "@/lib/session";
 import { normalizeUsername, usernameError } from "@/lib/auth";
+import {
+  enforceRateLimits,
+  getClientIp,
+  rateLimitResponse,
+} from "@/lib/rate-limit";
+import { passwordStrength } from "@/lib/password-strength";
 
 const NewUserBodySchema = z.object({
-  code: z.string().min(1, "请输入卡密"),
-  username: z.string().min(1, "请输入账号"),
-  password: z.string().min(8, "密码至少 8 位"),
-  phoneNumber: z.string().min(1, "请输入手机号"),
+  code: z.string().min(1, "请输入卡密").max(64),
+  username: z.string().min(1, "请输入账号").max(64),
+  password: z
+    .string()
+    .min(8, "密码至少 8 位")
+    .max(128, "密码过长")
+    .refine((value) => passwordStrength(value) !== "weak", "密码强度过低"),
+  phoneNumber: z.string().min(1, "请输入手机号").max(32),
   activatedAt: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "请输入有效日期"),
 });
 
 const AppendBodySchema = z.object({
-  code: z.string().min(1, "请输入卡密"),
-  phoneNumber: z.string().min(1, "请输入手机号"),
+  code: z.string().min(1, "请输入卡密").max(64),
+  phoneNumber: z.string().min(1, "请输入手机号").max(32),
   activatedAt: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "请输入有效日期"),
 });
 
@@ -40,6 +50,15 @@ const ERROR_MESSAGES: Record<string, string> = {
 };
 
 export async function POST(req: Request) {
+  const limited = await enforceRateLimits([
+    {
+      scope: "redeem-ip",
+      identifiers: [getClientIp(req)],
+      limit: 10,
+      windowMs: 15 * 60 * 1000,
+    },
+  ]);
+  if (!limited.allowed) return rateLimitResponse(limited);
   let body: unknown;
   try {
     body = await req.json();
@@ -100,8 +119,9 @@ async function runRedeem(
       return redeemCard(input, currentUserId, tx);
     });
   } catch (e) {
+    console.error("[redeem] transaction failed", e);
     return NextResponse.json(
-      { ok: false, error: e instanceof Error ? e.message : "兑换失败" },
+      { ok: false, error: "兑换暂时失败，请稍后重试" },
       { status: 500 }
     );
   }

@@ -42,10 +42,10 @@ describe("hashPassword / verifyPassword", () => {
 import { checkCronAuth, generateVerificationCode, generateId } from "../lib/auth";
 
 describe("checkCronAuth", () => {
-  it("CRON_SECRET 未设置 → 返回 true(本地调试模式)", () => {
+  it("CRON_SECRET 未设置 → fail closed", () => {
     const orig = process.env.CRON_SECRET;
     delete process.env.CRON_SECRET;
-    expect(checkCronAuth(new Request("http://x"))).toBe(true);
+    expect(checkCronAuth(new Request("http://x"))).toBe(false);
     if (orig) process.env.CRON_SECRET = orig;
   });
 

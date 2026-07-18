@@ -6,15 +6,15 @@ import { renderTemplate, portUrl } from "../lib/template";
 // 可疑点 1:portUrl 在多个尾部斜杠 + 已有路径 的情况
 describe("portUrl edge cases", () => {
   it("portUrl 已经包含 /p/<id> 时被覆盖", () => {
-    expect(portUrl("https://example.com/p/1", 42)).toBe("https://example.com/p/1/p/42");
+    expect(portUrl("https://example.com/p/1", "secure-token")).toBe("https://example.com/p/1/p/secure-token");
     // 这是 bug 还是设计?设计:baseUrl 应该是 origin,不是 path
   });
   it("portUrl 含 query string", () => {
-    expect(portUrl("https://example.com?foo=bar", 42)).toBe("https://example.com?foo=bar/p/42");
+    expect(portUrl("https://example.com?foo=bar", "secure-token")).toBe("https://example.com?foo=bar/p/secure-token");
     // 这是 bug
   });
   it("portUrl 不带协议", () => {
-    expect(portUrl("example.com", 42)).toBe("example.com/p/42");
+    expect(portUrl("example.com", "secure-token")).toBe("example.com/p/secure-token");
     // 取决于 cron route 是否传完整 URL
   });
 });

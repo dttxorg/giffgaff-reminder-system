@@ -19,8 +19,9 @@ describe("登录查询预算", () => {
     expect(userLogin).toContain("createUserSession(user.id)");
   });
 
-  it("管理员登录复用初始化查询结果，不再二次 findUnique", () => {
-    expect(adminLogin).toContain("const admin = await ensureDefaultAdmin()");
-    expect(adminLogin).not.toContain("prisma.adminUser.findUnique");
+  it("管理员登录只查已有账号，不在请求路径自动创建默认管理员", () => {
+    expect(adminLogin).toContain("prisma.adminUser.findUnique");
+    expect(adminLogin).not.toContain("ensureDefaultAdmin");
+    expect(adminLogin).not.toContain("admin123");
   });
 });

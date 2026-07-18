@@ -1,23 +1,19 @@
-// 默认管理员账号初始化（依赖 DB，独立成文件以避免 auth.ts 引入 Prisma 副作用）
-import { prisma } from "./db";
-import { hashPassword } from "./auth";
+import { passwordStrength } from "./password-strength";
 
 /**
- * 确保默认管理员账号存在
- * V1 单管理员模式：环境变量 ADMIN_USERNAME / ADMIN_PASSWORD 决定首登账号
- * 如未设置，使用默认 admin / admin123（生产应改）
+ * 读取管理员初始化凭据。没有默认值，缺失或弱密码直接阻止初始化。
  */
-export async function ensureDefaultAdmin() {
-  const username = process.env.ADMIN_USERNAME || "admin";
-  const password = process.env.ADMIN_PASSWORD || "admin123";
-  const existing = await prisma.adminUser.findUnique({ where: { username } });
-  if (existing) return existing;
-  const passwordHash = await hashPassword(password);
-  const admin = await prisma.adminUser.upsert({
-    where: { username },
-    update: {},
-    create: { username, passwordHash },
-  });
-  console.log(`[admin] 已创建默认管理员：${username}`);
-  return admin;
+export function readAdminProvisioningCredentials(): {
+  username: string;
+  password: string;
+} {
+  const username = process.env.ADMIN_USERNAME?.trim();
+  const password = process.env.ADMIN_PASSWORD;
+  if (!username || !password) {
+    throw new Error("ADMIN_USERNAME 和 ADMIN_PASSWORD 必须显式配置");
+  }
+  if (password.length < 12 || passwordStrength(password) === "weak") {
+    throw new Error("ADMIN_PASSWORD 必须至少 12 位且不能使用常见弱密码");
+  }
+  return { username, password };
 }

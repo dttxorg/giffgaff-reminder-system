@@ -5,14 +5,14 @@ import {
   sendPushPlus,
   sendTelegram,
   sendPush,
+  normalizeBarkEndpoint,
 } from "../lib/channels";
 
 function jsonResponse(body: unknown, status = 200) {
-  return {
-    ok: status >= 200 && status < 300,
+  return new Response(JSON.stringify(body), {
     status,
-    json: async () => body,
-  };
+    headers: { "Content-Type": "application/json" },
+  });
 }
 
 // 每个测试 fresh mock(避免跨测试 state 泄漏)
@@ -56,11 +56,22 @@ describe("sendServerChan", () => {
     expect(r.errorMessage).toBe("SendKey 无效");
   });
 
-  it("fetch throw → ok:false + e.message", async () => {
+  it("fetch throw → 不回传可能包含密钥的底层错误", async () => {
     mockFetch.mockRejectedValueOnce(new Error("network down"));
     const r = await sendServerChan("SCT", "t", "b");
     expect(r.ok).toBe(false);
-    expect(r.errorMessage).toBe("network down");
+    expect(r.errorMessage).toBe("推送请求失败");
+    expect(r.errorMessage).not.toContain("network down");
+  });
+
+  it("拒绝过大的成功响应，避免远端耗尽内存", async () => {
+    mockFetch.mockResolvedValueOnce(
+      new Response(JSON.stringify({ code: 0, padding: "x".repeat(70_000) }), {
+        status: 200,
+      })
+    );
+    const r = await sendServerChan("SCT", "t", "b");
+    expect(r).toEqual({ ok: false, errorMessage: "推送响应过大" });
   });
 
   it("title/body 通过 URLSearchParams 传(form 格式)", async () => {
@@ -105,6 +116,36 @@ describe("sendBark", () => {
     const r = await sendBark("https://api.day.app/bad", "t", "b");
     expect(r.ok).toBe(false);
     expect(r.errorMessage).toBe("key 无效");
+  });
+
+  it.each([
+    "http://api.day.app/key",
+    "https://example.com/key",
+    "https://api.day.app.evil.example/key",
+    "https://127.0.0.1/key",
+    "https://api.day.app:8443/key",
+    "https://user:pass@api.day.app/key",
+    "https://api.day.app/",
+  ])("拒绝不安全 Bark 地址 %s", async (endpoint) => {
+    const r = await sendBark(endpoint, "t", "b");
+    expect(r.ok).toBe(false);
+    expect(mockFetch).not.toHaveBeenCalled();
+  });
+
+  it("只允许环境变量显式加入的自建 Bark 主机", () => {
+    process.env.BARK_ALLOWED_HOSTS = "bark.example.com";
+    expect(normalizeBarkEndpoint("https://bark.example.com/device-key")).toBe(
+      "https://bark.example.com/device-key"
+    );
+    delete process.env.BARK_ALLOWED_HOSTS;
+  });
+
+  it("即使被错误加入白名单也拒绝 IP、localhost 与内部域名", () => {
+    process.env.BARK_ALLOWED_HOSTS = "127.0.0.1,localhost,bark.internal";
+    expect(normalizeBarkEndpoint("https://127.0.0.1/device-key")).toBeNull();
+    expect(normalizeBarkEndpoint("https://localhost/device-key")).toBeNull();
+    expect(normalizeBarkEndpoint("https://bark.internal/device-key")).toBeNull();
+    delete process.env.BARK_ALLOWED_HOSTS;
   });
 });
 

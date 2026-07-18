@@ -9,10 +9,7 @@ import { generatePortToken, looksLikeToken } from "./port-token";
 export { generatePortToken, looksLikeToken };
 
 /**
- * 按 URL 中的 param 查找 sim。
- * - param 看起来像 token(字母数字,非纯数字,长度合适) → 按 portToken 查
- * - 否则按 id 查(向后兼容旧的 /p/${int} URL)
- * - 找不到返回 null
+ * 仅按不可枚举 token 查找公开 SIM。自增数字 ID 不再是公开凭据。
  */
 export async function findSimByParam(param: string) {
   const select = {
@@ -22,12 +19,8 @@ export async function findSimByParam(param: string) {
     lastPortedAt: true,
     portToken: true,
   } as const;
-  if (looksLikeToken(param)) {
-    return prisma.sim.findUnique({ where: { portToken: param }, select });
-  }
-  const id = parseInt(param, 10);
-  if (!Number.isFinite(id) || id <= 0) return null;
-  return prisma.sim.findUnique({ where: { id }, select });
+  if (!looksLikeToken(param)) return null;
+  return prisma.sim.findUnique({ where: { portToken: param }, select });
 }
 
 /**

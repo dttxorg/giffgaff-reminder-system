@@ -81,11 +81,10 @@ describe("<AdminLoginPage />", () => {
     expect(homeLink).toHaveAttribute("href", "/");
   });
 
-  it("提示默认账号 admin/admin123 + 环境变量名", () => {
+  it("不公开默认账号密码，并说明账号由部署环境配置", () => {
     render(<AdminLoginPage />);
-    expect(screen.getByText(/首次访问会自动创建默认账号/)).toBeInTheDocument();
-    expect(screen.getByText("admin")).toBeInTheDocument();
-    expect(screen.getByText("admin123")).toBeInTheDocument();
-    expect(screen.getByText("ADMIN_USERNAME")).toBeInTheDocument();
+    expect(screen.getByText(/不会自动创建默认账号/)).toBeInTheDocument();
+    expect(screen.queryByText(/admin123/)).not.toBeInTheDocument();
+    expect(screen.getByLabelText("动态验证码")).toBeInTheDocument();
   });
 });

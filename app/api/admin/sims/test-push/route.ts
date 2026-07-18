@@ -4,6 +4,11 @@ import { prisma } from "@/lib/db";
 import { getAdminSession } from "@/lib/session";
 import { sendPush } from "@/lib/channels";
 import { mapWithConcurrency } from "@/lib/async-pool";
+import {
+  enforceRateLimits,
+  getClientIp,
+  rateLimitResponse,
+} from "@/lib/rate-limit";
 
 /**
  * POST /api/admin/sims/test-push
@@ -64,6 +69,15 @@ export async function POST(req: Request) {
   if (!(await getAdminSession())) {
     return NextResponse.json({ ok: false, error: "未授权" }, { status: 401 });
   }
+  const limited = await enforceRateLimits([
+    {
+      scope: "admin-test-push-ip",
+      identifiers: [getClientIp(req)],
+      limit: 5,
+      windowMs: 60 * 60 * 1000,
+    },
+  ]);
+  if (!limited.allowed) return rateLimitResponse(limited);
 
   let body: unknown;
   try {

@@ -31,6 +31,12 @@ export function toLookupKey(input: string): string | null {
  * "07724215611" → "07724 215611"
  */
 export function formatPhoneForDisplay(phoneNumber: string): string {
+  if (phoneNumber.startsWith("*")) return phoneNumber;
   if (phoneNumber.length <= 5) return phoneNumber;
   return phoneNumber.slice(0, 5) + " " + phoneNumber.slice(5);
+}
+
+/** 公开 Bearer 页面只展示末 4 位，不把完整号码发送到浏览器。 */
+export function maskPhoneForPublic(phoneNumber: string): string {
+  return `****** ${phoneNumber.slice(-4)}`;
 }

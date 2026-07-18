@@ -19,7 +19,7 @@ model Sim {
   id           Int       @id @default(autoincrement())
   phoneNumber  String    @unique // 完整号，如 07724215611（只存数字）
   // portToken 是公开 URL(/p/[token])用的不可枚举随机串,32 字符 url-safe
-  portToken    String?   @unique
+  portToken    String    @unique
   activatedAt  DateTime // 激活日期（保号起算日）
   lastPortedAt DateTime? // 上次保号日期，NULL = 还没保过号
   status       SimStatus @default(active) // active / paused
@@ -83,7 +83,7 @@ model ReminderSent {
   simId        Int
   dayOffset    Int // 提醒那天的 day_offset（170/178/179/180）
   bucket       Int // 0-indexed bucket
-  // 渠道快照:发送时的 channel/channelKey,即使后来改了也不影响历史日志
+    // 渠道类型用于历史统计；channelKey 仅保留兼容列，新记录固定为空。
   channel      Channel
   channelKey   String
   sentAt       DateTime   @default(now())
@@ -131,7 +131,7 @@ model VerificationCode {
 model AdminUser {
   id           Int      @id @default(autoincrement())
   username     String   @unique
-  passwordHash String // bcrypt 哈希
+  passwordHash String // scrypt 哈希
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 }
@@ -153,6 +153,16 @@ model UserSession {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
+}
+
+// Serverless 多实例共享的安全限流桶；key 是 scope + 标识符的 SHA-256。
+model RateLimitBucket {
+  key       String   @id
+  count     Int
+  resetAt   DateTime
+  updatedAt DateTime @updatedAt
+
+  @@index([resetAt])
 }
 
 // 卡密：分销/兑换场景

@@ -29,7 +29,9 @@ export function PortOverdueBanner({
   if (dayOffset <= 180) return null;
 
   const daysOverdue = dayOffset - 180;
-  const portUrl = portToken ?? String(simId);
+  const portHref = portToken
+    ? `/p/${portToken}`
+    : `/me/settings?simId=${simId}`;
 
   return (
     <div
@@ -65,7 +67,7 @@ export function PortOverdueBanner({
             请立即保号 — 选最近的保号日期提交,系统会从那天重新计时 170 天。
           </div>
           <Link
-            href={`/p/${portUrl}`}
+            href={portHref}
             className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-rose-600 text-white text-xs font-medium hover:bg-rose-700 transition-colors"
           >
             立即去保号

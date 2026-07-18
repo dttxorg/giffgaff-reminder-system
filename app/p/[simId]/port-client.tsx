@@ -11,8 +11,6 @@ export interface SimInfo {
   activatedAt: string;
   lastPortedAt: string | null;
   dayOffset: number;
-  /** 不可枚举的公开 URL 标识;老 sim 可能在 lazy-backfill 后才填上 */
-  portToken: string | null;
 }
 
 interface PortClientProps {

@@ -6,6 +6,12 @@ import { DEFAULT_TEMPLATE, portUrl, renderTemplate } from "@/lib/template";
 import { ensureSimPortToken } from "@/lib/port-token-db";
 import { dayOffsetFromBaseline } from "@/lib/bucket";
 import { parsePositiveIntParam } from "@/lib/route-params";
+import {
+  enforceRateLimits,
+  getClientIp,
+  rateLimitResponse,
+} from "@/lib/rate-limit";
+import { getPublicBaseUrl } from "@/lib/public-base-url";
 
 interface RouteContext {
   params: Promise<{ id: string }>;
@@ -15,16 +21,24 @@ interface RouteContext {
  * POST /api/admin/reminders/[id]/resend
  * 手动重发某条失败(也可重发成功)的提醒。
  *
- * 渠道使用 reminder 当时的快照(channel/channelKey)— 即使 sim 后来改了渠道,
- * 重发也保持原渠道(便于复现问题)。也可用 sim 当前的渠道重发,目前用快照。
+ * 重发使用 SIM 当前渠道；历史记录不保留可重放的推送密钥。
  *
  * - 鉴权: 管理员 session
  * - 行为: 用 reminder 当时的 dayOffset 渲染模板,推送;更新原 log
  */
-export async function POST(_req: Request, ctx: RouteContext) {
+export async function POST(req: Request, ctx: RouteContext) {
   if (!(await getAdminSession())) {
     return NextResponse.json({ ok: false, error: "未授权" }, { status: 401 });
   }
+  const limited = await enforceRateLimits([
+    {
+      scope: "admin-reminder-resend-ip",
+      identifiers: [getClientIp(req)],
+      limit: 20,
+      windowMs: 60 * 60 * 1000,
+    },
+  ]);
+  if (!limited.allowed) return rateLimitResponse(limited);
   const { id } = await ctx.params;
   const reminderId = parsePositiveIntParam(id);
   if (reminderId === null) {
@@ -43,17 +57,22 @@ export async function POST(_req: Request, ctx: RouteContext) {
     return NextResponse.json({ ok: false, error: "记录不存在" }, { status: 404 });
   }
 
-  // 渠道使用 reminder 当时的快照(便于复现当时的推送问题)
-  if (!reminder.channelKey) {
+  if (!reminder.sim.channelKey) {
     return NextResponse.json(
-      { ok: false, error: "该提醒快照无渠道 key(可能是早期数据)" },
+      { ok: false, error: "该 SIM 尚未配置推送渠道" },
       { status: 400 }
     );
   }
 
   const baseline = reminder.sim.lastPortedAt ?? reminder.sim.activatedAt;
   const days = dayOffsetFromBaseline(baseline);
-  const baseUrl = process.env.PUBLIC_BASE_URL || "http://localhost:3000";
+  const baseUrl = getPublicBaseUrl();
+  if (!baseUrl) {
+    return NextResponse.json(
+      { ok: false, error: "PUBLIC_BASE_URL 配置无效" },
+      { status: 503 }
+    );
+  }
   let url: string;
   if (reminder.sim.portToken) {
     url = portUrl(baseUrl, reminder.sim.portToken);
@@ -63,7 +82,13 @@ export async function POST(_req: Request, ctx: RouteContext) {
       reminder.sim.id,
       reminder.sim.portToken
     );
-    url = token ? portUrl(baseUrl, token) : portUrl(baseUrl, reminder.sim.id);
+    if (!token) {
+      return NextResponse.json(
+        { ok: false, error: "公开链接生成失败" },
+        { status: 503 }
+      );
+    }
+    url = portUrl(baseUrl, token);
   }
   const template = setting?.value || DEFAULT_TEMPLATE;
   const title = "Giffgaff 保号提醒";
@@ -73,7 +98,12 @@ export async function POST(_req: Request, ctx: RouteContext) {
     port_url: url,
   });
 
-  const result = await sendPush(reminder.channel, reminder.channelKey, title, body);
+  const result = await sendPush(
+    reminder.sim.channel,
+    reminder.sim.channelKey,
+    title,
+    body
+  );
   await prisma.reminderSent.update({
     where: { id: reminderId },
     data: {

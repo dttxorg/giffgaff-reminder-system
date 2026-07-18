@@ -94,7 +94,12 @@ export async function runReminderScan(opts: RunOptions): Promise<ReminderRunResu
       url = portUrl(opts.baseUrl, sim.portToken);
     } else {
       const token = await ensureSimPortToken(sim.id, sim.portToken);
-      url = token ? portUrl(opts.baseUrl, token) : portUrl(opts.baseUrl, sim.id);
+      if (!token) {
+        result.failed++;
+        result.details.push({ simId: sim.id, dayOffset, bucket, action: "failed", error: "公开 token 生成失败" });
+        continue;
+      }
+      url = portUrl(opts.baseUrl, token);
     }
     const phoneDisplay = `**** ${sim.phoneNumber.slice(-4)}`;
     const body = renderTemplate(template, {
@@ -114,7 +119,7 @@ export async function runReminderScan(opts: RunOptions): Promise<ReminderRunResu
     const channel = sim.channel as ChannelType;
     const sendResult = await sendPush(channel, sim.channelKey, title, body);
 
-    // 8. 写日志（无论成功失败,带 channel 快照）
+    // 8. 写日志。渠道类型可用于统计，但不把可重放的推送密钥复制到历史表。
     try {
       await prisma.reminderSent.create({
         data: {
@@ -123,7 +128,7 @@ export async function runReminderScan(opts: RunOptions): Promise<ReminderRunResu
           dayOffset,
           bucket,
           channel,
-          channelKey: sim.channelKey,
+          channelKey: "",
           status: sendResult.ok ? "success" : "failed",
           errorMessage: sendResult.errorMessage,
         },

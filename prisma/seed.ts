@@ -4,6 +4,8 @@
 import { PrismaClient } from "../lib/generated/prisma/client";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { hashPassword } from "../lib/auth";
+import { readAdminProvisioningCredentials } from "../lib/admin-bootstrap";
+import { generatePortToken } from "../lib/port-token";
 
 const connectionString =
   process.env.DATABASE_URL ||
@@ -20,16 +22,18 @@ const adapter = new PrismaPg({ connectionString });
 const prisma = new PrismaClient({ adapter });
 
 async function main() {
-  // 1. 默认管理员
-  const username = process.env.ADMIN_USERNAME || "admin";
-  const password = process.env.ADMIN_PASSWORD || "admin123";
-  const existing = await prisma.adminUser.findUnique({ where: { username } });
-  if (!existing) {
-    await prisma.adminUser.create({
-      data: { username, passwordHash: await hashPassword(password) },
-    });
-    console.log(`[seed] 创建管理员: ${username}`);
-  }
+  // 1. 显式配置管理员；重复运行会轮换密码并撤销全部旧管理员会话。
+  const { username, password } = readAdminProvisioningCredentials();
+  const passwordHash = await hashPassword(password);
+  await prisma.$transaction([
+    prisma.adminUser.upsert({
+      where: { username },
+      update: { passwordHash },
+      create: { username, passwordHash },
+    }),
+    prisma.adminSession.deleteMany(),
+  ]);
+  console.log(`[seed] 已配置管理员: ${username}`);
 
   // 2. 默认文案
   const template = await prisma.setting.findUnique({ where: { key: "reminder_template" } });
@@ -43,9 +47,9 @@ async function main() {
     console.log(`[seed] 创建默认提醒模板`);
   }
 
-  // 3. 测试 sim（仅当数据库为空时）
+  // 3. 样例 SIM 仅在显式启用时创建，避免生产 seed 注入测试号码。
   const simCount = await prisma.sim.count();
-  if (simCount === 0) {
+  if (process.env.SEED_SAMPLE_DATA === "true" && simCount === 0) {
     const now = new Date();
     const days = (n: number) => new Date(now.getTime() - n * 86400000);
     const samples = [
@@ -56,7 +60,11 @@ async function main() {
     ];
     for (const s of samples) {
       await prisma.sim.create({
-        data: { phoneNumber: s.phone, activatedAt: s.activated },
+        data: {
+          phoneNumber: s.phone,
+          activatedAt: s.activated,
+          portToken: generatePortToken(),
+        },
       });
     }
     console.log(`[seed] 创建 ${samples.length} 个测试 sim`);

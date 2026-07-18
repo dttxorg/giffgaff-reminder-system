@@ -111,7 +111,10 @@ export async function SimCard({
   }
 
   const channelMissing = !sim.channelKey;
-  const portUrl = sim.portToken ?? String(sim.id);
+  const portUrl = sim.portToken;
+  const portHref = portUrl
+    ? `/p/${portUrl}`
+    : `/me/settings?simId=${sim.id}`;
   return (
     <div>
       {milestone && <MilestoneBanner milestone={milestone} />}
@@ -352,7 +355,7 @@ export async function SimCard({
               <>
                 已超过 180 天,系统不再自动提醒。请尽快保号并提交新日期。
                 <Link
-                  href={`/p/${portUrl}`}
+                  href={portHref}
                   title="打开保号页面提交新日期"
                   className="ml-2 inline-flex items-center text-indigo-600 hover:underline font-medium"
                 >
@@ -392,7 +395,7 @@ export async function SimCard({
       </div>
 
       <Link
-        href={`/p/${portUrl}`}
+        href={portHref}
         title="打开保号页面,选一个日期提交即重置 170 天倒计时"
         className="block w-full text-center py-3 rounded-lg bg-indigo-600 text-white font-medium hover:bg-indigo-700 transition-colors shadow-sm inline-flex items-center justify-center gap-1.5"
       >
@@ -418,8 +421,8 @@ export async function SimCard({
         <CopyPortLinkButton
           portUrl={
             typeof window !== "undefined"
-              ? `${window.location.origin}/p/${portUrl}`
-              : `/p/${portUrl}`
+              ? `${window.location.origin}${portHref}`
+              : portHref
           }
         />
       </div>
@@ -662,7 +665,6 @@ export async function SimCard({
           phoneNumber={sim.phoneNumber}
           days={dayOffset}
           portToken={sim.portToken}
-          simIdFallback={sim.id}
           templateOverride={reminderTemplate}
         />
       </details>
