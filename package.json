@@ -23,11 +23,11 @@
   },
   "dependencies": {
     "@phosphor-icons/react": "^2.1.10",
-    "@prisma/adapter-pg": "^7.8.0",
-    "@prisma/client": "^7.8.0",
+    "@prisma/adapter-pg": "^7.9.0",
+    "@prisma/client": "^7.9.0",
     "jose": "^6.2.3",
-    "next": "16.2.9",
-    "prisma": "^7.8.0",
+    "next": "16.2.12",
+    "prisma": "^7.9.0",
     "react": "19.2.4",
     "react-dom": "19.2.4",
     "zod": "^4.4.3"
@@ -42,8 +42,8 @@
     "@types/react-dom": "^19",
     "@vitest/ui": "^4.1.9",
     "dotenv": "^17.4.2",
-    "eslint": "^9",
-    "eslint-config-next": "16.2.9",
+    "eslint": "^9.39.5",
+    "eslint-config-next": "16.2.12",
     "jsdom": "^29.1.1",
     "tailwindcss": "^4",
     "tsx": "^4.22.4",
@@ -51,7 +51,10 @@
     "vitest": "^4.1.9"
   },
   "overrides": {
-    "@hono/node-server": "1.19.13",
-    "postcss": "8.5.15"
+    "fast-uri": "3.1.4",
+    "find-my-way": "9.7.0",
+    "postcss": "8.5.23",
+    "sharp": "0.35.3",
+    "valibot": "1.4.2"
   }
 }
