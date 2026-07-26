@@ -1,11 +1,18 @@
 interface RedeemStepIndicatorProps {
   /** 当前步骤: 1 = 输入卡密, 2 = 填信息, 3 = 完成 */
   step: 1 | 2 | 3;
+  mode?: "single" | "batch";
 }
 
-const STEPS = [
+const SINGLE_STEPS = [
   { n: 1, label: "输入卡密" },
   { n: 2, label: "填信息" },
+  { n: 3, label: "完成" },
+] as const;
+
+const BATCH_STEPS = [
+  { n: 1, label: "导入数据" },
+  { n: 2, label: "批量兑换" },
   { n: 3, label: "完成" },
 ] as const;
 
@@ -17,20 +24,24 @@ const STEPS = [
  * - 当前步骤 indigo 边框 + indigo 数字
  * - 步骤之间用线连,完成的连线实色
  */
-export function RedeemStepIndicator({ step }: RedeemStepIndicatorProps) {
+export function RedeemStepIndicator({
+  step,
+  mode = "single",
+}: RedeemStepIndicatorProps) {
+  const steps = mode === "batch" ? BATCH_STEPS : SINGLE_STEPS;
   return (
     <ol
       className="flex items-center justify-between mb-6 px-2"
       aria-label={`兑换进度:第 ${step} 步 / 共 3 步`}
     >
-      {STEPS.map((s, i) => {
+      {steps.map((s, i) => {
         const done = step > s.n;
         const current = step === s.n;
         return (
           <li
             key={s.n}
             className={`flex items-center ${
-              i < STEPS.length - 1 ? "flex-1" : ""
+              i < steps.length - 1 ? "flex-1" : ""
             }`}
           >
             <div className="flex flex-col items-center">
@@ -77,7 +88,7 @@ export function RedeemStepIndicator({ step }: RedeemStepIndicatorProps) {
                 {s.label}
               </span>
             </div>
-            {i < STEPS.length - 1 && (
+            {i < steps.length - 1 && (
               <div
                 className={`flex-1 h-0.5 mx-2 -mt-5 ${
                   step > s.n ? "bg-indigo-600" : "bg-slate-200"

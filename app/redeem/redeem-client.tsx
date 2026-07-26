@@ -12,6 +12,9 @@ import {
 } from "@/lib/password-strength";
 import { PasswordInput } from "@/app/_components/password-input";
 import { Spinner } from "@/app/_components/skip-to-content";
+import { BatchRedeemPanel } from "./_components/batch-redeem-panel";
+
+export type RedeemEntryMode = "single" | "batch";
 
 type Phase =
   | { kind: "input" }
@@ -28,6 +31,9 @@ interface RedeemClientProps {
   currentUsername?: string;
   /** 账号下已有 sim 数(给用户提示"再添加 1 张"等) */
   existingSimCount?: number;
+  entryMode: RedeemEntryMode;
+  onEntryModeChange: (mode: RedeemEntryMode) => void;
+  onStepChange: (step: 1 | 2 | 3) => void;
 }
 
 export function RedeemClient({
@@ -36,6 +42,9 @@ export function RedeemClient({
   isLoggedIn,
   currentUsername,
   existingSimCount = 0,
+  entryMode,
+  onEntryModeChange,
+  onStepChange,
 }: RedeemClientProps) {
   const router = useRouter();
   const [phase, setPhase] = useState<Phase>(
@@ -58,14 +67,17 @@ export function RedeemClient({
       const data = await resp.json();
       if (!data.ok) {
         setPhase({ kind: "error", message: data.error || "卡密无效" });
+        onStepChange(1);
         return;
       }
       setPhase({ kind: "form", code, notes: data.notes });
+      onStepChange(2);
     } catch (e) {
       setPhase({
         kind: "error",
         message: e instanceof Error ? e.message : "网络错误",
       });
+      onStepChange(1);
     }
   }
 
@@ -83,6 +95,7 @@ export function RedeemClient({
   }) {
     if (!sessionReady) return;
     setPhase({ kind: "redeeming" });
+    onStepChange(2);
     try {
       const body: Record<string, string> = {
         code: args.code,
@@ -104,6 +117,7 @@ export function RedeemClient({
         setPhase({ kind: "error", message: data.error || "兑换失败" });
         return;
       }
+      onStepChange(3);
       router.push(data.redirect || "/me");
     } catch (e) {
       setPhase({
@@ -114,8 +128,24 @@ export function RedeemClient({
   }
 
   return (
-    <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 sm:p-8">
+    <div
+      className={`mx-auto rounded-xl border border-slate-200 bg-white p-5 shadow-sm transition-[max-width] sm:p-8 ${
+        entryMode === "batch" && phase.kind === "input"
+          ? "max-w-4xl"
+          : "max-w-md"
+      }`}
+    >
       {phase.kind === "input" && (
+        <RedeemModeTabs
+          value={entryMode}
+          onChange={(mode) => {
+            onEntryModeChange(mode);
+            onStepChange(1);
+          }}
+        />
+      )}
+
+      {phase.kind === "input" && entryMode === "single" && (
         <InputPhase
           value={codeInput}
           onChange={setCodeInput}
@@ -123,8 +153,22 @@ export function RedeemClient({
             const c = codeInput.trim();
             if (!c) return;
             setPhase({ kind: "previewing", code: c });
+            onStepChange(2);
             void doPreview(c);
           }}
+        />
+      )}
+
+      {phase.kind === "input" && entryMode === "batch" && (
+        <BatchRedeemPanel
+          sessionReady={sessionReady}
+          isLoggedIn={isLoggedIn}
+          existingSimCount={existingSimCount}
+          onSingle={() => {
+            onEntryModeChange("single");
+            onStepChange(1);
+          }}
+          onStepChange={onStepChange}
         />
       )}
 
@@ -152,7 +196,10 @@ export function RedeemClient({
           onSubmit={(username, password, phone, date) =>
             doRedeem({ code: phase.code, username, password, phone, date })
           }
-          onBack={() => setPhase({ kind: "input" })}
+          onBack={() => {
+            setPhase({ kind: "input" });
+            onStepChange(1);
+          }}
         />
       )}
 
@@ -171,9 +218,53 @@ export function RedeemClient({
           onRetry={() => {
             setPhase({ kind: "input" });
             setCodeInput("");
+            onStepChange(1);
           }}
         />
       )}
+    </div>
+  );
+}
+
+function RedeemModeTabs({
+  value,
+  onChange,
+}: {
+  value: RedeemEntryMode;
+  onChange: (mode: RedeemEntryMode) => void;
+}) {
+  return (
+    <div
+      role="tablist"
+      aria-label="兑换方式"
+      className="mb-5 grid grid-cols-2 gap-1 rounded-lg bg-slate-100 p-1"
+    >
+      <button
+        type="button"
+        role="tab"
+        aria-selected={value === "single"}
+        onClick={() => onChange("single")}
+        className={`min-h-10 rounded-md px-3 text-sm font-medium transition-colors ${
+          value === "single"
+            ? "bg-white text-slate-950 shadow-sm"
+            : "text-slate-600 hover:text-slate-900"
+        }`}
+      >
+        单张兑换
+      </button>
+      <button
+        type="button"
+        role="tab"
+        aria-selected={value === "batch"}
+        onClick={() => onChange("batch")}
+        className={`min-h-10 rounded-md px-3 text-sm font-medium transition-colors ${
+          value === "batch"
+            ? "bg-white text-indigo-700 shadow-sm"
+            : "text-slate-600 hover:text-slate-900"
+        }`}
+      >
+        批量导入
+      </button>
     </div>
   );
 }

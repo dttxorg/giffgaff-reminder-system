@@ -2,7 +2,10 @@
 
 import { useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
-import { RedeemClient } from "./redeem-client";
+import {
+  RedeemClient,
+  type RedeemEntryMode,
+} from "./redeem-client";
 import { RedeemStepIndicator } from "./_components/redeem-step-indicator";
 import {
   clearClientSessionCache,
@@ -22,7 +25,8 @@ type RedeemSessionContext =
 export function RedeemExperience() {
   const searchParams = useSearchParams();
   const initialCode = searchParams.get("code") ?? "";
-  const initialStep: 1 | 2 = initialCode ? 2 : 1;
+  const [entryMode, setEntryMode] = useState<RedeemEntryMode>("single");
+  const [step, setStep] = useState<1 | 2 | 3>(initialCode ? 2 : 1);
   const [sessionContext, setSessionContext] =
     useState<RedeemSessionContext>({ status: "loading" });
   const [sessionAttempt, setSessionAttempt] = useState(0);
@@ -52,10 +56,15 @@ export function RedeemExperience() {
 
   const sessionReady = sessionContext.status === "ready";
   const isLoggedIn = sessionReady && sessionContext.isLoggedIn;
+  const isBatch = entryMode === "batch";
 
   return (
-    <div className="mx-auto max-w-md px-4 py-8 sm:py-12">
-      <div className="mb-6 text-center">
+    <div
+      className={`mx-auto px-4 py-8 transition-[max-width] sm:py-12 ${
+        isBatch ? "max-w-5xl" : "max-w-md"
+      }`}
+    >
+      <div className="mx-auto mb-6 max-w-xl text-center">
         <div className="mb-3 inline-flex h-12 w-12 items-center justify-center rounded-xl bg-indigo-600 text-white">
           <svg
             width={28}
@@ -73,12 +82,22 @@ export function RedeemExperience() {
           </svg>
         </div>
         <h1 className="mb-2 text-2xl font-bold text-slate-900 sm:text-3xl">
-          {isLoggedIn ? "绑定新的 SIM 卡" : "兑换卡密"}
+          {isBatch
+            ? isLoggedIn
+              ? "批量绑定 SIM 卡"
+              : "批量导入兑换码"
+            : isLoggedIn
+              ? "绑定新的 SIM 卡"
+              : "兑换卡密"}
         </h1>
         <p className="text-sm text-slate-600">
-          {isLoggedIn
-            ? "把新卡密绑定到当前账号，登录一次提醒多个号码"
-            : "输入卡密，绑定 Giffgaff SIM 卡保号提醒"}
+          {isBatch
+            ? isLoggedIn
+              ? "粘贴或上传数据，一次把多张卡绑定到当前账号"
+              : "批量兑换会把多张 SIM 卡统一放进同一个账号"
+            : isLoggedIn
+              ? "把新卡密绑定到当前账号，登录一次提醒多个号码"
+              : "输入卡密，绑定 Giffgaff SIM 卡保号提醒"}
         </p>
       </div>
 
@@ -102,7 +121,9 @@ export function RedeemExperience() {
         </div>
       )}
 
-      <RedeemStepIndicator step={initialStep} />
+      <div className="mx-auto max-w-xl">
+        <RedeemStepIndicator step={step} mode={entryMode} />
+      </div>
       <RedeemClient
         key={initialCode || "empty"}
         initialCode={initialCode}
@@ -110,6 +131,9 @@ export function RedeemExperience() {
         isLoggedIn={isLoggedIn}
         currentUsername={sessionReady ? sessionContext.username : undefined}
         existingSimCount={sessionReady ? sessionContext.simCount : 0}
+        entryMode={entryMode}
+        onEntryModeChange={setEntryMode}
+        onStepChange={setStep}
       />
     </div>
   );
