@@ -53,7 +53,7 @@ export async function POST(req: Request) {
   const result = await sendPush(
     channel,
     channelKey,
-    "Giffgaff 保号提醒 - 测试",
+    "SIM 保号提醒 - 测试",
     `✅ 这是一条测试消息。\n\n如果您看到这条消息,说明您的 ${channelName} 配置成功!\n\n接下来系统会按每个号码的运营商预设或自定义日期自动推送保号提醒。`
   );
 

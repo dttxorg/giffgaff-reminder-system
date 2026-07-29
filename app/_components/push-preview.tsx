@@ -28,7 +28,7 @@ export async function PushPreview({
   days,
   portToken,
   templateOverride,
-  carrier = "Giffgaff",
+  carrier = "SIM",
 }: PushPreviewProps) {
   // 父组件可把模板与其它查询并行预载；独立使用时仍保持原有 fallback。
   const template =

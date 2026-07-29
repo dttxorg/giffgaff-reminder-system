@@ -5,7 +5,13 @@
 
 import type { Milestone } from "@/lib/bucket";
 
-export function MilestoneBanner({ milestone }: { milestone: Milestone }) {
+export function MilestoneBanner({
+  milestone,
+  cycleDays = 180,
+}: {
+  milestone: Milestone;
+  cycleDays?: number;
+}) {
   return (
     <div className="mb-4 p-4 rounded-lg bg-emerald-50 border-2 border-emerald-300 text-emerald-900">
       <div className="flex items-start gap-3">
@@ -28,7 +34,7 @@ export function MilestoneBanner({ milestone }: { milestone: Milestone }) {
         <div className="flex-1">
           <div className="font-semibold">恭喜!{milestone.label}</div>
           <div className="text-sm text-emerald-800 mt-0.5">
-            您的号码已使用 {milestone.days} 天,系统会持续守护到 180 天保号提醒窗口。
+            您的号码已使用 {milestone.days} 天，系统会按当前规则守护到第 {cycleDays} 天截止日。
           </div>
         </div>
       </div>

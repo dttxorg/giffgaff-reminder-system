@@ -19,7 +19,7 @@ export default function ServerChanHelpPage() {
         Sever酱 是一个把消息推送到<strong>微信公众号</strong>的服务。开通后,本系统给您发提醒时,微信会立即收到一条消息。
         <br />
         <span className="text-slate-500 text-sm">
-          大约 2 分钟搞定,需要您有一个微信号。完全免费,每天 5 条推送额度(本系统提醒 180 天最多用 20 条,够用)。
+          大约 2 分钟搞定，需要您有一个微信号。免费版每天 5 条推送额度，适合日常提醒；截止日的高频提醒请留意渠道额度。
         </span>
       </p>
 
@@ -171,8 +171,8 @@ export default function ServerChanHelpPage() {
           <strong>完全免费</strong>,Sever酱 不收任何费用。免费版每天 <strong>5 条</strong> 推送。
         </p>
         <p>
-          本系统的提醒规则在 180 天内最多 20 条,平均到 180 天 ≈ 每 9 天 1 条,远低于 5 条/天的限制。
-          即便在最密集的 180 天当天(10 条/天)也只用掉一天额度的 2 倍 — 不会超额。
+          本系统按每个号码的提醒开始日与截止日逐步提高频率。日常阶段通常不超过 5 条，
+          但截止日默认计划为 10 条；超出免费额度的部分以 Sever酱 当日实际配额为准。
         </p>
       </details>
 
@@ -206,7 +206,7 @@ export default function ServerChanHelpPage() {
           <li>☐ 微信公众号「Server酱」收到测试消息</li>
         </ul>
         <div className="mt-3 text-xs text-slate-500">
-          全打勾 = 配置完成。后续 170 天开始会自动推提醒,不用再做任何操作。
+          全打勾 = 配置完成。到达该号码设置的提醒开始日后会自动推送。
         </div>
       </div>
 

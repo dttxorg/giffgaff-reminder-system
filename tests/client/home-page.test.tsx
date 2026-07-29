@@ -27,11 +27,16 @@ describe("<HomePage />", () => {
       const hero = container.querySelector("section[aria-labelledby='home-title']");
 
       expect(hero).toBeInTheDocument();
-      expect(hero?.querySelector("#home-title")?.textContent).toContain("到期前");
+      expect(hero?.querySelector("#home-title")?.textContent).toContain("每张 SIM");
+      expect(hero?.querySelector("#home-title")?.textContent).toContain("按自己的时间提醒");
       expect(hero?.textContent).toContain("Giffgaff");
+      expect(hero?.textContent).toContain("CTExcel");
+      expect(hero?.textContent).toContain("自定义任意有效周期");
       expect(hero?.querySelector("a[href='/login']")?.textContent).toContain("登录并管理号码");
       expect(hero?.querySelector("a[href='/redeem']")?.textContent).toContain("使用卡密开通");
       expect(hero?.querySelector("#push-preview-title")?.textContent).toContain("这样的提醒");
+      expect(hero?.textContent).toContain("SIM 保号提醒");
+      expect(hero?.textContent).not.toContain("Giffgaff 保号提醒");
     });
 
     it("推送预览说明收到提醒后的三步操作", async () => {
@@ -73,13 +78,19 @@ describe("<HomePage />", () => {
     const { container } = await renderHome();
     const page = container.querySelector("[data-design-direction='utility-poster']");
     const timeline = container.querySelector("section[aria-labelledby='reminder-timeline-title']");
+    const replacement = container.querySelector("section[aria-labelledby='replacement-card-title']");
     const promotion = container.querySelector("section[aria-labelledby='codex-membership-title']");
 
     expect(page).toBeInTheDocument();
     expect(timeline).toBeInTheDocument();
+    expect(replacement).toBeInTheDocument();
     expect(promotion).toBeInTheDocument();
     expect(
-      (timeline?.compareDocumentPosition(promotion as Node) ?? 0) &
+      (timeline?.compareDocumentPosition(replacement as Node) ?? 0) &
+        Node.DOCUMENT_POSITION_FOLLOWING
+    ).toBeTruthy();
+    expect(
+      (replacement?.compareDocumentPosition(promotion as Node) ?? 0) &
         Node.DOCUMENT_POSITION_FOLLOWING
     ).toBeTruthy();
   });
@@ -130,18 +141,39 @@ describe("<HomePage />", () => {
     });
   });
 
-  describe("海报式提醒频率时间线", () => {
-    it("渲染 5 个时间节点(170/175/178/179/180)", async () => {
+  describe("Giffgaff 停用后的替代卡入口", () => {
+    it("展示 CTExcel 已激活方案并链接到完整介绍页", async () => {
+      const { container } = await renderHome();
+      const replacement = container.querySelector(
+        "section[aria-labelledby='replacement-card-title']"
+      );
+      const link = replacement?.querySelector(
+        "a[href='https://gg.681218.xyz/']"
+      );
+
+      expect(replacement).toBeInTheDocument();
+      expect(replacement?.textContent).toContain("原卡封号后");
+      expect(replacement?.textContent).toContain("CTExcel");
+      expect(replacement?.textContent).toContain("Wi‑Fi Calling");
+      expect(replacement?.textContent).toContain("PAC 携号说明");
+      expect(replacement?.textContent).toContain("¥128");
+      expect(link).toHaveAttribute("target", "_blank");
+      expect(link).toHaveAttribute("rel", "noopener noreferrer");
+    });
+  });
+
+  describe("通用提醒频率时间线", () => {
+    it("按开始日和距截止日剩余时间渲染 5 个节点", async () => {
       const { container } = await renderHome();
       const ol = container.querySelector("ol[aria-label='保号提醒频率时间线']");
       expect(ol).toBeInTheDocument();
       const items = ol?.querySelectorAll("li");
       expect(items?.length).toBe(5);
-      expect(items?.[0]).toHaveAttribute("aria-label", "第 170 天，1 次/天");
-      expect(items?.[1]).toHaveAttribute("aria-label", "第 175 天，2 次/天");
-      expect(items?.[2]).toHaveAttribute("aria-label", "第 178 天，3 次/天");
-      expect(items?.[3]).toHaveAttribute("aria-label", "第 179 天，5 次/天");
-      expect(items?.[4]).toHaveAttribute("aria-label", "第 180 天，10 次/天");
+      expect(items?.[0]).toHaveAttribute("aria-label", "开始日，1 次/天");
+      expect(items?.[1]).toHaveAttribute("aria-label", "剩 7 天，2 次/天");
+      expect(items?.[2]).toHaveAttribute("aria-label", "剩 4 天，3 次/天");
+      expect(items?.[3]).toHaveAttribute("aria-label", "剩 1 天，5 次/天");
+      expect(items?.[4]).toHaveAttribute("aria-label", "截止日，10 次/天");
     });
 
     it("每个节点显示提醒频率(1/2/3/5/10 次/天)", async () => {
@@ -154,14 +186,16 @@ describe("<HomePage />", () => {
       expect(text).toContain("10 次/天");
     });
 
-    it("标题:'170 天后，提醒自动开始'", async () => {
+    it("标题使用通用的截止日倒推表达", async () => {
       const { container } = await renderHome();
-      expect(container.textContent).toContain("170 天后，提醒自动开始");
+      expect(container.textContent).toContain("按截止日倒推，提醒逐步加密");
+      expect(container.textContent).toContain("不再套用单一运营商周期");
     });
 
-    it("底部说明:过了 180 天系统停止提醒", async () => {
+    it("底部说明使用客户自定义截止日", async () => {
       const { container } = await renderHome();
-      expect(container.textContent).toContain("过了 180 天系统停止提醒");
+      expect(container.textContent).toContain("到达自定义截止日后本轮自动停止");
+      expect(container.textContent).toContain("更新日期即可重新计时");
     });
   });
 });

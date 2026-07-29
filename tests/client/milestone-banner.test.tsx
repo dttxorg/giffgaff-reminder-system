@@ -9,6 +9,18 @@ describe("<MilestoneBanner />", () => {
     );
     expect(screen.getByText(/恭喜!100 天里程碑/)).toBeInTheDocument();
     expect(screen.getByText(/您的号码已使用 100 天/)).toBeInTheDocument();
+    expect(screen.getByText(/第 180 天截止日/)).toBeInTheDocument();
+  });
+
+  it("按号码自定义规则展示 CTExcel 截止日", () => {
+    render(
+      <MilestoneBanner
+        milestone={{ days: 30, label: "30 天里程碑", short: "满月" }}
+        cycleDays={90}
+      />
+    );
+    expect(screen.getByText(/第 90 天截止日/)).toBeInTheDocument();
+    expect(screen.queryByText(/第 180 天截止日/)).not.toBeInTheDocument();
   });
 
   it("0 天里程碑也支持 ('已激活')", () => {

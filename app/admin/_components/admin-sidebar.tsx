@@ -40,7 +40,7 @@ export function AdminSidebar() {
     <aside className="hidden md:flex md:w-56 bg-slate-900 text-slate-100 md:min-h-screen md:sticky md:top-0 md:h-screen flex-col">
       <div className="p-4 border-b border-slate-800">
         <div className="font-semibold">管理后台</div>
-        <div className="text-xs text-slate-400 mt-0.5">Giffgaff Reminder</div>
+        <div className="text-xs text-slate-400 mt-0.5">SIM Reminder</div>
       </div>
       <nav className="p-2 space-y-0.5 text-sm flex-1">
         {NAV.map((item) => {

@@ -2,47 +2,52 @@ import Image from "next/image";
 import Link from "next/link";
 import { Suspense } from "react";
 import {
+  ArrowSquareOut,
   Bell,
   CaretDown,
+  ClockCountdown,
   Circle,
   CreditCard,
+  PhoneTransfer,
   SealCheck,
   ShieldCheck,
+  SlidersHorizontal,
   Ticket,
   UserCircle,
+  WifiHigh,
 } from "@phosphor-icons/react/ssr";
 import { PublicStats } from "@/app/_components/public-stats";
 
 export const revalidate = 300;
 
 const reminderSteps = [
-  { day: 170, label: "开始提醒", frequency: "1 次/天", color: "text-slate-400" },
-  { day: 175, label: "增强提醒", frequency: "2 次/天", color: "text-amber-500" },
-  { day: 178, label: "高频提醒", frequency: "3 次/天", color: "text-orange-500" },
-  { day: 179, label: "关键提醒", frequency: "5 次/天", color: "text-orange-600" },
-  { day: 180, label: "最后提醒", frequency: "10 次/天", color: "text-red-600" },
+  { marker: "开始日", label: "基础提醒", frequency: "1 次/天", color: "text-slate-500" },
+  { marker: "剩 7 天", label: "增强提醒", frequency: "2 次/天", color: "text-amber-500" },
+  { marker: "剩 4 天", label: "高频提醒", frequency: "3 次/天", color: "text-orange-500" },
+  { marker: "剩 1 天", label: "关键提醒", frequency: "5 次/天", color: "text-orange-600" },
+  { marker: "截止日", label: "最后提醒", frequency: "10 次/天", color: "text-red-600" },
 ];
 
 const faqItems = [
   {
-    q: "Giffgaff 卡为什么要保号？",
-    a: "Giffgaff SIM 卡如果长期不活跃（不发起通话、短信或上网），运营商会在 6 个月后回收号码。保号就是通过一次付费活动让卡保持活跃。",
+    q: "哪些 SIM 卡可以使用？",
+    a: "目前提供 Giffgaff 与 CTExcel 两套快捷预设，也支持按每个号码自由填写提醒开始日和截止日，因此其他需要周期提醒的号码也可以按自定义规则管理。",
   },
   {
-    q: "Giffgaff 和 CTExcel 的提醒周期一样吗？",
-    a: "默认不一样：Giffgaff 第 170 天开始提醒、第 180 天截止；CTExcel 第 80 天开始提醒、第 90 天截止。登录后也可以为每个号码自由调整提醒开始日和截止日。",
+    q: "提醒日期是固定的吗？",
+    a: "不是。Giffgaff 默认第 170 天开始、第 180 天截止；CTExcel 默认第 80 天开始、第 90 天截止。选择预设后仍可单独调整，后续也能随时切换运营商或修改规则。",
   },
   {
     q: "推送渠道怎么选？",
-    a: "Sever酱适合大多数微信用户，Bark 适合 iOS 用户，Telegram Bot 适合跨平台使用；登录后可以随时修改。",
+    a: "Sever酱适合微信用户，Bark 适合 iOS，Telegram Bot 适合跨平台使用，也可选择 pushplus。每个号码可以独立配置，登录后随时修改。",
   },
   {
-    q: "账号忘了 / 想换推送渠道？",
-    a: "重新登录一次即可，登录时会更新您的渠道信息。原账号自动作废，新登录会覆盖旧设置。",
+    q: "号码很多时会不会收到太多消息？",
+    a: "同一账号有 4 个及以上活跃号码时，系统会合并为账号提醒，并由最接近截止日的号码决定频率，避免逐个号码重复轰炸通知渠道。",
   },
   {
-    q: "我能在公众号 / Bark 看到什么？",
-    a: "推送会带一个保号时间更新链接。提交最近一次保号日期后，系统会从那天按该号码当前设置的周期重新计时。",
+    q: "号码不用了，提醒权益怎么办？",
+    a: "可以移除当前号码。账号、通知渠道和提醒名额会保留；有新号码时直接填写，原来的通知配置会自动沿用。",
   },
   {
     q: "卡密是什么 / 怎么用？",
@@ -60,22 +65,33 @@ export default function HomePage() {
         <div className="mx-auto grid max-w-[1440px] gap-10 px-4 py-10 sm:px-6 sm:py-14 lg:min-h-[490px] lg:grid-cols-[minmax(0,1.12fr)_minmax(500px,0.88fr)] lg:items-center lg:gap-16 lg:px-8 lg:py-8">
           <div>
             <p className="mb-4 text-sm font-bold tracking-[0.12em] text-indigo-700">
-              稳定守护您的英国号码
+              多运营商预设 · 每个号码独立设置
             </p>
             <h1
               id="home-title"
               className="max-w-2xl text-[clamp(3.4rem,7vw,6.8rem)] font-black leading-[0.92] tracking-[-0.065em] text-balance"
             >
-              到期前，
-              <span className="mt-2 block">自动提醒</span>
+              每张 SIM，
+              <span className="mt-2 block">按自己的时间提醒</span>
             </h1>
             <p className="mt-6 max-w-xl text-lg font-medium leading-8 text-pretty text-slate-800">
-              录入 Giffgaff 或 CTExcel 号码一次，系统会载入
-              <strong className="mx-1 font-black text-orange-600">170 / 180 天</strong>
-              或
-              <strong className="mx-1 font-black text-orange-600">80 / 90 天</strong>
-              默认规则，也支持每个号码自由调整。
+              选择运营商预设，或直接设置提醒开始日和截止日。系统按每张卡自己的规则计时，
+              越接近截止日，提醒越密集。
             </p>
+            <ul
+              aria-label="可用提醒规则"
+              className="mt-5 flex max-w-2xl flex-wrap gap-2 text-xs font-bold text-slate-700"
+            >
+              <li className="border border-slate-400/70 bg-white/55 px-3 py-2">
+                Giffgaff · 170 → 180 天
+              </li>
+              <li className="border border-slate-400/70 bg-white/55 px-3 py-2">
+                CTExcel · 80 → 90 天
+              </li>
+              <li className="border border-indigo-400/70 bg-indigo-50/70 px-3 py-2 text-indigo-800">
+                自定义任意有效周期
+              </li>
+            </ul>
 
             <div className="mt-7 grid gap-3 sm:max-w-xl sm:grid-cols-2">
               <Link
@@ -112,8 +128,8 @@ export default function HomePage() {
                     <Bell size={25} weight="bold" aria-hidden="true" />
                   </span>
                   <div className="min-w-0">
-                    <p className="font-bold text-slate-950">Giffgaff 保号提醒</p>
-                    <p className="mt-0.5 text-sm text-slate-600">号码尾号 5611 · 已激活 175 天</p>
+                    <p className="font-bold text-slate-950">SIM 保号提醒</p>
+                    <p className="mt-0.5 text-sm text-slate-600">尾号 5611 · CTExcel · 距截止 5 天</p>
                   </div>
                 </div>
                 <span className="shrink-0 text-sm text-slate-500">刚刚</span>
@@ -124,7 +140,7 @@ export default function HomePage() {
                   您会收到这样的提醒
                 </h2>
                 <p className="mt-2 text-sm leading-6 text-slate-700">
-                  您的号码 ****5611 已进入保号窗口，请尽快完成一次付费活动。
+                  您的号码 ****5611 已进入设置的提醒窗口，请尽快完成一次有效使用。
                 </p>
                 <span className="mt-2 block break-all text-sm font-bold text-indigo-700 underline decoration-indigo-300 underline-offset-4">
                   baohao.681218.xyz/p/abc123
@@ -141,7 +157,7 @@ export default function HomePage() {
               </ol>
             </div>
             <p className="mt-3 text-center text-sm text-slate-600">
-              支持 Giffgaff / CTExcel · Sever酱、Bark、Telegram 与 pushplus
+              运营商预设或自定义规则 · Sever酱、Bark、Telegram 与 pushplus
             </p>
           </section>
         </div>
@@ -152,12 +168,14 @@ export default function HomePage() {
           <div className="border-b border-slate-950/70 pb-6 lg:border-r lg:border-b-0 lg:pr-8 lg:pb-0">
             <p className="text-sm font-black tracking-[0.12em] text-indigo-700">提醒节奏</p>
             <h2 id="reminder-timeline-title" className="mt-3 text-3xl font-black leading-tight tracking-tight">
-              170 天后，
-              <span className="block">提醒自动开始</span>
+              按截止日倒推，
+              <span className="block">提醒逐步加密</span>
             </h2>
-            <p className="mt-3 text-sm leading-6 text-slate-600">越临近 180 天截止日，提醒越频繁。</p>
+            <p className="mt-3 text-sm leading-6 text-slate-600">
+              开始日与截止日由每个号码自己决定，不再套用单一运营商周期。
+            </p>
             <p className="mt-2 text-xs leading-5 text-indigo-700">
-              CTExcel 默认 80 / 90 天；两种预设均可按号码自定义。
+              选择预设只是起点，保存后仍可随时调整。
             </p>
           </div>
 
@@ -165,8 +183,8 @@ export default function HomePage() {
             <ol className="grid grid-cols-5" aria-label="保号提醒频率时间线">
               {reminderSteps.map((step) => (
                 <li
-                  key={step.day}
-                  aria-label={`第 ${step.day} 天，${step.frequency}`}
+                  key={step.marker}
+                  aria-label={`${step.marker}，${step.frequency}`}
                   className="min-w-0 border-t border-slate-400 px-1 pt-4 text-center sm:px-2"
                 >
                   <Circle
@@ -175,9 +193,8 @@ export default function HomePage() {
                     aria-hidden="true"
                     className={`mx-auto -mt-[25px] bg-[#f7f3ea] ${step.color}`}
                   />
-                  <p className={`mt-3 text-2xl font-black tracking-[-0.04em] sm:text-4xl ${step.color}`}>
-                    {step.day}
-                    <span className="ml-1 text-xs tracking-normal text-slate-700 sm:text-sm">天</span>
+                  <p className={`mt-3 text-sm font-black tracking-[-0.02em] sm:text-2xl ${step.color}`}>
+                    {step.marker}
                   </p>
                   <p className="mt-1 text-[11px] font-bold text-slate-800 sm:text-sm">{step.label}</p>
                   <p className="mt-0.5 text-[10px] text-slate-500 sm:text-xs">{step.frequency}</p>
@@ -185,9 +202,88 @@ export default function HomePage() {
               ))}
             </ol>
             <p className="mt-7 text-center text-xs leading-5 text-slate-500 sm:text-sm">
-              过了 180 天系统停止提醒，SIM 卡可能被运营商回收
+              到达自定义截止日后本轮自动停止；完成保号并更新日期即可重新计时
             </p>
           </div>
+        </div>
+      </section>
+
+      <section
+        aria-labelledby="replacement-card-title"
+        className="border-b border-slate-950/20 bg-slate-950 text-white"
+      >
+        <div className="mx-auto grid max-w-[1440px] gap-8 px-4 py-10 sm:px-6 lg:grid-cols-[minmax(0,1.15fr)_minmax(320px,0.85fr)] lg:items-center lg:px-8 lg:py-14">
+          <div>
+            <p className="inline-flex border border-emerald-300/40 bg-emerald-300/10 px-3 py-1.5 text-sm font-bold tracking-[0.08em] text-emerald-200">
+              Giffgaff 停用后的下一步
+            </p>
+            <h2
+              id="replacement-card-title"
+              className="mt-5 max-w-3xl text-4xl font-black leading-[1.04] tracking-[-0.045em] text-balance sm:text-6xl"
+            >
+              原卡封号后，
+              <span className="block text-emerald-300">还有已激活替代方案</span>
+            </h2>
+            <p className="mt-5 max-w-2xl text-base leading-7 text-slate-300 sm:text-lg">
+              CTExcel 英国卡已提前完成激活并开通 Wi‑Fi Calling，首月含 50GB。
+              介绍页同时整理了国内使用、80 / 90 天保号和 PAC 携号步骤。
+            </p>
+            <ul className="mt-6 grid gap-3 text-sm text-slate-200 sm:grid-cols-3">
+              <li className="flex items-center gap-2 border-t border-slate-700 pt-3">
+                <SealCheck size={20} weight="bold" className="shrink-0 text-emerald-300" aria-hidden="true" />
+                到手已激活
+              </li>
+              <li className="flex items-center gap-2 border-t border-slate-700 pt-3">
+                <WifiHigh size={20} weight="bold" className="shrink-0 text-emerald-300" aria-hidden="true" />
+                Wi‑Fi Calling 已开通
+              </li>
+              <li className="flex items-center gap-2 border-t border-slate-700 pt-3">
+                <PhoneTransfer size={20} weight="bold" className="shrink-0 text-emerald-300" aria-hidden="true" />
+                PAC 携号说明
+              </li>
+            </ul>
+            <a
+              href="https://gg.681218.xyz/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="mt-7 inline-flex min-h-12 items-center justify-center gap-2 bg-emerald-300 px-5 py-3 font-black text-slate-950 transition-colors hover:bg-emerald-200"
+            >
+              查看替代卡完整介绍
+              <ArrowSquareOut size={20} weight="bold" aria-hidden="true" />
+            </a>
+          </div>
+
+          <aside className="border border-slate-700 bg-slate-900 p-5 sm:p-6" aria-label="CTExcel 替代卡摘要">
+            <div className="flex items-start justify-between gap-4 border-b border-slate-700 pb-5">
+              <div>
+                <p className="text-sm font-bold text-emerald-300">CTExcel 已激活英国卡</p>
+                <p className="mt-1 text-sm text-slate-400">首月 50GB · 中英共享流量</p>
+              </div>
+              <p className="text-right">
+                <span className="block text-xs text-slate-400">到手价</span>
+                <strong className="text-3xl font-black text-white">¥128</strong>
+              </p>
+            </div>
+            <dl className="mt-5 grid grid-cols-2 gap-px bg-slate-700">
+              <div className="bg-slate-900 p-4">
+                <dt className="flex items-center gap-1.5 text-xs text-slate-400">
+                  <ClockCountdown size={16} aria-hidden="true" />
+                  默认规则
+                </dt>
+                <dd className="mt-1 font-black text-white">80 → 90 天</dd>
+              </div>
+              <div className="bg-slate-900 p-4">
+                <dt className="flex items-center gap-1.5 text-xs text-slate-400">
+                  <SlidersHorizontal size={16} aria-hidden="true" />
+                  到期之后
+                </dt>
+                <dd className="mt-1 font-black text-white">可自定义提醒</dd>
+              </div>
+            </dl>
+            <p className="mt-5 text-xs leading-5 text-slate-400">
+              套餐、设备支持与实时资费以替代卡介绍页和号码账户显示为准。
+            </p>
+          </aside>
         </div>
       </section>
 
@@ -284,7 +380,7 @@ export default function HomePage() {
       </section>
 
       <p className="mx-auto max-w-[1440px] px-4 pb-10 text-xs leading-5 text-slate-500 sm:px-6 lg:px-8">
-        本服务用于提醒您保持 Giffgaff 或 CTExcel 号码活跃，不替代运营商服务或实际付费活动。
+        本服务提供运营商预设与自定义日期提醒，不替代运营商服务或实际有效使用。
       </p>
     </div>
   );

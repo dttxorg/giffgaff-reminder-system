@@ -135,7 +135,9 @@ export async function SimCard({
     : `/me/settings?simId=${sim.id}`;
   return (
     <div>
-      {milestone && <MilestoneBanner milestone={milestone} />}
+      {milestone && (
+        <MilestoneBanner milestone={milestone} cycleDays={policy.cycleDays} />
+      )}
 
       {/* tabs 已在外层标识当前是哪张卡,这里不再重复显示 indexLabel */}
 

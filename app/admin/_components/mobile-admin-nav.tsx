@@ -128,7 +128,7 @@ export function MobileAdminNav() {
             <div className="p-4 border-b border-slate-800 flex items-center justify-between">
               <div>
                 <div className="font-semibold">管理后台</div>
-                <div className="text-xs text-slate-400 mt-0.5">Giffgaff Reminder</div>
+                <div className="text-xs text-slate-400 mt-0.5">SIM Reminder</div>
               </div>
               <button
                 type="button"

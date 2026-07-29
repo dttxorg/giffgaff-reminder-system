@@ -53,7 +53,7 @@ async function sendTestPush(sim: TestPushSim): Promise<TestPushResult> {
   const result = await sendPush(
     sim.channel,
     sim.channelKey,
-    "Giffgaff 保号提醒 - 管理员测试",
+    "SIM 保号提醒 - 管理员测试",
     `🛠️ 管理员触发的推送测试\n\n号码:${sim.phoneNumber}\n渠道:${channelName}\n\n如果您收到这条消息,说明 ${channelName} 配置正常。`
   );
   return {

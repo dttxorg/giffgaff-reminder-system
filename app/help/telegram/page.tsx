@@ -52,8 +52,8 @@ export default function TelegramHelpPage() {
             发送命令 <code>/newbot</code>,按提示操作:
           </p>
           <ul>
-            <li>它会问你 bot 的名字(随便起,比如 <code>Giffgaff 保号提醒</code>)</li>
-            <li>再问 bot 的 username(必须以 <code>bot</code> 结尾,比如 <code>my_gg_reminder_bot</code>),<strong>全网唯一不能重复</strong></li>
+            <li>它会问你 bot 的名字(随便起,比如 <code>SIM 保号提醒</code>)</li>
+            <li>再问 bot 的 username(必须以 <code>bot</code> 结尾,比如 <code>my_sim_reminder_bot</code>),<strong>全网唯一不能重复</strong></li>
           </ul>
           <p>
             创建成功后会收到一条消息,里面有一行 <code>Use this token to access the HTTP API:</code>,
@@ -67,7 +67,7 @@ export default function TelegramHelpPage() {
         <li>
           <strong>跟自己的 bot 说句话(激活它)</strong>
           <p>
-            在 Telegram 搜索框搜你刚创建的 bot 的 username(比如 <code>@my_gg_reminder_bot</code>),点进去,
+            在 Telegram 搜索框搜你刚创建的 bot 的 username(比如 <code>@my_sim_reminder_bot</code>),点进去,
             点底部的 <strong>Start</strong> 按钮(或发送 <code>/start</code>)。
           </p>
           <p className="text-slate-600 text-sm">
@@ -110,7 +110,7 @@ export default function TelegramHelpPage() {
             格式严格:<code>botToken</code> + 竖线 + <code>chatId</code>,中间<strong>不要有空格</strong>。
           </p>
           <p>
-            点 <strong>测试推送</strong>,Telegram 应立即收到一条带 <code>Giffgaff 保号提醒 - 测试</code> 标题的消息,说明配置成功。点&quot;保存&quot;完成。
+            点 <strong>测试推送</strong>,Telegram 应立即收到一条带 <code>SIM 保号提醒 - 测试</code> 标题的消息,说明配置成功。点&quot;保存&quot;完成。
           </p>
         </li>
       </ol>
@@ -187,7 +187,7 @@ export default function TelegramHelpPage() {
           <li>同一 bot 给不同 chat 推送:最多 <strong>30 条/秒</strong></li>
         </ul>
         <p>
-          本系统一位用户 180 天最多推 20 条,远低于限制。
+          本系统会按每个号码的自定义规则分时发送，频率远低于 Telegram Bot API 的每秒限制。
         </p>
       </details>
 
@@ -233,7 +233,7 @@ export default function TelegramHelpPage() {
           <li>☐ Telegram 已收到测试消息</li>
         </ul>
         <div className="mt-3 text-xs text-slate-500">
-          全打勾 = 配置完成。后续 170 天开始会自动推提醒。
+          全打勾 = 配置完成。到达该号码设置的提醒开始日后会自动推送。
         </div>
       </div>
 

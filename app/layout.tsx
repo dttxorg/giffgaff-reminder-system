@@ -6,7 +6,7 @@ import { SkipToContent } from "./_components/skip-to-content";
 
 export const metadata: Metadata = {
   title: "SIM 保号提醒",
-  description: "Giffgaff、CTExcel SIM 卡保号提醒服务",
+  description: "支持运营商预设与自定义日期的多号码 SIM 保号提醒服务",
 };
 
 /**
@@ -28,8 +28,11 @@ export default function RootLayout({
               href="/"
               className="site-brand flex min-w-0 items-center gap-2 text-lg font-semibold text-indigo-600"
             >
-              <span className="inline-block w-8 h-8 rounded-lg bg-indigo-600 text-white text-center leading-8">
-                G
+              <span
+                aria-hidden="true"
+                className="inline-flex h-8 w-10 items-center justify-center rounded-lg bg-indigo-600 text-[10px] font-black tracking-tight text-white"
+              >
+                SIM
               </span>
               <span className="whitespace-nowrap">
                 SIM 保号提醒
@@ -42,8 +45,17 @@ export default function RootLayout({
         </header>
         <main id="main-content" className="flex-1">{children}</main>
         <footer className="site-footer border-t border-slate-200 bg-white/60 py-4 text-center text-xs text-slate-500">
-          <div className="max-w-5xl mx-auto px-4 flex items-center justify-center gap-3">
-            <span>Giffgaff · CTExcel 保号提醒</span>
+          <div className="max-w-5xl mx-auto px-4 flex flex-wrap items-center justify-center gap-3">
+            <span>多运营商 SIM 保号提醒</span>
+            <span className="text-slate-300">·</span>
+            <a
+              href="https://gg.681218.xyz/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-slate-500 transition-colors hover:text-slate-700"
+            >
+              Giffgaff 替代卡
+            </a>
             <span className="text-slate-300">·</span>
             <Link
               href="/admin/login"

@@ -11,9 +11,9 @@ const DEFAULT = `【{{carrier}} 保号提醒】您的号码 {{phone}} 已激活 
 // 预览用的样例值
 const SAMPLE = {
   phone: "07724 215611",
-  days: 175,
+  days: 85,
   port_url: "https://baohao.681218.xyz/p/42",
-  carrier: "Giffgaff",
+  carrier: "SIM",
 };
 
 export default function SettingsForm({ initial }: { initial: string }) {
@@ -198,7 +198,7 @@ export default function SettingsForm({ initial }: { initial: string }) {
         </div>
         <div className="rounded-lg bg-slate-50 border border-slate-200 p-4">
           <div className="text-xs text-slate-500 mb-1">推送标题</div>
-          <div className="font-medium text-slate-900 mb-3">Giffgaff 保号提醒</div>
+          <div className="font-medium text-slate-900 mb-3">{SAMPLE.carrier} 保号提醒</div>
           <div className="text-xs text-slate-500 mb-1">推送正文</div>
           <pre className="whitespace-pre-wrap font-sans text-sm text-slate-800 break-words">
             {previewBody}

@@ -15,7 +15,7 @@ export function renderTemplate(
   template: string,
   vars: { phone: string; days: number; port_url: string; carrier?: string }
 ): string {
-  const carrier = vars.carrier ?? "Giffgaff";
+  const carrier = vars.carrier ?? "SIM";
   // 兼容数据库里保存的旧默认模板：CTExcel 提醒不会继续显示 Giffgaff。
   const compatibleTemplate =
     carrier === "Giffgaff"

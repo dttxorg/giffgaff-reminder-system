@@ -145,7 +145,7 @@ export default function BarkHelpPage() {
           <li>☐ Bark App 已收到测试消息</li>
         </ul>
         <div className="mt-3 text-xs text-slate-500">
-          全打勾 = 配置完成。后续 170 天开始会自动推提醒,不用再做任何操作。
+          全打勾 = 配置完成。到达该号码设置的提醒开始日后会自动推送。
         </div>
       </div>
 
