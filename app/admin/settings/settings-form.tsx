@@ -5,7 +5,7 @@ import { renderTemplate } from "@/lib/template";
 import { ConfirmModal } from "@/app/_components/confirm-modal";
 import { LoadingButton } from "@/app/_components/loading-button";
 
-const DEFAULT = `【Giffgaff 保号提醒】您的号码 {{phone}} 已激活 {{days}} 天，该保号啦！
+const DEFAULT = `【{{carrier}} 保号提醒】您的号码 {{phone}} 已激活 {{days}} 天，该保号啦！
 点击更新保号时间：{{port_url}}`;
 
 // 预览用的样例值
@@ -13,6 +13,7 @@ const SAMPLE = {
   phone: "07724 215611",
   days: 175,
   port_url: "https://baohao.681218.xyz/p/42",
+  carrier: "Giffgaff",
 };
 
 export default function SettingsForm({ initial }: { initial: string }) {
@@ -33,13 +34,14 @@ export default function SettingsForm({ initial }: { initial: string }) {
         phone: SAMPLE.phone,
         days: SAMPLE.days,
         port_url: SAMPLE.port_url,
+        carrier: SAMPLE.carrier,
       }),
     [template]
   );
 
   // 检测模板里是否引用了未知变量(仅 {{phone}} {{days}} {{port_url}} 是合法的)
   const unknownVars = useMemo(() => {
-    const known = new Set(["phone", "days", "port_url"]);
+    const known = new Set(["phone", "days", "port_url", "carrier"]);
     const matches = template.match(/\{\{\s*([a-zA-Z_][a-zA-Z0-9_]*)\s*\}\}/g) ?? [];
     const found = new Set<string>();
     for (const m of matches) {
@@ -130,6 +132,13 @@ export default function SettingsForm({ initial }: { initial: string }) {
         <div className="mt-2 text-xs text-slate-500 space-y-0.5">
           <p>可用变量(点击按钮插入到光标位置):</p>
           <div className="flex flex-wrap gap-1.5 mt-1">
+            <button
+              type="button"
+              onClick={() => insertAtCursor("{{carrier}}")}
+              className="px-2 py-1 rounded bg-slate-100 font-mono text-xs hover:bg-slate-200"
+            >
+              {"{{carrier}}"}
+            </button>
             <button
               type="button"
               onClick={() => insertAtCursor("{{phone}}")}

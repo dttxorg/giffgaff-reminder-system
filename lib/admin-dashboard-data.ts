@@ -5,6 +5,7 @@ import {
   summarizeAdminSendTrends,
 } from "./admin-dashboard-trends";
 import type { Channel } from "@/lib/generated/prisma/enums";
+import type { CarrierType } from "./carrier";
 
 type ReminderStatus = "success" | "failed";
 type SimStatus = "active" | "paused";
@@ -26,6 +27,9 @@ export interface AdminDashboardSim {
   userId: number | null;
   createdAt: Date;
   user: { createdAt: Date } | null;
+  carrier?: CarrierType;
+  reminderStartDay?: number;
+  cycleDays?: number;
 }
 
 export interface AdminDashboardUser {
@@ -168,10 +172,18 @@ export function summarizeAdminDashboard(
         simId: sim.id,
         phoneNumber: sim.phoneNumber,
         dayOffset,
-        daysLeft: 180 - dayOffset,
+        daysLeft: (sim.cycleDays ?? (sim.carrier === "ctexcel" ? 90 : 180)) - dayOffset,
+        reminderStartDay:
+          sim.reminderStartDay ?? (sim.carrier === "ctexcel" ? 80 : 170),
+        cycleDays:
+          sim.cycleDays ?? (sim.carrier === "ctexcel" ? 90 : 180),
       };
     })
-    .filter((sim) => sim.dayOffset >= 170 && sim.dayOffset <= 180)
+    .filter(
+      (sim) =>
+        sim.dayOffset >= sim.reminderStartDay &&
+        sim.dayOffset <= sim.cycleDays
+    )
     .sort((a, b) => a.daysLeft - b.daysLeft || a.simId - b.simId);
 
   const bindRateLast7Days = Array.from({ length: 7 }, (_, index) => {
@@ -279,6 +291,9 @@ export async function getAdminDashboardData(now: Date) {
         userId: true,
         createdAt: true,
         user: { select: { createdAt: true } },
+        carrier: true,
+        reminderStartDay: true,
+        cycleDays: true,
       },
     }),
     prisma.user.findMany({ select: { createdAt: true } }),

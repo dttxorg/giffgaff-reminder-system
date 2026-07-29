@@ -39,6 +39,9 @@ export default async function UserDetailPage({ params }: PageProps) {
             lastPortedAt: true,
             channel: true,
             status: true,
+            carrier: true,
+            reminderStartDay: true,
+            cycleDays: true,
           },
         },
       },
@@ -166,7 +169,7 @@ export default async function UserDetailPage({ params }: PageProps) {
               {sims.map((sim, idx) => {
                 const baseline = sim.lastPortedAt ?? sim.activatedAt;
                 const days = dayOffsetFromBaseline(baseline);
-                const inWindow = isInReminderWindow(days);
+                const inWindow = isInReminderWindow(days, sim);
                 return (
                   <div
                     key={sim.id}
@@ -188,6 +191,13 @@ export default async function UserDetailPage({ params }: PageProps) {
                           {idx === 0 && (
                             <span className="ml-1 text-[10px] text-indigo-600">(主)</span>
                           )}
+                        </dd>
+                      </div>
+                      <div className="flex justify-between">
+                        <dt className="text-slate-500">运营商 / 规则</dt>
+                        <dd className="text-xs text-slate-700">
+                          {sim.carrier === "giffgaff" ? "Giffgaff" : "CTExcel"} ·{" "}
+                          {sim.reminderStartDay}/{sim.cycleDays} 天
                         </dd>
                       </div>
                       <div className="flex justify-between">
@@ -220,12 +230,12 @@ export default async function UserDetailPage({ params }: PageProps) {
                           </div>
                           {inWindow && (
                             <div className="text-xs text-amber-700 mt-0.5">
-                              提醒窗口内(170-180)
+                              提醒窗口内({sim.reminderStartDay}-{sim.cycleDays})
                             </div>
                           )}
-                          {days > 180 && (
+                          {days > sim.cycleDays && (
                             <div className="text-xs text-rose-700 mt-0.5">
-                              已超 180 天
+                              已超 {sim.cycleDays} 天
                             </div>
                           )}
                         </dd>

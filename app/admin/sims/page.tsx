@@ -76,6 +76,9 @@ export default async function SimsPage({ searchParams }: PageProps) {
         lastPortedAt: true,
         status: true,
         channel: true,
+        carrier: true,
+        reminderStartDay: true,
+        cycleDays: true,
         reminders: {
           orderBy: { sentAt: "desc" },
           take: 1,
@@ -108,7 +111,7 @@ export default async function SimsPage({ searchParams }: PageProps) {
       lastPortedAt: sim.lastPortedAt?.toISOString().slice(0, 10) ?? null,
       status: sim.status,
       dayOffset,
-      inWindow: isInReminderWindow(dayOffset),
+      inWindow: isInReminderWindow(dayOffset, sim),
       channel: sim.channel,
       lastSentAt: last
         ? last.sentAt.toISOString().replace("T", " ").slice(0, 19)

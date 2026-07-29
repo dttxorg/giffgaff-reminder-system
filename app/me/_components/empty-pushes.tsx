@@ -36,7 +36,7 @@ export function EmptyPushes({ status, hasDateFilter }: EmptyPushesProps) {
       <p className="text-sm text-slate-500 max-w-xs mx-auto leading-relaxed">
         {isFiltered
           ? "试试调整日期范围或清除状态过滤"
-          : "系统会在 Giffgaff 保号提醒窗口(170-180 天)开始自动推送,无需任何操作"}
+          : "系统会按该号码的运营商预设或自定义提醒日期自动推送，无需手动触发"}
       </p>
       {isFiltered && (
         <a

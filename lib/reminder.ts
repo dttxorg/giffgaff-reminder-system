@@ -8,6 +8,11 @@ import {
   buildAccountReminderMessage,
   MULTI_SIM_AGGREGATE_THRESHOLD,
 } from "./account-reminder";
+import {
+  carrierPolicy,
+  daysUntilCarrierDeadline,
+  type CarrierType,
+} from "./carrier";
 
 export interface ReminderRunDetail {
   simId: number;
@@ -43,6 +48,9 @@ interface ScanSim {
   portToken: string | null;
   channel: ChannelType;
   channelKey: string;
+  carrier: CarrierType;
+  reminderStartDay: number;
+  cycleDays: number;
 }
 
 interface ReminderCandidate {
@@ -67,7 +75,10 @@ function mostUrgentCandidate(
   candidates: ReminderCandidate[]
 ): ReminderCandidate {
   return [...candidates].sort(
-    (a, b) => b.dayOffset - a.dayOffset || a.sim.id - b.sim.id
+    (a, b) =>
+      daysUntilCarrierDeadline(a.dayOffset, a.sim) -
+        daysUntilCarrierDeadline(b.dayOffset, b.sim) ||
+      a.sim.id - b.sim.id
   )[0];
 }
 
@@ -121,6 +132,9 @@ export async function runReminderScan(
         portToken: true,
         channel: true,
         channelKey: true,
+        carrier: true,
+        reminderStartDay: true,
+        cycleDays: true,
       },
     }),
     prisma.setting.findUnique({ where: { key: "reminder_template" } }),
@@ -140,7 +154,7 @@ export async function runReminderScan(
   const candidates: ReminderCandidate[] = scanSims.flatMap((sim) => {
     const baseline = sim.lastPortedAt ?? sim.activatedAt;
     const dayOffset = dayOffsetFromBaseline(baseline, now);
-    const plan = bucketForDay(dayOffset, hourOfDay);
+    const plan = bucketForDay(dayOffset, hourOfDay, sim);
     return plan ? [{ sim, dayOffset, bucket: plan.bucket }] : [];
   });
 
@@ -252,6 +266,9 @@ export async function runReminderScan(
         id: sim.id,
         phoneNumber: sim.phoneNumber,
         dayOffset,
+        carrier: sim.carrier,
+        reminderStartDay: sim.reminderStartDay,
+        cycleDays: sim.cycleDays,
       })),
       opts.baseUrl
     );
@@ -327,8 +344,9 @@ export async function runReminderScan(
       phone: `**** ${sim.phoneNumber.slice(-4)}`,
       days: dayOffset,
       port_url: url,
+      carrier: carrierPolicy(sim.carrier).label,
     });
-    const title = `Giffgaff 保号提醒 (${dayOffset}天)`;
+    const title = `${carrierPolicy(sim.carrier).label} 保号提醒 (${dayOffset}天)`;
 
     if (opts.dryRun) {
       result.sent++;

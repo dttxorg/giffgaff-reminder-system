@@ -18,6 +18,9 @@ export async function findSimByParam(param: string) {
     activatedAt: true,
     lastPortedAt: true,
     portToken: true,
+    carrier: true,
+    reminderStartDay: true,
+    cycleDays: true,
   } as const;
   if (!looksLikeToken(param)) return null;
   return prisma.sim.findUnique({ where: { portToken: param }, select });

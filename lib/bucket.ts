@@ -1,4 +1,9 @@
-// 保号提醒规则：基于 dayOffset（今天 - 激活/上次保号日期）和 hourOfDay 计算 bucket
+// 保号提醒规则：基于运营商周期、dayOffset 和 hourOfDay 计算 bucket
+import {
+  reminderPolicy,
+  type CarrierType,
+  type ReminderSchedule,
+} from "./carrier";
 
 // 业务全部按 Asia/Shanghai（北京时间，UTC+8）解读"日期"。
 // Vercel serverless 跑在 UTC,如果直接用 getUTCFullYear / getUTCHours,
@@ -40,7 +45,7 @@ export function shanghaiParts(d: Date): {
 }
 
 /**
- * 各 dayOffset 对应的当天发送次数(2026-06-21 调整:170-172=1次,173-175=2次,176-178=3次)
+ * Giffgaff 默认 dayOffset 对应的当天发送次数（保留供兼容与基线测试使用）。
  */
 export const COUNTS: Record<number, number> = {
   170: 1, 171: 1, 172: 1,
@@ -49,6 +54,25 @@ export const COUNTS: Record<number, number> = {
   179: 5,
   180: 10,
 };
+
+export function reminderCountForDay(
+  dayOffset: number,
+  schedule: CarrierType | ReminderSchedule = "giffgaff"
+): number {
+  const policy = reminderPolicy(schedule);
+  if (
+    dayOffset < policy.reminderStartDay ||
+    dayOffset > policy.cycleDays
+  ) {
+    return 0;
+  }
+  const daysLeft = policy.cycleDays - dayOffset;
+  if (daysLeft === 0) return 10;
+  if (daysLeft === 1) return 5;
+  if (daysLeft <= 4) return 3;
+  if (daysLeft <= 7) return 2;
+  return 1;
+}
 
 /**
  * 返回当天的发送计划；null 表示当天不应发
@@ -59,9 +83,10 @@ export const COUNTS: Record<number, number> = {
  */
 export function bucketForDay(
   dayOffset: number,
-  hourOfDay: number
+  hourOfDay: number,
+  schedule: CarrierType | ReminderSchedule = "giffgaff"
 ): { count: number; bucket: number } | null {
-  const count = COUNTS[dayOffset];
+  const count = reminderCountForDay(dayOffset, schedule);
   if (!count) return null;
   if (hourOfDay < 0 || hourOfDay >= 24) return null;
 
@@ -89,9 +114,10 @@ export function bucketForDay(
  */
 export function nextBucketAt(
   dayOffset: number,
-  hourOfDay: number
+  hourOfDay: number,
+  schedule: CarrierType | ReminderSchedule = "giffgaff"
 ): string | null {
-  const info = bucketForDay(dayOffset, hourOfDay);
+  const info = bucketForDay(dayOffset, hourOfDay, schedule);
   if (!info) return null;
   const { count, bucket } = info;
   const windowSizeHours = 24 / count;
@@ -240,21 +266,28 @@ export function getNextMilestone(
 }
 
 /**
- * 检查给定 dayOffset 是否在提醒窗口内（170-180）
+ * 检查给定 dayOffset 是否在当前号码的提醒窗口内。
  */
-export function isInReminderWindow(dayOffset: number): boolean {
-  return dayOffset >= 170 && dayOffset <= 180;
+export function isInReminderWindow(
+  dayOffset: number,
+  schedule: CarrierType | ReminderSchedule = "giffgaff"
+): boolean {
+  const policy = reminderPolicy(schedule);
+  return (
+    dayOffset >= policy.reminderStartDay && dayOffset <= policy.cycleDays
+  );
 }
 
 /**
  * Round 214: 距保号提醒窗口还有几天
  *
  * 返回带标签的 union,UI 可以根据状态显示不同文案:
- *  - before: 还没到 170 天,距离还有 N 天
- *  - in:     正好在 170-180 窗口内(days 字段为 0,UI 显示"窗口期内")
- *  - after:  已超过 180 天(过期未保号),days 为负数(越小越久)
+ *  - before: 还没到自定义提醒开始日，距离还有 N 天
+ *  - in:     正好在提醒窗口内(days 字段为 0,UI 显示"窗口期内")
+ *  - after:  已超过自定义截止日，days 为负数(越小越久)
  *
  * 边界(纯日期语义,跟 dayOffset 一样是整数天):
+ * 默认 Giffgaff 示例：
  *  - 0 → before 170(刚激活,等 170 天)
  *  - 169 → before 1(明天进入窗口)
  *  - 170 → in 0
@@ -267,13 +300,15 @@ export type ReminderWindowDistance =
   | { kind: "after"; days: number };
 
 export function daysUntilReminderWindow(
-  dayOffset: number
+  dayOffset: number,
+  schedule: CarrierType | ReminderSchedule = "giffgaff"
 ): ReminderWindowDistance {
-  if (dayOffset < 170) {
-    return { kind: "before", days: 170 - dayOffset };
+  const policy = reminderPolicy(schedule);
+  if (dayOffset < policy.reminderStartDay) {
+    return { kind: "before", days: policy.reminderStartDay - dayOffset };
   }
-  if (dayOffset <= 180) {
+  if (dayOffset <= policy.cycleDays) {
     return { kind: "in", days: 0 };
   }
-  return { kind: "after", days: dayOffset - 180 };
+  return { kind: "after", days: dayOffset - policy.cycleDays };
 }

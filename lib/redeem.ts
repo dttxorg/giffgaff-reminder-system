@@ -14,6 +14,10 @@ import { hashPassword, normalizeUsername, usernameError } from "./auth";
 import { parseISOCalendarDate } from "./date";
 import { generatePortToken } from "./port-token";
 import type { Prisma } from "./generated/prisma/client";
+import {
+  carrierPolicy,
+  type CarrierType,
+} from "./carrier";
 
 export type RedeemInput = {
   /** 用户输入的卡密(已归一化为原始 16 字符) */
@@ -26,6 +30,8 @@ export type RedeemInput = {
   phoneNumber: string;
   /** 客户自己的激活日期 (yyyy-MM-dd) */
   activatedAt: string;
+  /** 运营商预设；未传保持旧客户端的 Giffgaff 默认。 */
+  carrier?: CarrierType;
 };
 
 export type RedeemResult =
@@ -107,6 +113,8 @@ export async function redeemCard(
 
   const phoneNumber = input.phoneNumber;
   const activatedAt = parsed.date;
+  const carrier = input.carrier ?? "giffgaff";
+  const schedule = carrierPolicy(carrier);
 
   // 检查 phoneNumber 是否已被 sim 占用
   const existingSim = await db.sim.findUnique({ where: { phoneNumber } });
@@ -144,15 +152,8 @@ export async function redeemCard(
     if (!u) return { ok: false, error: "USER_NOT_FOUND" };
     userId = u.id;
     isNewUser = false;
-    // 默认渠道: 复制该用户已有第一张 sim 的渠道(账号级统一推送的友好默认)
-    const firstSim = await db.sim.findFirst({
-      where: { userId: u.id },
-      orderBy: { id: "asc" },
-    });
-    if (firstSim) {
-      defaultChannel = firstSim.channel;
-      defaultChannelKey = firstSim.channelKey;
-    }
+    defaultChannel = u.defaultChannel ?? defaultChannel;
+    defaultChannelKey = u.defaultChannelKey ?? defaultChannelKey;
   }
 
   // 先以 used=false 为条件原子占用卡密。并发请求中只有一个事务能成功；
@@ -182,6 +183,9 @@ export async function redeemCard(
       phoneNumber,
       portToken: generatePortToken(),
       activatedAt,
+      carrier,
+      reminderStartDay: schedule.reminderStartDay,
+      cycleDays: schedule.cycleDays,
       status: "active",
       channel: defaultChannel,
       channelKey: defaultChannelKey,

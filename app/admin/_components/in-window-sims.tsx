@@ -31,7 +31,7 @@ export function InWindowSims({ sims }: { sims: InWindowSim[] }) {
           提醒窗口内 sim
         </h2>
         <span className="text-xs text-slate-500">
-          {sims.length} 个 · 170-180 天
+          {sims.length} 个 · 按号码规则
         </span>
       </div>
       {sims.length === 0 ? (
@@ -56,6 +56,11 @@ export function InWindowSims({ sims }: { sims: InWindowSim[] }) {
                   className="font-mono text-indigo-600 hover:underline truncate"
                 >
                   {s.phoneNumber}
+                  {s.carrier && (
+                    <span className="ml-2 font-sans text-[10px] text-slate-500">
+                      {s.carrier === "giffgaff" ? "Giffgaff" : "CTExcel"}
+                    </span>
+                  )}
                 </Link>
                 <span className={`whitespace-nowrap ${tone}`}>
                   剩 {s.daysLeft} 天

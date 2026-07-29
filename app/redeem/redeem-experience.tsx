@@ -97,7 +97,7 @@ export function RedeemExperience() {
               : "批量兑换会把多张 SIM 卡统一放进同一个账号"
             : isLoggedIn
               ? "把新卡密绑定到当前账号，登录一次提醒多个号码"
-              : "输入卡密，绑定 Giffgaff SIM 卡保号提醒"}
+              : "输入卡密，选择运营商并绑定 SIM 卡保号提醒"}
         </p>
       </div>
 

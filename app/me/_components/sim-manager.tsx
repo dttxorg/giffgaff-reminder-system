@@ -22,6 +22,9 @@ export interface SimManagerItem {
   dayOffset: number;
   createdAt: string;
   channel: "serverchan" | "bark" | "pushplus" | "telegram";
+  carrier?: "giffgaff" | "ctexcel";
+  reminderStartDay?: number;
+  cycleDays?: number;
   isPrimary: boolean;
 }
 
@@ -353,7 +356,13 @@ export function SimManager({ sims, activeSimId }: SimManagerProps) {
                             )}
                           </div>
                           <p className="mt-1 truncate text-xs text-slate-500">
-                            {sim.dayOffset < 0 ? "尚未激活" : `第 ${sim.dayOffset} 天`} · {sim.missingChannel ? "未设置渠道" : CHANNEL_LABEL[sim.channel]}
+                            <span className="font-medium text-slate-700">
+                              {sim.carrier === "ctexcel" ? "CTExcel" : "Giffgaff"}
+                            </span>
+                            {" · "}
+                            {sim.dayOffset < 0 ? "尚未激活" : `第 ${sim.dayOffset} 天`}
+                            {" · "}
+                            {sim.missingChannel ? "未设置渠道" : CHANNEL_LABEL[sim.channel]}
                           </p>
                         </div>
                         <div className="shrink-0 text-right">

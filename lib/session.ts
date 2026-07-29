@@ -2,6 +2,7 @@
 import { cache } from "react";
 import { cookies } from "next/headers";
 import { prisma } from "./db";
+import type { CarrierType } from "./carrier";
 
 const USER_COOKIE =
   process.env.NODE_ENV === "production"
@@ -19,10 +20,14 @@ type DashboardChannel = "serverchan" | "bark" | "pushplus" | "telegram";
 interface CurrentUserDashboardRow {
   expiresAt: Date;
   username: string;
+  availableReminderSlots?: number;
   simId: number | null;
   phoneNumber: string | null;
   status: "active" | "paused" | null;
   channel: DashboardChannel | null;
+  carrier?: CarrierType | null;
+  reminderStartDay?: number | null;
+  cycleDays?: number | null;
   missingChannel: boolean | null;
   dayOffset: number | null;
   createdAt: Date | null;
@@ -31,15 +36,22 @@ interface CurrentUserDashboardRow {
   activeActivatedAt: Date | null;
   activeLastPortedAt: Date | null;
   activeChannelKey: string | null;
+  activeCarrier?: CarrierType | null;
+  activeReminderStartDay?: number | null;
+  activeCycleDays?: number | null;
 }
 
 export interface CurrentUserDashboardContext {
   username: string;
+  availableReminderSlots: number;
   sims: Array<{
     id: number;
     phoneNumber: string;
     status: "active" | "paused";
     channel: DashboardChannel;
+    carrier: CarrierType;
+    reminderStartDay: number;
+    cycleDays: number;
     missingChannel: boolean;
     dayOffset: number;
     createdAt: Date;
@@ -53,6 +65,9 @@ export interface CurrentUserDashboardContext {
     status: "active" | "paused";
     channel: DashboardChannel;
     channelKey: string;
+    carrier: CarrierType;
+    reminderStartDay: number;
+    cycleDays: number;
   } | null;
 }
 
@@ -67,6 +82,9 @@ export function summarizeCurrentUserDashboardRows(
       phoneNumber: string;
       status: "active" | "paused";
       channel: DashboardChannel;
+      carrier: CarrierType;
+      reminderStartDay: number;
+      cycleDays: number;
       missingChannel: boolean;
       dayOffset: number;
       createdAt: Date;
@@ -76,11 +94,15 @@ export function summarizeCurrentUserDashboardRows(
 
   return {
     username: first.username,
+    availableReminderSlots: first.availableReminderSlots ?? 0,
     sims: simRows.map((row) => ({
       id: row.simId,
       phoneNumber: row.phoneNumber,
       status: row.status,
       channel: row.channel,
+      carrier: row.carrier ?? "giffgaff",
+      reminderStartDay: row.reminderStartDay ?? 170,
+      cycleDays: row.cycleDays ?? 180,
       missingChannel: row.missingChannel,
       dayOffset: row.dayOffset,
       createdAt: row.createdAt,
@@ -95,6 +117,10 @@ export function summarizeCurrentUserDashboardRows(
           status: active.status,
           channel: active.channel,
           channelKey: active.activeChannelKey!,
+          carrier: active.activeCarrier ?? active.carrier ?? "giffgaff",
+          reminderStartDay:
+            active.activeReminderStartDay ?? active.reminderStartDay ?? 170,
+          cycleDays: active.activeCycleDays ?? active.cycleDays ?? 180,
         }
       : null,
   };
@@ -137,7 +163,8 @@ export const getCurrentUserDashboardContext = cache(
         SELECT
           session."expiresAt",
           usr."id" AS "userId",
-          usr."username"
+          usr."username",
+          usr."availableReminderSlots"
         FROM "UserSession" session
         INNER JOIN "User" usr ON usr."id" = session."userId"
         WHERE session."id" = ${sid}
@@ -150,6 +177,9 @@ export const getCurrentUserDashboardContext = cache(
           sim."activatedAt",
           sim."lastPortedAt",
           sim."status",
+          sim."carrier",
+          sim."reminderStartDay",
+          sim."cycleDays",
           sim."channel",
           sim."channelKey",
           sim."createdAt",
@@ -174,12 +204,12 @@ export const getCurrentUserDashboardContext = cache(
                 WHEN ${requestedSimId}::int IS NOT NULL
                   AND "id" = ${requestedSimId} THEN -1
                 WHEN "status" = 'paused' THEN 4
-                WHEN "dayOffset" > 180 THEN 0
-                WHEN "dayOffset" >= 170 THEN 1
+                WHEN "dayOffset" > "cycleDays" THEN 0
+                WHEN "dayOffset" >= "reminderStartDay" THEN 1
                 WHEN "missingChannel" THEN 2
                 ELSE 3
               END,
-              "dayOffset" DESC,
+              ("cycleDays" - "dayOffset") ASC,
               LENGTH("phoneNumber") ASC,
               "phoneNumber" ASC
           ) AS "simRank"
@@ -188,10 +218,14 @@ export const getCurrentUserDashboardContext = cache(
       SELECT
         current."expiresAt",
         current."username",
+        current."availableReminderSlots",
         ranked."id" AS "simId",
         ranked."phoneNumber",
         ranked."status"::text AS "status",
         ranked."channel"::text AS "channel",
+        ranked."carrier"::text AS "carrier",
+        ranked."reminderStartDay",
+        ranked."cycleDays",
         ranked."missingChannel",
         ranked."dayOffset",
         ranked."createdAt",
@@ -203,7 +237,13 @@ export const getCurrentUserDashboardContext = cache(
         CASE WHEN ranked."simRank" = 1 THEN ranked."lastPortedAt" END
           AS "activeLastPortedAt",
         CASE WHEN ranked."simRank" = 1 THEN ranked."channelKey" END
-          AS "activeChannelKey"
+          AS "activeChannelKey",
+        CASE WHEN ranked."simRank" = 1 THEN ranked."carrier"::text END
+          AS "activeCarrier",
+        CASE WHEN ranked."simRank" = 1 THEN ranked."reminderStartDay" END
+          AS "activeReminderStartDay",
+        CASE WHEN ranked."simRank" = 1 THEN ranked."cycleDays" END
+          AS "activeCycleDays"
       FROM current_session current
       LEFT JOIN ranked_sims ranked ON TRUE
       ORDER BY ranked."id" ASC
@@ -263,6 +303,7 @@ export const getCurrentUserId = cache(async (): Promise<number | null> => {
 interface CurrentUserSettingsRow {
   expiresAt: Date;
   username: string;
+  availableReminderSlots?: number;
   simId: number | null;
   phoneNumber: string | null;
   isSelected: boolean | null;
@@ -271,10 +312,14 @@ interface CurrentUserSettingsRow {
   selectedLastPortedAt: Date | null;
   selectedChannel: DashboardChannel | null;
   selectedChannelKey: string | null;
+  selectedCarrier?: CarrierType | null;
+  selectedReminderStartDay?: number | null;
+  selectedCycleDays?: number | null;
 }
 
 export interface CurrentUserSettingsContext {
   username: string;
+  availableReminderSlots: number;
   sims: Array<{ id: number; phoneNumber: string }>;
   selectedSim: {
     id: number;
@@ -284,6 +329,9 @@ export interface CurrentUserSettingsContext {
     lastPortedAt: Date | null;
     channel: DashboardChannel;
     channelKey: string;
+    carrier: CarrierType;
+    reminderStartDay: number;
+    cycleDays: number;
   } | null;
 }
 
@@ -301,6 +349,7 @@ export function summarizeCurrentUserSettingsRows(
   const selected = simRows.find((row) => row.isSelected === true);
   return {
     username: first.username,
+    availableReminderSlots: first.availableReminderSlots ?? 0,
     sims: simRows.map((row) => ({
       id: row.simId,
       phoneNumber: row.phoneNumber,
@@ -314,6 +363,9 @@ export function summarizeCurrentUserSettingsRows(
           lastPortedAt: selected.selectedLastPortedAt,
           channel: selected.selectedChannel!,
           channelKey: selected.selectedChannelKey!,
+          carrier: selected.selectedCarrier ?? "giffgaff",
+          reminderStartDay: selected.selectedReminderStartDay ?? 170,
+          cycleDays: selected.selectedCycleDays ?? 180,
         }
       : null,
   };
@@ -333,7 +385,8 @@ export const getCurrentUserSettingsContext = cache(
         SELECT
           session."expiresAt",
           usr."id" AS "userId",
-          usr."username"
+          usr."username",
+          usr."availableReminderSlots"
         FROM "UserSession" session
         INNER JOIN "User" usr ON usr."id" = session."userId"
         WHERE session."id" = ${sid}
@@ -357,6 +410,7 @@ export const getCurrentUserSettingsContext = cache(
       SELECT
         current."expiresAt",
         current."username",
+        current."availableReminderSlots",
         ranked."id" AS "simId",
         ranked."phoneNumber",
         (ranked."simRank" = 1) AS "isSelected",
@@ -369,7 +423,13 @@ export const getCurrentUserSettingsContext = cache(
         CASE WHEN ranked."simRank" = 1 THEN ranked."channel"::text END
           AS "selectedChannel",
         CASE WHEN ranked."simRank" = 1 THEN ranked."channelKey" END
-          AS "selectedChannelKey"
+          AS "selectedChannelKey",
+        CASE WHEN ranked."simRank" = 1 THEN ranked."carrier"::text END
+          AS "selectedCarrier",
+        CASE WHEN ranked."simRank" = 1 THEN ranked."reminderStartDay" END
+          AS "selectedReminderStartDay",
+        CASE WHEN ranked."simRank" = 1 THEN ranked."cycleDays" END
+          AS "selectedCycleDays"
       FROM current_session current
       LEFT JOIN ranked_sims ranked ON TRUE
       ORDER BY ranked."id" ASC

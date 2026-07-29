@@ -41,6 +41,9 @@ export default async function PortPage({ params }: PageProps) {
     activatedAt: sim.activatedAt.toISOString().slice(0, 10),
     lastPortedAt: sim.lastPortedAt?.toISOString().slice(0, 10) ?? null,
     dayOffset: dayOffsetFromBaseline(baseline),
+    carrier: sim.carrier,
+    reminderStartDay: sim.reminderStartDay,
+    cycleDays: sim.cycleDays,
   };
 
   return <PortClient simIdRaw={simId} initialSim={initialSim} />;

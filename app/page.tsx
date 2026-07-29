@@ -29,8 +29,8 @@ const faqItems = [
     a: "Giffgaff SIM 卡如果长期不活跃（不发起通话、短信或上网），运营商会在 6 个月后回收号码。保号就是通过一次付费活动让卡保持活跃。",
   },
   {
-    q: "保号提醒是怎么触发的？",
-    a: "从您的卡激活日起算，第 170 天系统开始提醒。越接近 180 天截止日，提醒频率越高；180 天当天提醒 10 次，之后停止。",
+    q: "Giffgaff 和 CTExcel 的提醒周期一样吗？",
+    a: "默认不一样：Giffgaff 第 170 天开始提醒、第 180 天截止；CTExcel 第 80 天开始提醒、第 90 天截止。登录后也可以为每个号码自由调整提醒开始日和截止日。",
   },
   {
     q: "推送渠道怎么选？",
@@ -42,11 +42,11 @@ const faqItems = [
   },
   {
     q: "我能在公众号 / Bark 看到什么？",
-    a: "推送会带一个保号时间更新链接。提交最近一次保号日期后，系统会从那天重新计时 170 天。",
+    a: "推送会带一个保号时间更新链接。提交最近一次保号日期后，系统会从那天按该号码当前设置的周期重新计时。",
   },
   {
     q: "卡密是什么 / 怎么用？",
-    a: "卡密是 16 位字母数字销售凭证。在兑换页填写卡密、Giffgaff SIM 卡号与激活日期即可开通，一次性使用。",
+    a: "卡密是 16 位字母数字销售凭证。在兑换页选择 Giffgaff 或 CTExcel，填写 SIM 卡号与激活日期即可开通，一次性使用。",
   },
 ];
 
@@ -70,11 +70,11 @@ export default function HomePage() {
               <span className="mt-2 block">自动提醒</span>
             </h1>
             <p className="mt-6 max-w-xl text-lg font-medium leading-8 text-pretty text-slate-800">
-              录入 Giffgaff 号码和激活日期一次，系统会在第
-              <strong className="mx-1 font-black text-orange-600">170 天</strong>
-              开始提醒；越接近
-              <strong className="mx-1 font-black text-orange-600">180 天</strong>
-              截止日，提醒越及时。
+              录入 Giffgaff 或 CTExcel 号码一次，系统会载入
+              <strong className="mx-1 font-black text-orange-600">170 / 180 天</strong>
+              或
+              <strong className="mx-1 font-black text-orange-600">80 / 90 天</strong>
+              默认规则，也支持每个号码自由调整。
             </p>
 
             <div className="mt-7 grid gap-3 sm:max-w-xl sm:grid-cols-2">
@@ -94,7 +94,7 @@ export default function HomePage() {
               </Link>
             </div>
             <p className="mt-3 text-sm leading-6 text-slate-600">
-              已有账号可直接登录；卡密用于首次开通服务。
+              已有账号可直接登录；支持切换运营商、保留提醒名额与通知渠道。
             </p>
             <Suspense fallback={null}>
               <PublicStats />
@@ -141,7 +141,7 @@ export default function HomePage() {
               </ol>
             </div>
             <p className="mt-3 text-center text-sm text-slate-600">
-              支持 Sever酱、Bark、Telegram 与 pushplus
+              支持 Giffgaff / CTExcel · Sever酱、Bark、Telegram 与 pushplus
             </p>
           </section>
         </div>
@@ -156,6 +156,9 @@ export default function HomePage() {
               <span className="block">提醒自动开始</span>
             </h2>
             <p className="mt-3 text-sm leading-6 text-slate-600">越临近 180 天截止日，提醒越频繁。</p>
+            <p className="mt-2 text-xs leading-5 text-indigo-700">
+              CTExcel 默认 80 / 90 天；两种预设均可按号码自定义。
+            </p>
           </div>
 
           <div className="min-w-0">
@@ -281,7 +284,7 @@ export default function HomePage() {
       </section>
 
       <p className="mx-auto max-w-[1440px] px-4 pb-10 text-xs leading-5 text-slate-500 sm:px-6 lg:px-8">
-        本服务用于提醒您保持 Giffgaff 号码活跃，不替代运营商服务或实际付费活动。
+        本服务用于提醒您保持 Giffgaff 或 CTExcel 号码活跃，不替代运营商服务或实际付费活动。
       </p>
     </div>
   );

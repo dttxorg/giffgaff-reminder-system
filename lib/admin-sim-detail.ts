@@ -6,6 +6,9 @@ interface AdminSimDetailRow {
   activatedAt: Date | string;
   lastPortedAt: Date | string | null;
   status: "active" | "paused";
+  carrier: "giffgaff" | "ctexcel";
+  reminderStartDay: number;
+  cycleDays: number;
   user: { id: number; username: string } | null;
   recentReminders: Array<{
     id: number;
@@ -23,6 +26,9 @@ export interface AdminSimDetail {
   activatedAt: string;
   lastPortedAt: string | null;
   status: "active" | "paused";
+  carrier?: "giffgaff" | "ctexcel";
+  reminderStartDay?: number;
+  cycleDays?: number;
   user: { id: number; username: string } | null;
   recentReminders: Array<{
     id: number;
@@ -45,6 +51,9 @@ export async function getAdminSimDetail(
       sim."activatedAt",
       sim."lastPortedAt",
       sim."status"::text AS "status",
+      sim."carrier"::text AS "carrier",
+      sim."reminderStartDay",
+      sim."cycleDays",
       CASE
         WHEN owner."id" IS NULL THEN NULL
         ELSE jsonb_build_object(
@@ -86,6 +95,9 @@ export async function getAdminSimDetail(
       ? new Date(snapshot.lastPortedAt).toISOString().slice(0, 10)
       : null,
     status: snapshot.status,
+    carrier: snapshot.carrier,
+    reminderStartDay: snapshot.reminderStartDay,
+    cycleDays: snapshot.cycleDays,
     user: snapshot.user,
     recentReminders: snapshot.recentReminders.map((reminder) => ({
       ...reminder,

@@ -39,6 +39,9 @@ export default async function MePage({ searchParams }: PageProps) {
     dayOffset: sim.dayOffset,
     createdAt: sim.createdAt.toISOString(),
     channel: sim.channel,
+    carrier: sim.carrier,
+    reminderStartDay: sim.reminderStartDay,
+    cycleDays: sim.cycleDays,
     isPrimary: index === 0,
   }));
 
@@ -55,7 +58,9 @@ export default async function MePage({ searchParams }: PageProps) {
       )}
 
       {/* Round 222: 0 张卡的友好空状态 */}
-      {simCount === 0 && <EmptySims />}
+      {simCount === 0 && (
+        <EmptySims availableReminderSlots={user.availableReminderSlots} />
+      )}
 
       {activeSim && (
         <div className={simCount > 1 ? "lg:grid lg:grid-cols-[20rem_minmax(0,28rem)] lg:items-start lg:justify-center lg:gap-6" : ""}>
@@ -65,20 +70,25 @@ export default async function MePage({ searchParams }: PageProps) {
           )}
 
           <div className="min-w-0">
-            {/* Round 216: 保号窗口 hero 倒计时(170-180 窗口期内才显示) */}
+            {/* 当前号码进入自定义提醒窗口后显示倒计时。 */}
             <PortCountdownHero
               baseline={activeSim.lastPortedAt ?? activeSim.activatedAt}
               portToken={activeSim.portToken}
               simId={activeSim.id}
               now={now}
+              carrier={activeSim.carrier}
+              reminderStartDay={activeSim.reminderStartDay}
+              cycleDays={activeSim.cycleDays}
             />
 
-            {/* Round 217: 已过保号窗口警示(180+ 天) */}
+            {/* 当前号码超过自定义截止日后显示警示。 */}
             <PortOverdueBanner
               baseline={activeSim.lastPortedAt ?? activeSim.activatedAt}
               portToken={activeSim.portToken}
               simId={activeSim.id}
               now={now}
+              carrier={activeSim.carrier}
+              cycleDays={activeSim.cycleDays}
             />
 
             {/* 号码列表先可用；详情统计完成后再流式补齐。 */}
@@ -93,6 +103,9 @@ export default async function MePage({ searchParams }: PageProps) {
                   status: activeSim.status,
                   channel: activeSim.channel,
                   channelKey: activeSim.channelKey,
+                  carrier: activeSim.carrier,
+                  reminderStartDay: activeSim.reminderStartDay,
+                  cycleDays: activeSim.cycleDays,
                 }}
                 isPrimary={activeSim.id === sims[0].id}
                 now={now}
@@ -100,7 +113,10 @@ export default async function MePage({ searchParams }: PageProps) {
             </Suspense>
 
             {/* Round 218: 底部 action bar(改用 pill 按钮,带 icon) */}
-            <ActionBar activeSimId={activeSim.id} />
+            <ActionBar
+              activeSimId={activeSim.id}
+              availableReminderSlots={user.availableReminderSlots}
+            />
           </div>
         </div>
       )}

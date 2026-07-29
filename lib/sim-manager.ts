@@ -1,4 +1,9 @@
 import { filterSimsByQuery } from "./sim-search";
+import {
+  reminderPolicy,
+  daysUntilCarrierDeadline,
+  type CarrierType,
+} from "./carrier";
 
 export type SimManagerFilter = "all" | "attention" | "window" | "missing" | "paused";
 export type SimManagerSort = "priority" | "number" | "recent";
@@ -10,6 +15,9 @@ export interface SimManagerItemBase {
   status: "active" | "paused";
   missingChannel: boolean;
   dayOffset: number;
+  carrier?: CarrierType;
+  reminderStartDay?: number;
+  cycleDays?: number;
   createdAt: string;
 }
 
@@ -33,10 +41,21 @@ const ATTENTION_RANK: Record<SimAttention, number> = {
  * 号码管理器里的唯一优先级来源。
  * 暂停卡始终放到最后；其余号码按“已超期 → 窗口内 → 缺渠道 → 正常”排序。
  */
-export function getSimAttention(sim: Pick<SimManagerItemBase, "status" | "missingChannel" | "dayOffset">): SimAttention {
+export function getSimAttention(
+  sim: Pick<
+    SimManagerItemBase,
+    | "status"
+    | "missingChannel"
+    | "dayOffset"
+    | "carrier"
+    | "reminderStartDay"
+    | "cycleDays"
+  >
+): SimAttention {
   if (sim.status === "paused") return "paused";
-  if (sim.dayOffset > 180) return "overdue";
-  if (sim.dayOffset >= 170) return "window";
+  const policy = reminderPolicy(sim);
+  if (sim.dayOffset > policy.cycleDays) return "overdue";
+  if (sim.dayOffset >= policy.reminderStartDay) return "window";
   if (sim.missingChannel) return "missing";
   return "normal";
 }
@@ -88,7 +107,11 @@ export function sortSimManagerItems<T extends SimManagerItemBase>(
     if (rankDiff !== 0) return rankDiff;
 
     // 同一优先级内，天数越大越接近（或越超过）截止日，越应该排在前面。
-    return b.dayOffset - a.dayOffset || a.phoneNumber.localeCompare(b.phoneNumber, "en", { numeric: true });
+    return (
+      daysUntilCarrierDeadline(a.dayOffset, a) -
+        daysUntilCarrierDeadline(b.dayOffset, b) ||
+      a.phoneNumber.localeCompare(b.phoneNumber, "en", { numeric: true })
+    );
   });
 }
 
@@ -105,13 +128,21 @@ export function filterAndSortSimManagerItems<T extends SimManagerItemBase>(
   );
 }
 
-export function formatSimTiming(sim: Pick<SimManagerItemBase, "status" | "dayOffset">): string {
+export function formatSimTiming(
+  sim: Pick<
+    SimManagerItemBase,
+    "status" | "dayOffset" | "carrier" | "reminderStartDay" | "cycleDays"
+  >
+): string {
   if (sim.status === "paused") return "已暂停监控";
-  if (sim.dayOffset > 180) return `已超期 ${sim.dayOffset - 180} 天`;
-  if (sim.dayOffset === 180) return "今天截止";
-  if (sim.dayOffset >= 170) return `距截止 ${180 - sim.dayOffset} 天`;
+  const policy = reminderPolicy(sim);
+  if (sim.dayOffset > policy.cycleDays)
+    return `已超期 ${sim.dayOffset - policy.cycleDays} 天`;
+  if (sim.dayOffset === policy.cycleDays) return "今天截止";
+  if (sim.dayOffset >= policy.reminderStartDay)
+    return `距截止 ${policy.cycleDays - sim.dayOffset} 天`;
   if (sim.dayOffset < 0) return "尚未到激活日";
-  return `距提醒 ${170 - sim.dayOffset} 天`;
+  return `距提醒 ${policy.reminderStartDay - sim.dayOffset} 天`;
 }
 
 export function pickDefaultManagedSim<T extends SimManagerItemBase>(sims: T[]): T | null {

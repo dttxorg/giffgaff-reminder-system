@@ -11,6 +11,9 @@ export interface SimInfo {
   activatedAt: string;
   lastPortedAt: string | null;
   dayOffset: number;
+  carrier?: "giffgaff" | "ctexcel";
+  reminderStartDay?: number;
+  cycleDays?: number;
 }
 
 interface PortClientProps {
@@ -92,18 +95,32 @@ export default function PortClient({ simIdRaw, initialSim }: PortClientProps) {
   }
 
   if (success) {
-    return <SuccessPage />;
+    return (
+      <SuccessPage
+        carrierLabel={initialSim.carrier === "ctexcel" ? "CTExcel" : "Giffgaff"}
+        reminderStartDay={
+          initialSim.reminderStartDay ??
+          (initialSim.carrier === "ctexcel" ? 80 : 170)
+        }
+      />
+    );
   }
 
   const sim = initialSim;
+  const carrierLabel = sim.carrier === "ctexcel" ? "CTExcel" : "Giffgaff";
+  const reminderStartDay =
+    sim.reminderStartDay ?? (sim.carrier === "ctexcel" ? 80 : 170);
+  const cycleDays = sim.cycleDays ?? (sim.carrier === "ctexcel" ? 90 : 180);
 
   return (
     <div className="max-w-md mx-auto px-4 py-8 sm:py-12">
       <PublicBrandHeader />
       <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 sm:p-8">
-        <h1 className="text-2xl font-bold mb-1">Giffgaff 保号</h1>
+        <h1 className="text-2xl font-bold mb-1">
+          {carrierLabel} 保号
+        </h1>
         <p className="text-slate-600 text-sm mb-3">
-          保号后系统按新日期重新计时 170 天
+          提交后按新日期重新计时，第 {reminderStartDay} 天开始提醒
         </p>
         <details className="mb-5 group">
           <summary className="text-xs text-indigo-600 hover:text-indigo-700 cursor-pointer list-none inline-flex items-center gap-1">
@@ -119,7 +136,8 @@ export default function PortClient({ simIdRaw, initialSim }: PortClientProps) {
               <strong>发一条短信</strong>(发给自己或朋友都行)、<strong>打个电话</strong>、或<strong>用流量上一次网</strong>。
             </p>
             <p>
-              giffgaff 政策:连续 <strong>180 天</strong>无任何活动会回收号码(连同余额、sim 卡本身)。
+              当前号码采用第 <strong>{cycleDays} 天</strong>截止的提醒规则；
+              该日期可由账号持有人在后台调整。
             </p>
           </div>
         </details>
@@ -172,7 +190,7 @@ export default function PortClient({ simIdRaw, initialSim }: PortClientProps) {
             <div className="mt-2 p-3 rounded-lg bg-slate-50 border border-slate-200 text-slate-700 space-y-1">
               <p>
                 <strong>保号</strong> = 让运营商知道你这张卡还在用,避免被回收。
-                Giffgaff 卡 6 个月不活跃就会被回收号码。
+                当前号码的提醒周期为 {cycleDays} 天。
               </p>
               <p>任意付费活动即可保号,简单做法:</p>
               <ul className="list-disc list-inside pl-1 space-y-0.5">
@@ -201,7 +219,13 @@ export default function PortClient({ simIdRaw, initialSim }: PortClientProps) {
  * 保号成功页:实时倒计时 + "立即返回" + "撤销" 操作按钮
  * 让用户掌控节奏,不用瞎等 3 秒也不知道是否会真跳。
  */
-function SuccessPage() {
+function SuccessPage({
+  carrierLabel,
+  reminderStartDay,
+}: {
+  carrierLabel: string;
+  reminderStartDay: number;
+}) {
   const router = useRouter();
   const [secondsLeft, setSecondsLeft] = useState(3);
   const [cancelled, setCancelled] = useState(false);
@@ -238,7 +262,7 @@ function SuccessPage() {
         </div>
         <h1 className="text-xl font-bold mb-2 text-emerald-900">已记录</h1>
         <p className="text-slate-600">
-          新的保号日期已记录,下次提醒将在 170 天后
+          新的保号日期已记录，{carrierLabel} 提醒将在第 {reminderStartDay} 天开始
         </p>
         {!cancelled ? (
           <p className="text-xs text-slate-400 mt-3" aria-live="polite">
@@ -285,7 +309,7 @@ function PublicBrandHeader() {
       <span className="inline-block w-5 h-5 rounded bg-indigo-600 text-white text-center leading-5 align-middle">
         G
       </span>
-      <span className="align-middle">Giffgaff 保号提醒 · 公开保号链接</span>
+      <span className="align-middle">SIM 保号提醒 · 公开保号链接</span>
     </div>
   );
 }

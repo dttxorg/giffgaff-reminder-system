@@ -6,6 +6,7 @@ import { PrismaPg } from "@prisma/adapter-pg";
 import { hashPassword } from "../lib/auth";
 import { readAdminProvisioningCredentials } from "../lib/admin-bootstrap";
 import { generatePortToken } from "../lib/port-token";
+import { DEFAULT_TEMPLATE } from "../lib/template";
 
 const connectionString =
   process.env.DATABASE_URL ||
@@ -41,7 +42,7 @@ async function main() {
     await prisma.setting.create({
       data: {
         key: "reminder_template",
-        value: "【Giffgaff 保号提醒】您的号码 {{phone}} 已激活 {{days}} 天，该保号啦！\n点击更新保号时间：{{port_url}}",
+        value: DEFAULT_TEMPLATE,
       },
     });
     console.log(`[seed] 创建默认提醒模板`);

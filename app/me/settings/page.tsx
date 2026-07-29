@@ -42,12 +42,18 @@ export default async function MeSettingsPage({ searchParams }: PageProps) {
     return (
       <div className="max-w-md mx-auto px-4 py-8 sm:py-12 text-center">
         <h1 className="text-2xl font-bold mb-2">设置</h1>
-        <p className="text-slate-600 mb-4">该账号还没绑定 SIM 卡</p>
+        <p className="text-slate-600 mb-4">
+          {user.availableReminderSlots > 0
+            ? `号码已移除，仍保留 ${user.availableReminderSlots} 个提醒名额和原通知渠道`
+            : "该账号还没绑定 SIM 卡"}
+        </p>
         <Link
-          href="/redeem"
+          href={
+            user.availableReminderSlots > 0 ? "/me/reminders/new" : "/redeem"
+          }
           className="inline-flex items-center px-4 py-2 rounded-lg bg-indigo-600 text-white text-sm font-medium hover:bg-indigo-700"
         >
-          去兑换卡密 →
+          {user.availableReminderSlots > 0 ? "填写新号码 →" : "去兑换卡密 →"}
         </Link>
       </div>
     );
@@ -99,6 +105,9 @@ export default async function MeSettingsPage({ searchParams }: PageProps) {
         isFirstTime={isFirstTime}
         activatedAt={activatedAt}
         simId={selectedSim.id}
+        initialCarrier={selectedSim.carrier}
+        initialReminderStartDay={selectedSim.reminderStartDay}
+        initialCycleDays={selectedSim.cycleDays}
       />
 
       {/* 推送样例预览:显示当前选中 sim 的样例推送 */}
@@ -147,6 +156,9 @@ export default async function MeSettingsPage({ searchParams }: PageProps) {
               )
             )}
             portToken={selectedSim.portToken}
+            carrier={
+              selectedSim.carrier === "giffgaff" ? "Giffgaff" : "CTExcel"
+            }
           />
         </Suspense>
       </details>

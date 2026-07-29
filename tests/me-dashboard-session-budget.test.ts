@@ -21,7 +21,10 @@ describe("用户中心 Session 载荷预算", () => {
   it("SQL 在数据库内完成优先级选卡", () => {
     expect(helper).toContain("ROW_NUMBER() OVER (");
     expect(helper).toContain("WHEN \"status\" = 'paused' THEN 4");
-    expect(helper).toContain("WHEN \"dayOffset\" > 180 THEN 0");
+    expect(helper).toContain('WHEN "dayOffset" > "cycleDays" THEN 0');
+    expect(helper).toContain(
+      'WHEN "dayOffset" >= "reminderStartDay" THEN 1'
+    );
     expect(helper).toContain("WHEN \"missingChannel\" THEN 2");
   });
 

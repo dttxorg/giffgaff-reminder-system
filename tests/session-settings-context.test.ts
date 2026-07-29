@@ -55,6 +55,11 @@ describe("summarizeCurrentUserSettingsRows", () => {
           isSelected: null,
         },
       ])
-    ).toEqual({ username: "alice", sims: [], selectedSim: null });
+    ).toEqual({
+      username: "alice",
+      availableReminderSlots: 0,
+      sims: [],
+      selectedSim: null,
+    });
   });
 });

@@ -61,6 +61,11 @@ describe("summarizeCurrentUserDashboardRows", () => {
           isActive: null,
         },
       ])
-    ).toEqual({ username: "alice", sims: [], activeSim: null });
+    ).toEqual({
+      username: "alice",
+      availableReminderSlots: 0,
+      sims: [],
+      activeSim: null,
+    });
   });
 });

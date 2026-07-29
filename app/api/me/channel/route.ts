@@ -92,7 +92,7 @@ export async function POST(req: Request) {
   const verification = await sendPush(
     channel,
     channelKey,
-    "Giffgaff 保号提醒 - 渠道验证",
+    "SIM 保号提醒 - 渠道验证",
     "正在保存您的通知渠道配置。如果收到此消息,说明配置正确。"
   );
   if (!verification.ok) {

@@ -9,6 +9,7 @@ import { clearClientSessionCache } from "@/lib/client-session";
 interface ActionBarProps {
   /** 当前 activeSim 的 id(用于跳转到对应 sim 的 settings) */
   activeSimId: number | null;
+  availableReminderSlots?: number;
 }
 
 /**
@@ -20,7 +21,10 @@ interface ActionBarProps {
  *  - 每个按钮带 icon + 文字,移动端可点击区域足够大
  *  - flex-wrap 自动换行
  */
-export function ActionBar({ activeSimId }: ActionBarProps) {
+export function ActionBar({
+  activeSimId,
+  availableReminderSlots = 0,
+}: ActionBarProps) {
   const router = useRouter();
   const [loggingOut, setLoggingOut] = useState(false);
   const [logoutError, setLogoutError] = useState(false);
@@ -54,6 +58,17 @@ export function ActionBar({ activeSimId }: ActionBarProps) {
         aria-label="账号操作"
         className="flex items-center justify-center gap-2 flex-wrap"
       >
+        {availableReminderSlots > 0 && (
+          <Link
+            href="/me/reminders/new"
+            className="inline-flex min-h-[36px] items-center gap-1.5 rounded-full bg-emerald-50 px-3.5 py-2 text-sm font-medium text-emerald-700 transition-colors hover:bg-emerald-100"
+          >
+            填写新号码
+            <span className="rounded-full bg-emerald-100 px-1.5 text-[10px]">
+              {availableReminderSlots}
+            </span>
+          </Link>
+        )}
         <Link
           href={`/me/settings?simId=${activeSimId ?? ""}`}
           className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-full bg-indigo-50 text-indigo-700 text-sm font-medium hover:bg-indigo-100 transition-colors min-h-[36px]"

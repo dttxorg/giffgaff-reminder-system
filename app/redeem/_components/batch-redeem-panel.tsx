@@ -45,6 +45,7 @@ export function BatchRedeemPanel({
 }: BatchRedeemPanelProps) {
   const [text, setText] = useState("");
   const [defaultDate, setDefaultDate] = useState(() => todayLocalISODate());
+  const [carrier, setCarrier] = useState<"giffgaff" | "ctexcel">("giffgaff");
   const [fileName, setFileName] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -138,6 +139,7 @@ export function BatchRedeemPanel({
             code,
             phoneNumber,
             activatedAt,
+            carrier,
           })),
         }),
       });
@@ -281,6 +283,27 @@ export function BatchRedeemPanel({
         </div>
 
         <div className="space-y-4">
+          <div>
+            <label htmlFor="batch-carrier" className="mb-1.5 block text-sm font-medium">
+              统一运营商预设
+            </label>
+            <select
+              id="batch-carrier"
+              value={carrier}
+              onChange={(event) =>
+                setCarrier(event.target.value as "giffgaff" | "ctexcel")
+              }
+              disabled={loading}
+              className="min-h-11 w-full rounded-lg border border-slate-300 bg-white px-3 text-base outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
+            >
+              <option value="giffgaff">Giffgaff · 170 / 180 天</option>
+              <option value="ctexcel">CTExcel · 80 / 90 天</option>
+            </select>
+            <p className="mt-1.5 text-xs leading-5 text-slate-500">
+              本次导入统一使用该预设，之后每个号码都可单独调整。
+            </p>
+          </div>
+
           <div>
             <label
               htmlFor="batch-default-date"

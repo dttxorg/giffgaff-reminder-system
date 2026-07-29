@@ -10,6 +10,7 @@ import { LoadingButton } from "@/app/_components/loading-button";
 import { ExternalLink } from "@/app/_components/external-link";
 
 type Channel = "serverchan" | "bark" | "pushplus" | "telegram";
+type Carrier = "giffgaff" | "ctexcel";
 type TestStatus = "idle" | "sending" | "success" | "error";
 type SaveStatus = "idle" | "saving" | "success" | "error";
 
@@ -20,6 +21,9 @@ interface MeSettingsClientProps {
   activatedAt: string;
   /** 当前选中的 sim id(多 sim 时通过 ?simId=X 切换) */
   simId: number;
+  initialCarrier?: Carrier;
+  initialReminderStartDay?: number;
+  initialCycleDays?: number;
 }
 
 export function MeSettingsClient({
@@ -28,6 +32,9 @@ export function MeSettingsClient({
   isFirstTime,
   activatedAt: initialActivatedAt,
   simId,
+  initialCarrier = "giffgaff",
+  initialReminderStartDay = 170,
+  initialCycleDays = 180,
 }: MeSettingsClientProps) {
   const [channel, setChannel] = useState<Channel>(initialChannel);
   const [channelKey, setChannelKey] = useState(initialChannelKey);
@@ -253,8 +260,8 @@ export function MeSettingsClient({
     <div>
       {!configured && (
         <div className="mb-4 p-4 rounded-lg bg-amber-50 border border-amber-200 text-amber-900 text-sm">
-          <strong>首次设置</strong>:请填写您的通知渠道,系统会在 Giffgaff 保号日前
-          170-180 天自动推送提醒给您。
+          <strong>首次设置</strong>：请填写您的通知渠道。系统会按当前号码的
+          运营商预设或自定义日期自动推送提醒。
         </div>
       )}
 
@@ -577,6 +584,13 @@ export function MeSettingsClient({
         </div>
       </div>
 
+      <ReminderPolicySection
+        simId={simId}
+        initialCarrier={initialCarrier}
+        initialReminderStartDay={initialReminderStartDay}
+        initialCycleDays={initialCycleDays}
+      />
+
       <PasswordSection />
 
       {/* 危险操作区:默认收起,避免误改激活日期(会重置保号提醒 schedule) */}
@@ -604,7 +618,7 @@ export function MeSettingsClient({
               </svg>
               危险
             </span>
-            <span className="text-sm font-medium text-slate-900">高级 · 修改 SIM 卡激活日期</span>
+            <span className="text-sm font-medium text-slate-900">高级 · 激活日期与移除提醒</span>
           </span>
           <span aria-hidden="true" className="text-slate-400 group-open:rotate-180 transition-transform">
             ▾
@@ -612,21 +626,310 @@ export function MeSettingsClient({
         </summary>
         <div className="px-5 pb-5">
           <p className="text-xs text-slate-600 mb-3">
-            会重新计算保号提醒节奏。如果之前填错了兑换时的激活日期,在这里修正。
-            <strong className="text-rose-700">操作不可撤销</strong>,改完即生效。
+            可修正激活日期，也可移除当前号码。移除号码时会保留账号、通知渠道与提醒名额。
           </p>
-          <ActivatedAtSection initialActivatedAt={initialActivatedAt} simId={simId} />
+          <ActivatedAtSection
+            initialActivatedAt={initialActivatedAt}
+            reminderStartDay={initialReminderStartDay}
+            simId={simId}
+          />
+          <RemoveReminderSection simId={simId} />
         </div>
       </details>
     </div>
   );
 }
 
+const CARRIER_PRESETS = {
+  giffgaff: {
+    label: "Giffgaff",
+    reminderStartDay: 170,
+    cycleDays: 180,
+  },
+  ctexcel: {
+    label: "CTExcel",
+    reminderStartDay: 80,
+    cycleDays: 90,
+  },
+} as const;
+
+function ReminderPolicySection({
+  simId,
+  initialCarrier,
+  initialReminderStartDay,
+  initialCycleDays,
+}: {
+  simId: number;
+  initialCarrier: Carrier;
+  initialReminderStartDay: number;
+  initialCycleDays: number;
+}) {
+  const router = useRouter();
+  const [carrier, setCarrier] = useState(initialCarrier);
+  const [reminderStartDay, setReminderStartDay] = useState(
+    initialReminderStartDay
+  );
+  const [cycleDays, setCycleDays] = useState(initialCycleDays);
+  const [saved, setSaved] = useState({
+    carrier: initialCarrier,
+    reminderStartDay: initialReminderStartDay,
+    cycleDays: initialCycleDays,
+  });
+  const [saving, setSaving] = useState(false);
+  const [message, setMessage] = useState<{
+    kind: "success" | "error";
+    text: string;
+  } | null>(null);
+
+  const changed =
+    carrier !== saved.carrier ||
+    reminderStartDay !== saved.reminderStartDay ||
+    cycleDays !== saved.cycleDays;
+  const valid =
+    Number.isInteger(reminderStartDay) &&
+    Number.isInteger(cycleDays) &&
+    reminderStartDay >= 0 &&
+    cycleDays <= 3650 &&
+    cycleDays > reminderStartDay;
+
+  function choosePreset(nextCarrier: Carrier) {
+    const preset = CARRIER_PRESETS[nextCarrier];
+    setCarrier(nextCarrier);
+    setReminderStartDay(preset.reminderStartDay);
+    setCycleDays(preset.cycleDays);
+    setMessage(null);
+  }
+
+  async function save() {
+    if (!valid || !changed || saving) return;
+    setSaving(true);
+    setMessage(null);
+    try {
+      const response = await fetch("/api/me/sim", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          simId,
+          carrier,
+          reminderStartDay,
+          cycleDays,
+        }),
+      });
+      const data = await response.json();
+      if (!data.ok) {
+        setMessage({ kind: "error", text: data.error || "保存失败" });
+        return;
+      }
+      setSaved({ carrier, reminderStartDay, cycleDays });
+      setMessage({ kind: "success", text: "提醒规则已立即更新" });
+      router.refresh();
+    } catch (caught) {
+      setMessage({
+        kind: "error",
+        text: caught instanceof Error ? caught.message : "网络错误",
+      });
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <section className="mt-6 rounded-xl border border-indigo-100 bg-white p-5 shadow-sm sm:p-6">
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <h2 className="text-lg font-semibold text-slate-950">
+            运营商与提醒日期
+          </h2>
+          <p className="mt-1 text-xs leading-5 text-slate-500">
+            运营商提供默认值；每个号码都可独立调整，通知渠道不受影响。
+          </p>
+        </div>
+        <span className="shrink-0 rounded-full bg-indigo-50 px-2.5 py-1 text-xs font-semibold text-indigo-700">
+          可自定义
+        </span>
+      </div>
+
+      <div className="mt-4 grid grid-cols-2 gap-2">
+        {(Object.keys(CARRIER_PRESETS) as Carrier[]).map((value) => {
+          const preset = CARRIER_PRESETS[value];
+          return (
+            <button
+              key={value}
+              type="button"
+              aria-pressed={carrier === value}
+              onClick={() => choosePreset(value)}
+              className={`min-h-20 rounded-xl border p-3 text-left transition ${
+                carrier === value
+                  ? "border-indigo-500 bg-indigo-50 ring-2 ring-indigo-100"
+                  : "border-slate-200 hover:border-slate-300"
+              }`}
+            >
+              <span className="block text-sm font-semibold text-slate-900">
+                {preset.label}
+              </span>
+              <span className="mt-1 block text-xs leading-5 text-slate-500">
+                默认 {preset.reminderStartDay} / {preset.cycleDays} 天
+              </span>
+            </button>
+          );
+        })}
+      </div>
+
+      <div className="mt-4 grid gap-3 sm:grid-cols-2">
+        <label className="text-sm font-medium text-slate-700">
+          第几天开始提醒
+          <input
+            type="number"
+            min={0}
+            max={3649}
+            value={reminderStartDay}
+            onChange={(event) => {
+              setReminderStartDay(Number(event.target.value));
+              setMessage(null);
+            }}
+            className="mt-1.5 min-h-11 w-full rounded-lg border border-slate-300 px-3 text-base outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
+          />
+        </label>
+        <label className="text-sm font-medium text-slate-700">
+          第几天截止
+          <input
+            type="number"
+            min={1}
+            max={3650}
+            value={cycleDays}
+            onChange={(event) => {
+              setCycleDays(Number(event.target.value));
+              setMessage(null);
+            }}
+            className="mt-1.5 min-h-11 w-full rounded-lg border border-slate-300 px-3 text-base outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
+          />
+        </label>
+      </div>
+      {!valid && (
+        <p className="mt-2 text-xs text-rose-700">
+          截止日必须晚于提醒开始日，且最长为 3650 天。
+        </p>
+      )}
+      <p className="mt-3 rounded-lg bg-slate-50 px-3 py-2 text-xs leading-5 text-slate-600">
+        当前会在第 <strong>{reminderStartDay}</strong> 天开始提醒，并在第{" "}
+        <strong>{cycleDays}</strong> 天达到截止日；最后 10 天沿用逐步加密的提醒频率。
+      </p>
+
+      {message && (
+        <p
+          role="status"
+          className={`mt-3 rounded-lg px-3 py-2 text-sm ${
+            message.kind === "success"
+              ? "bg-emerald-50 text-emerald-800"
+              : "bg-rose-50 text-rose-800"
+          }`}
+        >
+          {message.text}
+        </p>
+      )}
+
+      <LoadingButton
+        type="button"
+        onClick={save}
+        loading={saving}
+        loadingLabel="保存中"
+        label={changed ? "保存提醒规则" : "提醒规则已保存"}
+        tone="primary"
+        disabled={!changed || !valid}
+        className="mt-4 min-h-11 w-full px-5 text-sm sm:w-auto"
+      />
+    </section>
+  );
+}
+
+function RemoveReminderSection({ simId }: { simId: number }) {
+  const router = useRouter();
+  const [confirming, setConfirming] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function remove() {
+    if (deleting) return;
+    setDeleting(true);
+    setError(null);
+    try {
+      const response = await fetch("/api/me/sim", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ simId }),
+      });
+      const data = await response.json();
+      if (!data.ok) {
+        setError(data.error || "移除失败");
+        return;
+      }
+      router.push("/me");
+      router.refresh();
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : "网络错误");
+    } finally {
+      setDeleting(false);
+    }
+  }
+
+  return (
+    <div className="mt-5 border-t border-rose-200 pt-5">
+      <h3 className="text-sm font-semibold text-slate-900">移除这个号码的提醒</h3>
+      <p className="mt-1 text-xs leading-5 text-slate-600">
+        号码和本号码的发送历史会被移除；账号、通知渠道和一个提醒名额会保留。
+        有新号码时可直接填写并继续使用。
+      </p>
+      {error && (
+        <p role="alert" className="mt-2 text-sm text-rose-700">
+          {error}
+        </p>
+      )}
+      {!confirming ? (
+        <button
+          type="button"
+          onClick={() => setConfirming(true)}
+          className="mt-3 min-h-11 rounded-lg border border-rose-300 bg-white px-4 text-sm font-semibold text-rose-700 hover:bg-rose-50"
+        >
+          移除提醒
+        </button>
+      ) : (
+        <div className="mt-3 rounded-xl border border-rose-200 bg-white p-4">
+          <p className="text-sm font-semibold text-rose-900">确认移除当前号码？</p>
+          <p className="mt-1 text-xs text-slate-600">
+            移除后可从用户中心使用保留名额填写新号码。
+          </p>
+          <div className="mt-3 flex flex-col-reverse gap-2 sm:flex-row">
+            <button
+              type="button"
+              onClick={() => setConfirming(false)}
+              disabled={deleting}
+              className="min-h-11 rounded-lg px-4 text-sm font-medium text-slate-600 hover:bg-slate-100"
+            >
+              取消
+            </button>
+            <LoadingButton
+              type="button"
+              onClick={remove}
+              loading={deleting}
+              loadingLabel="正在移除"
+              label="确认移除并保留名额"
+              tone="danger"
+              className="min-h-11 px-4 text-sm"
+            />
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function ActivatedAtSection({
   initialActivatedAt,
+  reminderStartDay,
   simId,
 }: {
   initialActivatedAt: string;
+  reminderStartDay: number;
   simId: number;
 }) {
   const router = useRouter();
@@ -656,12 +959,12 @@ function ActivatedAtSection({
   const changed = value !== initialActivatedAt;
   const canSubmit = valid && changed && !saving;
 
-  // 算新激活日期 + 170 天的提醒开始日,给用户直观影响提示
+  // 算新激活日期 + 当前自定义提醒日，给用户直观影响提示
   const reminderStartDate = (() => {
     const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
     if (!m) return "";
     const d = new Date(Date.UTC(+m[1], +m[2] - 1, +m[3]));
-    d.setUTCDate(d.getUTCDate() + 170);
+    d.setUTCDate(d.getUTCDate() + reminderStartDay);
     const y = d.getUTCFullYear();
     const mo = String(d.getUTCMonth() + 1).padStart(2, "0");
     const dd = String(d.getUTCDate()).padStart(2, "0");
@@ -829,7 +1132,7 @@ function ActivatedAtSection({
                 </div>
                 <ul className="list-disc list-inside space-y-0.5">
                   <li>会重新计算「已激活天数」</li>
-                  <li>如果之后没有保号记录,系统将从 {value} 重新计时 170 天</li>
+                  <li>如果之后没有保号记录,系统将从 {value} 重新计时 {reminderStartDay} 天</li>
                   <li>预计下次提醒开始日：<strong>{reminderStartDate || "—"}</strong></li>
                 </ul>
               </div>

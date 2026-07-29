@@ -90,6 +90,7 @@ export function RedeemClient({
     code: string;
     phone: string;
     date: string;
+    carrier: "giffgaff" | "ctexcel";
     username?: string;
     password?: string;
   }) {
@@ -101,6 +102,7 @@ export function RedeemClient({
         code: args.code,
         phoneNumber: normalizePhone(args.phone),
         activatedAt: args.date,
+        carrier: args.carrier,
       };
       if (!isLoggedIn) {
         if (!args.username || !args.password) return;
@@ -193,8 +195,8 @@ export function RedeemClient({
           isLoggedIn={isLoggedIn}
           currentUsername={currentUsername}
           existingSimCount={existingSimCount}
-          onSubmit={(username, password, phone, date) =>
-            doRedeem({ code: phase.code, username, password, phone, date })
+          onSubmit={(username, password, phone, date, carrier) =>
+            doRedeem({ code: phase.code, username, password, phone, date, carrier })
           }
           onBack={() => {
             setPhase({ kind: "input" });
@@ -323,11 +325,18 @@ function FormPhase({
   isLoggedIn: boolean;
   currentUsername?: string;
   existingSimCount: number;
-  onSubmit: (username: string, password: string, phone: string, date: string) => void;
+  onSubmit: (
+    username: string,
+    password: string,
+    phone: string,
+    date: string,
+    carrier: "giffgaff" | "ctexcel"
+  ) => void;
   onBack: () => void;
 }) {
   const [phone, setPhone] = useState("");
   const [date, setDate] = useState(() => todayLocalISODate());
+  const [carrier, setCarrier] = useState<"giffgaff" | "ctexcel">("giffgaff");
   // 新用户场景需要 username + password
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
@@ -355,9 +364,9 @@ function FormPhase({
         e.preventDefault();
         if (!canSubmit) return;
         if (isLoggedIn) {
-          onSubmit("", "", phone, date); // username/password 不用,但 onSubmit 签名统一
+          onSubmit("", "", phone, date, carrier); // username/password 不用,但 onSubmit 签名统一
         } else {
-          onSubmit(usernameNorm, password, phone, date);
+          onSubmit(usernameNorm, password, phone, date, carrier);
         }
       }}
       className="space-y-4"
@@ -437,8 +446,36 @@ function FormPhase({
       )}
 
       <div>
+        <label className="block text-sm font-medium mb-1.5">运营商预设</label>
+        <div className="grid grid-cols-2 gap-2">
+          {([
+            ["giffgaff", "Giffgaff", "170 天提醒 · 180 天截止"],
+            ["ctexcel", "CTExcel", "80 天提醒 · 90 天截止"],
+          ] as const).map(([value, label, desc]) => (
+            <button
+              key={value}
+              type="button"
+              aria-pressed={carrier === value}
+              onClick={() => setCarrier(value)}
+              className={`min-h-16 rounded-xl border px-3 py-2 text-left transition ${
+                carrier === value
+                  ? "border-indigo-500 bg-indigo-50 ring-2 ring-indigo-100"
+                  : "border-slate-200 bg-white hover:border-slate-300"
+              }`}
+            >
+              <span className="block text-sm font-semibold text-slate-900">{label}</span>
+              <span className="mt-0.5 block text-xs text-slate-500">{desc}</span>
+            </button>
+          ))}
+        </div>
+        <p className="mt-1.5 text-xs text-slate-500">
+          这是默认提醒周期，绑定后可在设置里按号码自由调整。
+        </p>
+      </div>
+
+      <div>
         <label className="block text-sm font-medium mb-1.5">
-          Giffgaff SIM 卡号
+          {carrier === "giffgaff" ? "Giffgaff" : "CTExcel"} SIM 卡号
         </label>
         <input
           type="text"
@@ -468,7 +505,8 @@ function FormPhase({
           </p>
         ) : (
           <p className="text-xs text-slate-500 mt-1.5">
-            从这天起算 170 天开始提醒您保号
+            从这天起算 {carrier === "giffgaff" ? 170 : 80} 天开始提醒，
+            第 {carrier === "giffgaff" ? 180 : 90} 天截止
           </p>
         )}
       </div>

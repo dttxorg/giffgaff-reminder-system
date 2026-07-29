@@ -1,8 +1,20 @@
-import { COUNTS, nextBucketAt, shanghaiParts } from "@/lib/bucket";
+import {
+  nextBucketAt,
+  reminderCountForDay,
+  shanghaiParts,
+} from "@/lib/bucket";
 import { NextPushCountdown } from "./next-push-countdown";
+import {
+  reminderPolicy,
+  type CarrierType,
+  type ReminderSchedule,
+} from "@/lib/carrier";
 
 interface DayOffsetProgressProps {
   dayOffset: number;
+  carrier?: CarrierType;
+  reminderStartDay?: number;
+  cycleDays?: number;
 }
 
 interface ProgressInfo {
@@ -24,43 +36,52 @@ interface ProgressInfo {
  * - 180: 最后一天 (10 次/天)
  * - >180: 已过期 (系统停止提醒)
  */
-export function progressFor(dayOffset: number): ProgressInfo {
-  if (dayOffset < 170) {
+export function progressFor(
+  dayOffset: number,
+  schedule: CarrierType | ReminderSchedule = "giffgaff"
+): ProgressInfo {
+  const policy = reminderPolicy(schedule);
+  if (dayOffset < policy.reminderStartDay) {
     return {
-      pct: Math.round((dayOffset / 169) * 25),
+      pct: Math.round(
+        (Math.max(0, dayOffset) / Math.max(1, policy.reminderStartDay - 1)) *
+          25
+      ),
       color: "bg-slate-300",
       label: "静默期",
       bucketCount: 0,
     };
   }
-  if (dayOffset <= 172) {
+  const daysLeft = policy.cycleDays - dayOffset;
+  const bucketCount = reminderCountForDay(dayOffset, schedule);
+  if (daysLeft >= 8) {
     return {
-      pct: 25 + Math.round(((dayOffset - 170) / 2) * 25),
+      pct: 25,
       color: "bg-amber-400",
       label: "轻度提醒",
-      bucketCount: COUNTS[dayOffset] ?? 0,
+      bucketCount,
     };
   }
-  if (dayOffset <= 175) {
+  if (daysLeft >= 5) {
     return {
-      pct: 50 + Math.round(((dayOffset - 173) / 2) * 25),
+      pct: 50 + Math.round(((7 - daysLeft) / 2) * 25),
       color: "bg-amber-500",
       label: "中度提醒",
-      bucketCount: COUNTS[dayOffset] ?? 0,
+      bucketCount,
     };
   }
-  if (dayOffset <= 178) {
+  if (daysLeft >= 2) {
     return {
-      pct: 75 + Math.round(((dayOffset - 176) / 2) * 15),
+      pct: 75 + Math.round(((4 - daysLeft) / 2) * 15),
       color: "bg-orange-500",
       label: "高度提醒",
-      bucketCount: COUNTS[dayOffset] ?? 0,
+      bucketCount,
     };
   }
-  if (dayOffset === 179) {
+  if (daysLeft === 1) {
     return { pct: 95, color: "bg-orange-600", label: "临近截止", bucketCount: 5 };
   }
-  if (dayOffset === 180) {
+  if (daysLeft === 0) {
     return { pct: 100, color: "bg-rose-600", label: "最后一天", bucketCount: 10 };
   }
   return { pct: 100, color: "bg-slate-500", label: "已过期", bucketCount: 0 };
@@ -69,8 +90,14 @@ export function progressFor(dayOffset: number): ProgressInfo {
 /**
  * 进度条 + 分段颜色,让用户一眼看出"还差几天""当前处于哪个提醒阶段"。
  */
-export function DayOffsetProgress({ dayOffset }: DayOffsetProgressProps) {
-  const { pct, color, label, bucketCount } = progressFor(dayOffset);
+export function DayOffsetProgress({
+  dayOffset,
+  carrier = "giffgaff",
+  reminderStartDay,
+  cycleDays,
+}: DayOffsetProgressProps) {
+  const schedule = { carrier, reminderStartDay, cycleDays };
+  const { pct, color, label, bucketCount } = progressFor(dayOffset, schedule);
   const clamped = Math.max(0, Math.min(100, pct));
 
   return (
@@ -106,6 +133,9 @@ interface ReminderWindowAlertProps {
   bucketInfo: { count: number; bucket: number } | null;
   /** Round 137: 当前时间,用于算"距下次推送还有多久" */
   now?: Date;
+  carrier?: CarrierType;
+  reminderStartDay?: number;
+  cycleDays?: number;
 }
 
 /**
@@ -118,12 +148,17 @@ export function ReminderWindowAlert({
   dayOffset,
   bucketInfo,
   now,
+  carrier = "giffgaff",
+  reminderStartDay,
+  cycleDays,
 }: ReminderWindowAlertProps) {
-  const daysLeft = 180 - dayOffset;
-  const { label, bucketCount } = progressFor(dayOffset);
+  const schedule = { carrier, reminderStartDay, cycleDays };
+  const policy = reminderPolicy(schedule);
+  const daysLeft = policy.cycleDays - dayOffset;
+  const { label, bucketCount } = progressFor(dayOffset, schedule);
   // Round 137: 用上海时区算"下次推送时间"
   const parts = shanghaiParts(now ?? new Date());
-  const nextHHMM = nextBucketAt(dayOffset, parts.hour);
+  const nextHHMM = nextBucketAt(dayOffset, parts.hour, schedule);
   // Round 139: nextHHMM="00:00" 在 bucketForDay 边界外,可能是"今天 0 点已过"或"明天 0 点"。
   // 简单判断:如果 parts.hour >= 12 且 nextHHMM="00:00",则是明天;否则今天已过
   // (bucketForDay 不会让 hourOfDay 落在最后一个 bucket 之后才返回 0:00,

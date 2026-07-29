@@ -58,15 +58,18 @@ export async function GET(req: Request) {
   });
 
   const header =
-    "simId,号码,激活日期,上次保号,已激活天数,提醒窗口内,状态,渠道(sim),绑定账号,最后发送时间,最后状态,最后错误\n";
+    "simId,号码,运营商,提醒开始日,截止日,激活日期,上次保号,已激活天数,提醒窗口内,状态,渠道(sim),绑定账号,最后发送时间,最后状态,最后错误\n";
   const lines = sims.map((s) => {
     const baseline = s.lastPortedAt ?? s.activatedAt;
     const days = dayOffsetFromBaseline(baseline);
-    const inWindow = isInReminderWindow(days) ? "是" : "否";
+    const inWindow = isInReminderWindow(days, s) ? "是" : "否";
     const last = s.reminders[0];
     return [
       String(s.id),
       csvEscape(s.phoneNumber),
+      s.carrier,
+      String(s.reminderStartDay),
+      String(s.cycleDays),
       s.activatedAt.toISOString().slice(0, 10),
       s.lastPortedAt ? s.lastPortedAt.toISOString().slice(0, 10) : "",
       String(days),

@@ -4,6 +4,7 @@ const mocks = vi.hoisted(() => ({
   getCurrentUserId: vi.fn(),
   getCurrentUserSessionId: vi.fn(),
   updateCurrentUserSimActivatedAt: vi.fn(),
+  updateCurrentUserSimDetails: vi.fn(),
   updateCurrentUserSimChannel: vi.fn(),
   userFindUnique: vi.fn(),
   userUpdate: vi.fn(),
@@ -26,6 +27,7 @@ vi.mock("../lib/session", () => ({
 
 vi.mock("../lib/user-sim-writes", () => ({
   updateCurrentUserSimActivatedAt: mocks.updateCurrentUserSimActivatedAt,
+  updateCurrentUserSimDetails: mocks.updateCurrentUserSimDetails,
   updateCurrentUserSimChannel: mocks.updateCurrentUserSimChannel,
 }));
 
@@ -167,6 +169,61 @@ describe("用户设置写接口", () => {
     } finally {
       vi.useRealTimers();
     }
+  });
+
+  it("切换到 CTExcel 时载入 80/90 默认值", async () => {
+    mocks.updateCurrentUserSimDetails.mockResolvedValue({
+      authenticated: true,
+      hasSims: true,
+      sim: { id: 23, portToken: null },
+    });
+
+    const response = await changeActivatedAt(
+      jsonRequest("/api/me/sim", "PATCH", {
+        simId: 23,
+        carrier: "ctexcel",
+      })
+    );
+
+    expect(response.status).toBe(200);
+    expect(mocks.updateCurrentUserSimDetails).toHaveBeenCalledWith(
+      "session-id",
+      23,
+      {
+        activatedAt: undefined,
+        carrier: "ctexcel",
+        reminderStartDay: 80,
+        cycleDays: 90,
+      }
+    );
+  });
+
+  it("客户自定义日期覆盖运营商默认值", async () => {
+    mocks.updateCurrentUserSimDetails.mockResolvedValue({
+      authenticated: true,
+      hasSims: true,
+      sim: { id: 23, portToken: null },
+    });
+
+    const response = await changeActivatedAt(
+      jsonRequest("/api/me/sim", "PATCH", {
+        simId: 23,
+        carrier: "ctexcel",
+        reminderStartDay: 75,
+        cycleDays: 88,
+      })
+    );
+
+    expect(response.status).toBe(200);
+    expect(mocks.updateCurrentUserSimDetails).toHaveBeenCalledWith(
+      "session-id",
+      23,
+      expect.objectContaining({
+        carrier: "ctexcel",
+        reminderStartDay: 75,
+        cycleDays: 88,
+      })
+    );
   });
 
   it("无效日历日期不会进入 SIM 写入", async () => {

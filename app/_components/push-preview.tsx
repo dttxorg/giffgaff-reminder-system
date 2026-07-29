@@ -13,6 +13,7 @@ interface PushPreviewProps {
   /** 预览用 sim id,fallback */
   /** 父组件已经加载模板时直接传入，避免重复数据库查询 */
   templateOverride?: string;
+  carrier?: string;
 }
 
 /**
@@ -27,13 +28,14 @@ export async function PushPreview({
   days,
   portToken,
   templateOverride,
+  carrier = "Giffgaff",
 }: PushPreviewProps) {
   // 父组件可把模板与其它查询并行预载；独立使用时仍保持原有 fallback。
   const template =
     templateOverride ?? (await getCachedReminderTemplate());
 
   // 检测未知变量
-  const known = new Set(["phone", "days", "port_url"]);
+  const known = new Set(["phone", "days", "port_url", "carrier"]);
   const matches = template.match(/\{\{\s*([a-zA-Z_][a-zA-Z0-9_]*)\s*\}\}/g) ?? [];
   const unknown = new Set<string>();
   for (const m of matches) {
@@ -55,6 +57,7 @@ export async function PushPreview({
     phone: phoneDisplay,
     days,
     port_url: url,
+    carrier,
   });
 
   return (
@@ -68,7 +71,7 @@ export async function PushPreview({
         <div>
           <div className="text-xs text-slate-500 mb-1">推送标题</div>
           <div className="text-sm font-medium text-slate-900">
-            Giffgaff 保号提醒
+            {carrier} 保号提醒
           </div>
         </div>
         <div>
@@ -108,6 +111,10 @@ export async function PushPreview({
         <div className="text-xs text-slate-500 border-t border-slate-100 pt-3">
           <div className="font-medium text-slate-600 mb-1.5">变量说明</div>
           <ul className="space-y-1">
+            <li>
+              <code className="bg-slate-100 px-1 rounded text-rose-700 font-mono">{"{{carrier}}"}</code>
+              <span className="ml-1.5">运营商名称</span>
+            </li>
             <li>
               <code className="bg-slate-100 px-1 rounded text-rose-700 font-mono">{"{{phone}}"}</code>
               <span className="ml-1.5">完整手机号(如 07724 215611)</span>

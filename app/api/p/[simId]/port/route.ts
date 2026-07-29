@@ -23,7 +23,7 @@ interface RouteContext {
  * 公开 Bearer 链接提交；仅接受随机 portToken，并在成功后立即轮换使旧链接失效。
  * - portedAt 不能晚于今天（不能填未来）
  * - portedAt 不能早于 activatedAt（保号动作只能发生在激活之后）
- *   老用户（卡已用很久）可以补录任意历史日期，系统按那天重新计时 170 天
+ *   老用户（卡已用很久）可以补录任意历史日期，系统按该号码的提醒规则重新计时
  */
 export async function POST(req: Request, ctx: RouteContext) {
   const { simId } = await ctx.params;

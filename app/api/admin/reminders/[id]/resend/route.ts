@@ -13,6 +13,7 @@ import {
 } from "@/lib/rate-limit";
 import { getPublicBaseUrl } from "@/lib/public-base-url";
 import { buildAccountReminderResendMessage } from "@/lib/account-reminder";
+import { carrierPolicy } from "@/lib/carrier";
 
 interface RouteContext {
   params: Promise<{ id: string }>;
@@ -103,11 +104,13 @@ export async function POST(req: Request, ctx: RouteContext) {
       url = portUrl(baseUrl, token);
     }
     const template = setting?.value || DEFAULT_TEMPLATE;
-    title = "Giffgaff 保号提醒";
+    const carrierLabel = carrierPolicy(reminder.sim.carrier).label;
+    title = `${carrierLabel} 保号提醒`;
     body = renderTemplate(template, {
       phone: reminder.sim.phoneNumber,
       days,
       port_url: url,
+      carrier: carrierLabel,
     });
   }
 

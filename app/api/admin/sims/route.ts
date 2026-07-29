@@ -5,14 +5,31 @@ import { getAdminSession } from "@/lib/session";
 import { hashPassword } from "@/lib/auth";
 import { generatePortToken } from "@/lib/port-token";
 import { parseISOCalendarDate } from "@/lib/date";
+import { carrierPolicy } from "@/lib/carrier";
 
-const BodySchema = z.object({
-  phoneNumber: z.string().min(6),
-  activatedAt: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
-  status: z.enum(["active", "paused"]).optional(),
-  // A 场景:管理员录 sim 时一并给客户设置初始密码
-  initialPassword: z.string().min(8, "初始密码至少 8 位"),
-});
+const BodySchema = z
+  .object({
+    phoneNumber: z.string().min(6),
+    activatedAt: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+    status: z.enum(["active", "paused"]).optional(),
+    carrier: z.enum(["giffgaff", "ctexcel"]).optional(),
+    reminderStartDay: z.number().int().min(0).max(3649).optional(),
+    cycleDays: z.number().int().min(1).max(3650).optional(),
+    // A 场景:管理员录 sim 时一并给客户设置初始密码
+    initialPassword: z.string().min(8, "初始密码至少 8 位"),
+  })
+  .refine(
+    (data) =>
+      (data.reminderStartDay === undefined) === (data.cycleDays === undefined),
+    { message: "提醒开始日与截止日需要一起填写" }
+  )
+  .refine(
+    (data) =>
+      data.reminderStartDay === undefined ||
+      data.cycleDays === undefined ||
+      data.reminderStartDay < data.cycleDays,
+    { message: "提醒开始日必须早于截止日" }
+  );
 
 /**
  * POST /api/admin/sims
@@ -42,13 +59,32 @@ export async function POST(req: Request) {
   if (!activatedAt) {
     return NextResponse.json({ ok: false, error: "激活日期无效" }, { status: 400 });
   }
+  const carrier = parsed.data.carrier ?? "giffgaff";
+  const defaults = carrierPolicy(carrier);
+  const reminderRule = {
+    carrier,
+    reminderStartDay:
+      parsed.data.reminderStartDay ?? defaults.reminderStartDay,
+    cycleDays: parsed.data.cycleDays ?? defaults.cycleDays,
+  };
 
   try {
     const existing = await prisma.sim.findUnique({ where: { phoneNumber: phone } });
     if (existing) {
       const updated = await prisma.sim.update({
         where: { id: existing.id },
-        data: { activatedAt, ...(parsed.data.status ? { status: parsed.data.status } : {}) },
+        data: {
+          activatedAt,
+          ...(parsed.data.status ? { status: parsed.data.status } : {}),
+          ...(parsed.data.carrier !== undefined
+            ? reminderRule
+            : parsed.data.reminderStartDay !== undefined
+              ? {
+                  reminderStartDay: parsed.data.reminderStartDay,
+                  cycleDays: parsed.data.cycleDays!,
+                }
+              : {}),
+        },
       });
       return NextResponse.json({ ok: true, sim: updated, created: false });
     }
@@ -68,6 +104,7 @@ export async function POST(req: Request) {
           portToken: generatePortToken(),
           activatedAt,
           status: parsed.data.status || "active",
+          ...reminderRule,
           userId: user.id,
         },
       });

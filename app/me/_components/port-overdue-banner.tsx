@@ -8,6 +8,8 @@ interface PortOverdueBannerProps {
   portToken: string | null;
   simId: number;
   now: Date;
+  carrier?: "giffgaff" | "ctexcel";
+  cycleDays?: number;
 }
 
 /**
@@ -23,12 +25,14 @@ export function PortOverdueBanner({
   portToken,
   simId,
   now,
+  carrier = "giffgaff",
+  cycleDays = carrier === "ctexcel" ? 90 : 180,
 }: PortOverdueBannerProps) {
   const dayOffset = dayOffsetFromBaseline(baseline, now);
   // 仅 180+ 渲染(0-180 范围内归 SimCard / PortCountdownHero 处理)
-  if (dayOffset <= 180) return null;
+  if (dayOffset <= cycleDays) return null;
 
-  const daysOverdue = dayOffset - 180;
+  const daysOverdue = dayOffset - cycleDays;
   const portHref = portToken
     ? `/p/${portToken}`
     : `/me/settings?simId=${simId}`;
@@ -63,8 +67,8 @@ export function PortOverdueBanner({
             系统已停止提醒 · 已过保号窗口 {daysOverdue} 天
           </div>
           <div className="text-xs text-rose-800/80 mb-3 leading-relaxed">
-            180 天窗口期已过,运营商可能在近期回收号码。
-            请立即保号 — 选最近的保号日期提交,系统会从那天重新计时 170 天。
+            {cycleDays} 天窗口期已过，运营商可能在近期回收号码。
+            请立即保号；提交最近的保号日期后，系统会按当前自定义规则重新计时。
           </div>
           <Link
             href={portHref}

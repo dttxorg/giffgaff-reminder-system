@@ -141,25 +141,36 @@ export async function getLast30DaysSends(): Promise<DailySend[]> {
 }
 
 /**
- * Round 151: 取"提醒窗口内"的 sim 列表(170-180 天)
+ * 取各号码自定义“提醒窗口内”的 sim 列表。
  *
  * 业务用例: /admin 仪表盘"提醒窗口内 sim 列表"卡,
  * admin 不只看数字(几个 sim 在窗口),还能看到具体哪些 sim。
  *
- * 算法: 取所有 active sim,JS 里算 dayOffset 过滤 170-180 区间,
+ * 算法: 取所有 active sim，在 JS 中按各自提醒开始日与截止日过滤，
  * 跟 dashboard 主流程的 inWindowSimCount 算法保持一致。
  */
 export interface InWindowSim {
   simId: number;
   phoneNumber: string;
   dayOffset: number;
-  daysLeft: number; // 距保号截止 (180 - dayOffset)
+  daysLeft: number; // 距当前号码自定义保号截止日
+  carrier?: "giffgaff" | "ctexcel";
+  reminderStartDay?: number;
+  cycleDays?: number;
 }
 
 export async function getInWindowSims(limit: number = 10): Promise<InWindowSim[]> {
   const sims = await prisma.sim.findMany({
     where: { status: "active" },
-    select: { id: true, phoneNumber: true, activatedAt: true, lastPortedAt: true },
+    select: {
+      id: true,
+      phoneNumber: true,
+      activatedAt: true,
+      lastPortedAt: true,
+      carrier: true,
+      reminderStartDay: true,
+      cycleDays: true,
+    },
   });
   const now = new Date();
   const inWindow = sims
@@ -170,10 +181,16 @@ export async function getInWindowSims(limit: number = 10): Promise<InWindowSim[]
         simId: s.id,
         phoneNumber: s.phoneNumber,
         dayOffset,
-        daysLeft: 180 - dayOffset,
+        daysLeft: s.cycleDays - dayOffset,
+        carrier: s.carrier,
+        reminderStartDay: s.reminderStartDay,
+        cycleDays: s.cycleDays,
       };
     })
-    .filter((s) => s.dayOffset >= 170 && s.dayOffset <= 180)
+    .filter(
+      (s) =>
+        s.dayOffset >= s.reminderStartDay && s.dayOffset <= s.cycleDays
+    )
     .sort((a, b) => a.daysLeft - b.daysLeft) // 最紧急的(剩最少天)排前
     .slice(0, limit);
   return inWindow;

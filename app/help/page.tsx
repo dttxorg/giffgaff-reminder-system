@@ -146,7 +146,7 @@ export default function HelpIndexPage() {
           </li>
           <li>
             <strong>不想装 App</strong>:推荐 <Link href="/help/serverchan" className="text-indigo-600 hover:underline">Sever酱</Link>,
-            微信直接收。每天 5 条够保号提醒用(180 天最多 20 条)。
+            微信直接收。系统会根据每个号码的自定义截止日逐步提高提醒频率。
           </li>
           <li>
             <strong>想用更稳的微信推送</strong>:选 <Link href="/help/pushplus" className="text-indigo-600 hover:underline">pushplus</Link>,额度大。
@@ -176,9 +176,9 @@ export default function HelpIndexPage() {
       <details>
         <summary>能同时用多个渠道吗?</summary>
         <p>
-          当前版本一个账号绑定一个渠道。如果您有特殊需求(比如同时想微信 + Bark 兜底),
-          可以在 <Link href="/me" className="text-indigo-600 hover:underline">用户中心</Link> 切换渠道,
-          历史推送会保留,只是后续新提醒走新渠道。
+          每个号码可选择一个渠道，同一账号下的不同号码也可分别配置。如果想更换渠道，
+          可以在 <Link href="/me" className="text-indigo-600 hover:underline">用户中心</Link> 选择号码后修改；
+          历史推送会保留，后续提醒走新渠道。
         </p>
       </details>
 

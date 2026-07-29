@@ -48,8 +48,8 @@ describe("<InWindowSims />", () => {
     expect(link).toHaveAttribute("href", "/admin/sims/1");
   });
 
-  it("标题显示 N 个 · 170-180 天", () => {
+  it("标题显示 N 个并说明按号码规则", () => {
     render(<InWindowSims sims={baseSims} />);
-    expect(screen.getByText("3 个 · 170-180 天")).toBeInTheDocument();
+    expect(screen.getByText("3 个 · 按号码规则")).toBeInTheDocument();
   });
 });

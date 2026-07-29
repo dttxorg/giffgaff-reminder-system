@@ -1,3 +1,9 @@
+import {
+  reminderPolicy,
+  type CarrierType,
+  type ReminderSchedule,
+} from "./carrier";
+
 /**
  * "已激活 N 天" 显示标签
  *
@@ -22,7 +28,10 @@ export type ActivatedDaysDisplay = {
  * 0/1/2 边界返回中文标签,3+ 返回数字字符串
  * 业务用例:/me "已激活 N 天" 主数字
  */
-export function formatActivatedDays(dayOffset: number): ActivatedDaysDisplay {
+export function formatActivatedDays(
+  dayOffset: number,
+  schedule: CarrierType | ReminderSchedule = "giffgaff"
+): ActivatedDaysDisplay {
   // 防御:用户填了未来激活日期(理论上 API 阻止,UI 也限定不能晚于今天)
   // 但 dayOffset 计算走本地时区,边缘情况可能产生 -1/-2
   // 先处理这两个明确边界,再把更小的负数归零
@@ -35,10 +44,14 @@ export function formatActivatedDays(dayOffset: number): ActivatedDaysDisplay {
   if (dayOffset === 2) return { text: "前天", showFreshBadge: true, mode: "fresh" };
 
   // 3+ 直接数字
-  if (dayOffset >= 170 && dayOffset <= 180) {
+  const policy = reminderPolicy(schedule);
+  if (
+    dayOffset >= policy.reminderStartDay &&
+    dayOffset <= policy.cycleDays
+  ) {
     return { text: String(dayOffset), showFreshBadge: false, mode: "inWindow" };
   }
-  if (dayOffset > 180) {
+  if (dayOffset > policy.cycleDays) {
     return { text: String(dayOffset), showFreshBadge: false, mode: "overdue" };
   }
   return { text: String(dayOffset), showFreshBadge: false, mode: "normal" };

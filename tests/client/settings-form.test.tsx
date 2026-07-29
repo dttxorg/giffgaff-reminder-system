@@ -19,12 +19,13 @@ describe("<SettingsForm />", () => {
     render(<SettingsForm initial={SAMPLE_TEMPLATE} />);
     const ta = screen.getByDisplayValue(SAMPLE_TEMPLATE) as HTMLTextAreaElement;
     expect(ta).toBeInTheDocument();
-    // 变量按钮(3 个)
+    // 变量按钮(运营商 + 原有 3 个)
     const buttons = screen.getAllByRole("button", { name: /\{\{[a-z_]+\}\}/ });
-    expect(buttons).toHaveLength(3);
-    expect(buttons[0]).toHaveTextContent("{{phone}}");
-    expect(buttons[1]).toHaveTextContent("{{days}}");
-    expect(buttons[2]).toHaveTextContent("{{port_url}}");
+    expect(buttons).toHaveLength(4);
+    expect(buttons[0]).toHaveTextContent("{{carrier}}");
+    expect(buttons[1]).toHaveTextContent("{{phone}}");
+    expect(buttons[2]).toHaveTextContent("{{days}}");
+    expect(buttons[3]).toHaveTextContent("{{port_url}}");
   });
 
   it("点变量按钮 → 在 textarea 内容里插入该变量", () => {

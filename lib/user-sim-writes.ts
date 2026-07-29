@@ -1,6 +1,7 @@
 import { prisma } from "./db";
 
 type Channel = "serverchan" | "bark" | "pushplus" | "telegram";
+type Carrier = "giffgaff" | "ctexcel";
 
 interface CurrentUserSimWriteRow {
   authenticated: boolean;
@@ -41,6 +42,24 @@ export async function updateCurrentUserSimActivatedAt(
   simId: number,
   activatedAt: Date
 ): Promise<CurrentUserSimWriteOutcome> {
+  return updateCurrentUserSimDetails(sessionId, simId, { activatedAt });
+}
+
+/** Session/归属校验后原子更新运营商与可选激活日期。 */
+export async function updateCurrentUserSimDetails(
+  sessionId: string,
+  simId: number,
+  input: {
+    activatedAt?: Date;
+    carrier?: Carrier;
+    reminderStartDay?: number;
+    cycleDays?: number;
+  }
+): Promise<CurrentUserSimWriteOutcome> {
+  const activatedAt = input.activatedAt ?? null;
+  const carrier = input.carrier ?? null;
+  const reminderStartDay = input.reminderStartDay ?? null;
+  const cycleDays = input.cycleDays ?? null;
   const [row] = await prisma.$queryRaw<CurrentUserSimWriteRow[]>`
     WITH expired_session AS (
       DELETE FROM "UserSession"
@@ -57,7 +76,10 @@ export async function updateCurrentUserSimActivatedAt(
     updated AS (
       UPDATE "Sim" sim
       SET
-        "activatedAt" = ${activatedAt},
+        "activatedAt" = COALESCE(${activatedAt}, sim."activatedAt"),
+        "carrier" = COALESCE(${carrier}::"Carrier", sim."carrier"),
+        "reminderStartDay" = COALESCE(${reminderStartDay}, sim."reminderStartDay"),
+        "cycleDays" = COALESCE(${cycleDays}, sim."cycleDays"),
         "updatedAt" = CURRENT_TIMESTAMP
       FROM current_session current
       WHERE sim."id" = ${simId}
@@ -108,6 +130,17 @@ export async function updateCurrentUserSimChannel(
       WHERE sim."id" = ${simId}
         AND sim."userId" = current."userId"
       RETURNING sim."id", sim."portToken"
+    ),
+    saved_default AS (
+      UPDATE "User" usr
+      SET
+        "defaultChannel" = ${channel}::"Channel",
+        "defaultChannelKey" = ${channelKey},
+        "updatedAt" = CURRENT_TIMESTAMP
+      FROM current_session current
+      WHERE usr."id" = current."userId"
+        AND EXISTS(SELECT 1 FROM updated)
+      RETURNING usr."id"
     )
     SELECT
       EXISTS(SELECT 1 FROM current_session) AS "authenticated",

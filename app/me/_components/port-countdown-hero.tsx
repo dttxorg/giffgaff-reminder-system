@@ -4,6 +4,7 @@ import {
   dayOffsetFromBaseline,
   shanghaiParts,
 } from "@/lib/bucket";
+import { carrierPolicy, type CarrierType } from "@/lib/carrier";
 
 interface PortCountdownHeroProps {
   /** sim 的上次保号日期(若有)或激活日期 */
@@ -14,6 +15,9 @@ interface PortCountdownHeroProps {
   simId: number;
   /** 客户端"现在",从父组件传入保证 SSR 一致 */
   now: Date;
+  carrier?: CarrierType;
+  reminderStartDay?: number;
+  cycleDays?: number;
 }
 
 /**
@@ -33,20 +37,31 @@ export function PortCountdownHero({
   portToken,
   simId,
   now,
+  carrier = "giffgaff",
+  reminderStartDay = carrierPolicy(carrier).reminderStartDay,
+  cycleDays = carrierPolicy(carrier).cycleDays,
 }: PortCountdownHeroProps) {
   const dayOffset = dayOffsetFromBaseline(baseline, now);
-  // 仅在 170-180 窗口内显示
-  if (dayOffset < 170 || dayOffset > 180) return null;
+  if (dayOffset < reminderStartDay || dayOffset > cycleDays) return null;
 
   // 计算当前小时(上海时区)的 bucket,显示"今天第几次推送"
   const sp = shanghaiParts(now);
-  const plan = bucketForDay(dayOffset, sp.hour);
+  const plan = bucketForDay(dayOffset, sp.hour, {
+    carrier,
+    reminderStartDay,
+    cycleDays,
+  });
 
   // 距离 180 天还剩多少
-  const daysLeft = 180 - dayOffset;
+  const daysLeft = cycleDays - dayOffset;
 
   // 文案 + 配色
-  const { headline, sub, gradient, ring, dotColor } = urgency(dayOffset, daysLeft);
+  const { headline, sub, gradient, ring, dotColor } = urgency(
+    dayOffset,
+    daysLeft,
+    reminderStartDay,
+    cycleDays
+  );
 
   // 当天 bucket 进度(0/1/2),给用户"已经推了第 N 次"的实感
   const sentToday = plan ? plan.bucket + 1 : 0;
@@ -79,7 +94,7 @@ export function PortCountdownHero({
             aria-hidden="true"
           />
           <span className="text-xs font-semibold tracking-wider uppercase">
-            保号窗口期
+            {carrier === "giffgaff" ? "Giffgaff" : "CTExcel"} · 保号窗口期
           </span>
         </div>
 
@@ -90,12 +105,12 @@ export function PortCountdownHero({
         <div className="mb-4">
           <div className="flex items-center justify-between text-[11px] text-white/80 mb-1">
             <span>第 {dayOffset} 天</span>
-            <span>截止 180 天</span>
+            <span>截止 {cycleDays} 天</span>
           </div>
           <div className="h-1.5 bg-white/20 rounded-full overflow-hidden">
             <div
               className="h-full bg-white/90 rounded-full transition-all"
-              style={{ width: `${Math.min(100, (dayOffset / 180) * 100)}%` }}
+              style={{ width: `${Math.min(100, (dayOffset / cycleDays) * 100)}%` }}
             />
           </div>
         </div>
@@ -137,7 +152,9 @@ export function PortCountdownHero({
  */
 function urgency(
   dayOffset: number,
-  daysLeft: number
+  daysLeft: number,
+  reminderStartDay: number,
+  cycleDays: number
 ): {
   headline: string;
   sub: string;
@@ -145,16 +162,16 @@ function urgency(
   ring: string;
   dotColor: string;
 } {
-  if (dayOffset === 180) {
+  if (dayOffset === cycleDays) {
     return {
       headline: "今天必须保号",
-      sub: "180 天窗口期最后一天,过了系统就停止提醒",
+      sub: `${cycleDays} 天窗口期最后一天，过了系统就停止提醒`,
       gradient: "bg-gradient-to-br from-rose-500 to-rose-700",
       ring: "ring-rose-200",
       dotColor: "bg-rose-200",
     };
   }
-  if (dayOffset === 179) {
+  if (dayOffset === cycleDays - 1) {
     return {
       headline: "明天是最后一天",
       sub: "建议今天就保,系统今天还会推 5 次",
@@ -163,10 +180,10 @@ function urgency(
       dotColor: "bg-orange-200",
     };
   }
-  if (dayOffset === 178) {
+  if (dayOffset === cycleDays - 2) {
     return {
       headline: `还有 ${daysLeft} 天`,
-      sub: "窗口期倒数,临近截止 180 天提醒会变密",
+      sub: `窗口期倒数，临近截止 ${cycleDays} 天提醒会变密`,
       gradient: "bg-gradient-to-br from-amber-500 to-amber-700",
       ring: "ring-amber-200",
       dotColor: "bg-amber-200",
@@ -174,8 +191,9 @@ function urgency(
   }
   // 170-177
   return {
-    headline: daysLeft === 10 ? "今天开始提醒" : `还有 ${daysLeft} 天`,
-    sub: "系统从今天起每天自动推送保号提醒,临近 180 天频率会增加",
+    headline:
+      dayOffset === reminderStartDay ? "今天开始提醒" : `还有 ${daysLeft} 天`,
+    sub: `系统从第 ${reminderStartDay} 天起自动推送，临近第 ${cycleDays} 天频率会增加`,
     gradient: "bg-gradient-to-br from-amber-400 to-amber-600",
     ring: "ring-amber-200",
     dotColor: "bg-amber-200",

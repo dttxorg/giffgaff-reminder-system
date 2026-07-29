@@ -29,12 +29,14 @@ const NewUserBodySchema = z.object({
     .refine((value) => passwordStrength(value) !== "weak", "密码强度过低"),
   phoneNumber: z.string().min(1, "请输入手机号").max(32),
   activatedAt: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "请输入有效日期"),
+  carrier: z.enum(["giffgaff", "ctexcel"]).default("giffgaff"),
 });
 
 const AppendBodySchema = z.object({
   code: z.string().min(1, "请输入卡密").max(64),
   phoneNumber: z.string().min(1, "请输入手机号").max(32),
   activatedAt: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "请输入有效日期"),
+  carrier: z.enum(["giffgaff", "ctexcel"]).default("giffgaff"),
 });
 
 export async function POST(req: Request) {
@@ -89,18 +91,19 @@ export async function POST(req: Request) {
 
 async function runRedeem(
   data:
-    | { code: string; phoneNumber: string; activatedAt: string; password: string; username: string }
-    | { code: string; phoneNumber: string; activatedAt: string },
+    | { code: string; phoneNumber: string; activatedAt: string; carrier: "giffgaff" | "ctexcel"; password: string; username: string }
+    | { code: string; phoneNumber: string; activatedAt: string; carrier: "giffgaff" | "ctexcel" },
   currentUserId: number | undefined
 ) {
   let result;
   try {
     result = await prisma.$transaction(async (tx) => {
       // 仅在 data 上有这些字段时才传入
-      const input: { rawCode: string; phoneNumber: string; activatedAt: string; password?: string; username?: string } = {
+      const input: { rawCode: string; phoneNumber: string; activatedAt: string; carrier: "giffgaff" | "ctexcel"; password?: string; username?: string } = {
         rawCode: data.code,
         phoneNumber: data.phoneNumber,
         activatedAt: data.activatedAt,
+        carrier: data.carrier,
       };
       if ("password" in data) input.password = data.password;
       if ("username" in data) input.username = data.username;

@@ -115,11 +115,13 @@ describe("<BatchRedeemPanel />", () => {
               code: "7K9P3R4M8H2XN5YQ",
               phoneNumber: "07724215611",
               activatedAt: "2026-07-01",
+              carrier: "giffgaff",
             },
             {
               code: "8W3RK2NP9X5TM7QH",
               phoneNumber: "07724215612",
               activatedAt: "2026-07-02",
+              carrier: "giffgaff",
             },
           ],
         }),

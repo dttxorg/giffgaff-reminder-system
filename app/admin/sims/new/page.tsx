@@ -8,6 +8,9 @@ import { ConfirmModal } from "@/app/_components/confirm-modal";
 
 export default function NewSimPage() {
   const router = useRouter();
+  const [carrier, setCarrier] = useState<"giffgaff" | "ctexcel">("giffgaff");
+  const [reminderStartDay, setReminderStartDay] = useState(170);
+  const [cycleDays, setCycleDays] = useState(180);
   const [phoneNumber, setPhoneNumber] = useState("");
   const [activatedAt, setActivatedAt] = useState(new Date().toISOString().slice(0, 10));
   const [status, setStatus] = useState<"active" | "paused">("active");
@@ -19,6 +22,10 @@ export default function NewSimPage() {
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
+    if (reminderStartDay < 0 || cycleDays <= reminderStartDay || cycleDays > 3650) {
+      setError("提醒开始日必须早于截止日，且截止日最长为 3650 天");
+      return;
+    }
     if (initialPassword.length < 8) {
       setError("初始密码至少 8 位");
       return;
@@ -28,7 +35,15 @@ export default function NewSimPage() {
       const resp = await fetch("/api/admin/sims", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ phoneNumber, activatedAt, status, initialPassword }),
+        body: JSON.stringify({
+          phoneNumber,
+          activatedAt,
+          status,
+          carrier,
+          reminderStartDay,
+          cycleDays,
+          initialPassword,
+        }),
       });
       const data = await resp.json();
       if (!data.ok) {
@@ -69,6 +84,64 @@ export default function NewSimPage() {
           </div>
         )}
 
+        <div>
+          <label className="block text-sm font-medium mb-1.5">运营商预设</label>
+          <div className="grid grid-cols-2 gap-2">
+            {(
+              [
+                ["giffgaff", "Giffgaff", 170, 180],
+                ["ctexcel", "CTExcel", 80, 90],
+              ] as const
+            ).map(([value, label, start, cycle]) => (
+              <button
+                key={value}
+                type="button"
+                aria-pressed={carrier === value}
+                onClick={() => {
+                  setCarrier(value);
+                  setReminderStartDay(start);
+                  setCycleDays(cycle);
+                }}
+                className={`min-h-16 rounded-lg border p-3 text-left ${
+                  carrier === value
+                    ? "border-indigo-500 bg-indigo-50 ring-2 ring-indigo-100"
+                    : "border-slate-300 hover:border-slate-400"
+                }`}
+              >
+                <span className="block text-sm font-semibold">{label}</span>
+                <span className="mt-1 block text-xs text-slate-500">
+                  默认 {start} / {cycle} 天
+                </span>
+              </button>
+            ))}
+          </div>
+        </div>
+        <div className="grid gap-3 sm:grid-cols-2">
+          <label className="block text-sm font-medium">
+            第几天开始提醒
+            <input
+              type="number"
+              min={0}
+              max={3649}
+              value={reminderStartDay}
+              onChange={(e) => setReminderStartDay(Number(e.target.value))}
+              required
+              className="mt-1.5 w-full rounded-lg border border-slate-300 px-3.5 py-2.5 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
+            />
+          </label>
+          <label className="block text-sm font-medium">
+            第几天截止
+            <input
+              type="number"
+              min={1}
+              max={3650}
+              value={cycleDays}
+              onChange={(e) => setCycleDays(Number(e.target.value))}
+              required
+              className="mt-1.5 w-full rounded-lg border border-slate-300 px-3.5 py-2.5 outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
+            />
+          </label>
+        </div>
         <div>
           <label className="block text-sm font-medium mb-1.5">手机号</label>
           <input

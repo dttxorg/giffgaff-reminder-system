@@ -18,6 +18,7 @@ const BatchItemSchema = z.object({
   code: z.string().min(1).max(64),
   phoneNumber: z.string().min(1).max(32),
   activatedAt: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  carrier: z.enum(["giffgaff", "ctexcel"]).default("giffgaff"),
 });
 
 const BodySchema = z.object({
@@ -103,6 +104,7 @@ export async function POST(req: Request) {
       code,
       phoneNumber,
       activatedAt: item.activatedAt,
+      carrier: item.carrier,
       earlyError,
     };
   });
@@ -122,6 +124,7 @@ export async function POST(req: Request) {
               rawCode: item.code,
               phoneNumber: item.phoneNumber,
               activatedAt: item.activatedAt,
+              carrier: item.carrier,
             },
             currentUserId,
             tx

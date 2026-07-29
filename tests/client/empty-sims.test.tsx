@@ -13,8 +13,8 @@ describe("<EmptySims />", () => {
 
   it("显示副标(说明流程)", () => {
     render(<EmptySims />);
-    expect(screen.getByText(/用 16 位卡密绑定您的 Giffgaff SIM 卡/)).toBeInTheDocument();
-    expect(screen.getByText(/170 天后自动开始推送保号提醒/)).toBeInTheDocument();
+    expect(screen.getByText(/Giffgaff 或 CTExcel SIM 卡/)).toBeInTheDocument();
+    expect(screen.getByText(/默认提醒周期.*自由调整/)).toBeInTheDocument();
   });
 
   it("主操作'去兑换卡密'链接到 /redeem", () => {

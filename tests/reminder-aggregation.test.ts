@@ -36,22 +36,37 @@ const safeBaseline = new Date("2026-04-06T04:00:00.000Z"); // 100 天
 function sim(
   id: number,
   userId: number,
-  options: { due?: boolean; urgent?: boolean; channelKey?: string } = {}
+  options: {
+    due?: boolean;
+    urgent?: boolean;
+    channelKey?: string;
+    carrier?: "giffgaff" | "ctexcel";
+    dayOffset?: number;
+  } = {}
 ) {
+  const carrier = options.carrier ?? "giffgaff";
+  const customBaseline =
+    options.dayOffset === undefined
+      ? null
+      : new Date(now.getTime() - options.dayOffset * 24 * 60 * 60 * 1000);
   return {
     id,
     userId,
     phoneNumber: `0772400000${id}`,
     activatedAt:
-      options.due === false
+      customBaseline ??
+      (options.due === false
         ? safeBaseline
         : options.urgent
           ? urgentBaseline
-          : dueBaseline,
+          : dueBaseline),
     lastPortedAt: null,
     portToken: `token-${id}`,
     channel: "serverchan",
     channelKey: options.channelKey ?? `key-${id}`,
+    carrier,
+    reminderStartDay: carrier === "ctexcel" ? 80 : 170,
+    cycleDays: carrier === "ctexcel" ? 90 : 180,
   };
 }
 
@@ -207,6 +222,50 @@ describe("多号码账号汇总提醒", () => {
     expect(mocks.reminderCreate).toHaveBeenCalledTimes(3);
     expect(mocks.reminderUpdate).not.toHaveBeenCalled();
     expect(result.sent).toBe(3);
+  });
+
+  it("CTExcel 按 80/90 天窗口发送并显示正确运营商", async () => {
+    mocks.simFindMany.mockResolvedValue([
+      sim(1, 10, { carrier: "ctexcel", dayOffset: 85 }),
+    ]);
+
+    const result = await runReminderScan({
+      baseUrl: "https://baohao.example",
+      now,
+    });
+
+    expect(mocks.sendPush).toHaveBeenCalledWith(
+      "serverchan",
+      "key-1",
+      "CTExcel 保号提醒 (85天)",
+      expect.stringContaining("CTExcel 保号提醒")
+    );
+    expect(mocks.reminderCreate).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        dayOffset: 85,
+        bucket: 1,
+      }),
+    });
+    expect(result.sent).toBe(1);
+  });
+
+  it("混合运营商汇总以距各自截止日最近的号码决定频率", async () => {
+    mocks.simFindMany.mockResolvedValue([
+      sim(1, 10, { dayOffset: 179 }),
+      sim(2, 10, { carrier: "ctexcel", dayOffset: 90 }),
+      sim(3, 10, { due: false }),
+      sim(4, 10, { due: false }),
+    ]);
+
+    await runReminderScan({ baseUrl: "https://baohao.example", now });
+
+    expect(mocks.reminderCreate.mock.calls[0][0].data).toMatchObject({
+      dayOffset: 90,
+      bucket: 5,
+    });
+    expect(mocks.sendPush.mock.calls[0][3]).toContain(
+      "CTExcel · 今天截止"
+    );
   });
 
   it("主卡未配置渠道时选择账号内第一张已配置渠道的卡", async () => {

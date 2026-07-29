@@ -1,6 +1,6 @@
 // 提醒文案模板渲染
 
-export const DEFAULT_TEMPLATE = `【Giffgaff 保号提醒】您的号码 {{phone}} 已激活 {{days}} 天，该保号啦！
+export const DEFAULT_TEMPLATE = `【{{carrier}} 保号提醒】您的号码 {{phone}} 已激活 {{days}} 天，该保号啦！
 点击更新保号时间：{{port_url}}`;
 
 /**
@@ -9,15 +9,23 @@ export const DEFAULT_TEMPLATE = `【Giffgaff 保号提醒】您的号码 {{phone
  *   {{phone}} - 完整手机号
  *   {{days}} - 当前 day_offset
  *   {{port_url}} - 保号更新链接
+ *   {{carrier}} - 运营商展示名称
  */
 export function renderTemplate(
   template: string,
-  vars: { phone: string; days: number; port_url: string }
+  vars: { phone: string; days: number; port_url: string; carrier?: string }
 ): string {
-  return template
+  const carrier = vars.carrier ?? "Giffgaff";
+  // 兼容数据库里保存的旧默认模板：CTExcel 提醒不会继续显示 Giffgaff。
+  const compatibleTemplate =
+    carrier === "Giffgaff"
+      ? template
+      : template.replace(/Giffgaff/gi, carrier);
+  return compatibleTemplate
     .replace(/\{\{phone\}\}/g, vars.phone)
     .replace(/\{\{days\}\}/g, String(vars.days))
-    .replace(/\{\{port_url\}\}/g, vars.port_url);
+    .replace(/\{\{port_url\}\}/g, vars.port_url)
+    .replace(/\{\{carrier\}\}/g, carrier);
 }
 
 /**

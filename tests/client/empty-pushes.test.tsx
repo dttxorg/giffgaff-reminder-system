@@ -10,7 +10,7 @@ describe("<EmptyPushes />", () => {
     render(<EmptyPushes hasDateFilter={false} />);
     expect(screen.getByText("还没有推送记录")).toBeInTheDocument();
     expect(
-      screen.getByText(/系统会在 Giffgaff 保号提醒窗口.*开始自动推送/)
+      screen.getByText(/运营商预设或自定义提醒日期自动推送/)
     ).toBeInTheDocument();
   });
 

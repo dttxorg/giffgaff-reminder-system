@@ -4,7 +4,7 @@ import {
   dayOffsetFromBaseline,
   daysUntilReminderWindow,
   getMilestone,
-  COUNTS,
+  reminderCountForDay,
   getAnniversaryProgress,
   getNextMilestone,
   isInReminderWindow,
@@ -29,6 +29,11 @@ import {
 import { PushPreview } from "@/app/_components/push-preview";
 import { CopyPhoneButton } from "./copy-phone-button";
 import { CopyPortLinkButton } from "./copy-port-link-button";
+import {
+  carrierPolicy,
+  reminderPolicy,
+  type CarrierType,
+} from "@/lib/carrier";
 
 export interface SimCardProps {
   /** 该 SIM 卡的数据(必填) */
@@ -41,6 +46,9 @@ export interface SimCardProps {
     status: "active" | "paused";
     channel: "serverchan" | "bark" | "pushplus" | "telegram";
     channelKey: string;
+    carrier?: CarrierType;
+    reminderStartDay?: number;
+    cycleDays?: number;
   };
   /** 是否当前账号下的第一个 SIM(用于"主"标记) */
   isPrimary: boolean;
@@ -58,6 +66,15 @@ export async function SimCard({
   isPrimary,
   now,
 }: SimCardProps) {
+  const carrier = sim.carrier ?? "giffgaff";
+  const defaults = carrierPolicy(carrier);
+  const schedule = {
+    carrier,
+    reminderStartDay: sim.reminderStartDay ?? defaults.reminderStartDay,
+    cycleDays: sim.cycleDays ?? defaults.cycleDays,
+  };
+  const policy = reminderPolicy(schedule);
+  const carrierLabel = policy.label;
   const baseline = sim.lastPortedAt ?? sim.activatedAt;
   const _daysFromRelative = (rel: string): number => {
     const m = rel.match(/^(\d+)\s*天/);
@@ -68,11 +85,11 @@ export async function SimCard({
     ? _daysFromRelative(formatRelativeTime(sim.lastPortedAt))
     : 0;
   const dayOffset = dayOffsetFromBaseline(baseline);
-  const inWindow = isInReminderWindow(dayOffset);
-  // Round 214: 距保号窗口距离(0/1/2 边界 + 170/180 窗口期)
-  const windowDistance = daysUntilReminderWindow(dayOffset);
+  const inWindow = isInReminderWindow(dayOffset, schedule);
+  // 距当前号码自定义保号窗口的距离与边界状态。
+  const windowDistance = daysUntilReminderWindow(dayOffset, schedule);
   // Round 214: 0/1/2 边缘"刚激活"徽标(从纯函数拿,与单测对齐)
-  const activatedDisplay = formatActivatedDays(dayOffset);
+  const activatedDisplay = formatActivatedDays(dayOffset, schedule);
   const milestone = getMilestone(dayOffset);
   const nextMilestone = milestone ? null : getNextMilestone(dayOffset);
   const anniversary = getAnniversaryProgress(dayOffset);
@@ -99,7 +116,8 @@ export async function SimCard({
 
   const sp = shanghaiParts(now);
   const hourOfDay = sp.hour;
-  const bucketInfo = bucketForDay(dayOffset, hourOfDay);
+  const bucketInfo = bucketForDay(dayOffset, hourOfDay, schedule);
+  const todayExpected = reminderCountForDay(dayOffset, schedule);
 
   let thisMonthExpected = 0;
   for (let d = 1; d <= sp.day; d++) {
@@ -107,7 +125,7 @@ export async function SimCard({
       new Date(Date.UTC(sp.year, sp.month - 1, d)),
       baseline
     );
-    thisMonthExpected += COUNTS[dayOffsetAtMonth] ?? 0;
+    thisMonthExpected += reminderCountForDay(dayOffsetAtMonth, schedule);
   }
 
   const channelMissing = !sim.channelKey;
@@ -181,6 +199,20 @@ export async function SimCard({
         </div>
         <div className="text-2xl font-mono font-semibold mb-3 tracking-wider">
           {formatPhoneForDisplay(sim.phoneNumber)}
+        </div>
+        <div className="mb-4 flex flex-wrap items-center gap-2 text-xs">
+          <span className="rounded-full bg-indigo-50 px-2.5 py-1 font-semibold text-indigo-700">
+            {carrierLabel}
+          </span>
+          <span className="rounded-full bg-slate-100 px-2.5 py-1 text-slate-600">
+            第 {policy.reminderStartDay} 天提醒 · 第 {policy.cycleDays} 天截止
+          </span>
+          <Link
+            href={`/me/settings?simId=${sim.id}`}
+            className="font-medium text-indigo-600 hover:underline"
+          >
+            调整规则
+          </Link>
         </div>
         <div className="flex items-center justify-between mb-1">
           <div className="text-sm text-slate-500">激活日期</div>
@@ -268,10 +300,10 @@ export async function SimCard({
               className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium bg-emerald-100 text-emerald-700"
               title={
                 dayOffset === 0
-                  ? "今天激活,系统会从 170 天后开始提醒保号"
+                  ? `今天激活,系统会从 ${policy.reminderStartDay} 天后开始提醒保号`
                   : dayOffset === 1
-                    ? "昨天激活,等待 170 天进入保号窗口"
-                    : "前天激活,等待 170 天进入保号窗口"
+                    ? `昨天激活,等待第 ${policy.reminderStartDay} 天进入保号窗口`
+                    : `前天激活,等待第 ${policy.reminderStartDay} 天进入保号窗口`
               }
             >
               <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" aria-hidden="true" />
@@ -289,7 +321,7 @@ export async function SimCard({
           {windowDistance.kind === "before" && windowDistance.days > 2 && (
             <span
               className="ml-2 text-xs text-slate-500"
-              title={`还有 ${windowDistance.days} 天进入 170 天保号提醒窗口`}
+              title={`还有 ${windowDistance.days} 天进入第 ${policy.reminderStartDay} 天保号提醒窗口`}
             >
               · 距保号窗口 <strong className="font-semibold text-slate-700">{windowDistance.days}</strong> 天
             </span>
@@ -297,7 +329,7 @@ export async function SimCard({
           {windowDistance.kind === "after" && (
             <span
               className="ml-2 text-xs text-rose-600"
-              title={`已过 180 天保号窗口 ${windowDistance.days} 天,建议尽快保号`}
+              title={`已过第 ${policy.cycleDays} 天保号窗口 ${windowDistance.days} 天,建议尽快保号`}
             >
               · 已过保号窗口 <strong className="font-semibold">{windowDistance.days}</strong> 天
             </span>
@@ -313,11 +345,11 @@ export async function SimCard({
           <span
             className="ml-2 text-xs text-slate-500"
             title={`系统累计推送 ${lifetimeCount} 次 (成功 ${successCount} 次, 失败 ${failedCount} 次)${
-              (COUNTS[dayOffset] ?? 0) > 0
-                ? `, 今日预期 ${COUNTS[dayOffset]} 次`
-                : dayOffset > 180
+              todayExpected > 0
+                ? `, 今日预期 ${todayExpected} 次`
+                : dayOffset > policy.cycleDays
                   ? ", 已超过提醒窗口"
-                  : dayOffset < 170
+                  : dayOffset < policy.reminderStartDay
                     ? ", 未到提醒窗口"
                     : ""
             }${365 - daysSinceActivated > 0 ? `, 距激活 1 周年 ${365 - daysSinceActivated} 天` : ""}`}
@@ -328,8 +360,8 @@ export async function SimCard({
             >
               {successCount} 次成功
             </Link>
-            {(COUNTS[dayOffset] ?? 0) > 0 && (
-              <span className="ml-1">/ 今日预期 {COUNTS[dayOffset]} 次</span>
+            {todayExpected > 0 && (
+              <span className="ml-1">/ 今日预期 {todayExpected} 次</span>
             )}
             {365 - daysSinceActivated > 0 && (
               <span className="ml-1" title={`还有 ${365 - daysSinceActivated} 天到 1 周年`}>
@@ -343,17 +375,29 @@ export async function SimCard({
           {anniversary.years >= 1 && <AnniversaryProgress progress={anniversary} />}
           {anniversary.years >= 1 && <AnniversaryProgressBar progress={anniversary} />}
         </div>
-        <DayOffsetProgress dayOffset={dayOffset} />
+        <DayOffsetProgress
+          dayOffset={dayOffset}
+          carrier={carrier}
+          reminderStartDay={policy.reminderStartDay}
+          cycleDays={policy.cycleDays}
+        />
 
         {inWindow && (
-          <ReminderWindowAlert dayOffset={dayOffset} bucketInfo={bucketInfo} now={now} />
+          <ReminderWindowAlert
+            dayOffset={dayOffset}
+            bucketInfo={bucketInfo}
+            now={now}
+            carrier={carrier}
+            reminderStartDay={policy.reminderStartDay}
+            cycleDays={policy.cycleDays}
+          />
         )}
 
         {!inWindow && (
           <div className="mt-4 p-3 rounded-lg bg-slate-100 border border-slate-200 text-slate-700 text-sm">
-            {dayOffset > 180 ? (
+            {dayOffset > policy.cycleDays ? (
               <>
-                已超过 180 天,系统不再自动提醒。请尽快保号并提交新日期。
+                已超过第 {policy.cycleDays} 天，系统不再自动提醒。请尽快保号并提交新日期。
                 <Link
                   href={portHref}
                   title="打开保号页面提交新日期"
@@ -382,12 +426,12 @@ export async function SimCard({
                   </svg>
                   距提醒开始还有{" "}
                 </span>
-                <strong className="text-slate-900">{170 - dayOffset} 天</strong>
+                <strong className="text-slate-900">{policy.reminderStartDay - dayOffset} 天</strong>
                 <DaysUntilWindowCountdown
-                  targetDayOffset={170}
+                  targetDayOffset={policy.reminderStartDay}
                   currentDayOffset={dayOffset}
                 />
-                ,提醒窗口 170-180 天。
+                ，提醒窗口为第 {policy.reminderStartDay}-{policy.cycleDays} 天。
               </>
             )}
           </div>
@@ -396,7 +440,7 @@ export async function SimCard({
 
       <Link
         href={portHref}
-        title="打开保号页面,选一个日期提交即重置 170 天倒计时"
+        title={`打开保号页面，提交日期后按第 ${policy.reminderStartDay} 天提醒规则重新计时`}
         className="block w-full text-center py-3 rounded-lg bg-indigo-600 text-white font-medium hover:bg-indigo-700 transition-colors shadow-sm inline-flex items-center justify-center gap-1.5"
       >
         {inWindow ? "立即去保号" : "保号(更新日期)"}
@@ -415,7 +459,7 @@ export async function SimCard({
         </svg>
       </Link>
       <p className="text-xs text-slate-500 text-center mb-3">
-        选个最近一次保号的日期提交,系统从那天重新计时 170 天
+        选个最近一次保号的日期提交，系统从那天按当前规则重新计时
       </p>
       <div className="flex justify-center mb-3 -mt-2">
         <CopyPortLinkButton
@@ -440,12 +484,12 @@ export async function SimCard({
                   <summary
                     className="text-sm font-normal text-slate-500 inline-flex items-center gap-1 cursor-pointer list-none"
                     title={`今日 (${sp.year}-${String(sp.month).padStart(2, "0")}-${String(sp.day).padStart(2, "0")}) 已推 ${todayCount} 条${todayFailedCount > 0 ? `, 失败 ${todayFailedCount} 条` : ""}${
-                      (COUNTS[dayOffset] ?? 0) > 0
-                        ? `, 今日预期 ${COUNTS[dayOffset]} 次 (提醒窗口 170-180 天)`
-                        : dayOffset > 180
+                      todayExpected > 0
+                        ? `, 今日预期 ${todayExpected} 次 (提醒窗口 ${policy.reminderStartDay}-${policy.cycleDays} 天)`
+                        : dayOffset > policy.cycleDays
                           ? " (已超过提醒窗口,系统不再自动推送)"
-                          : dayOffset < 170
-                            ? " (提醒窗口 170-180 天,未到推送时间)"
+                          : dayOffset < policy.reminderStartDay
+                            ? ` (提醒窗口 ${policy.reminderStartDay}-${policy.cycleDays} 天,未到推送时间)`
                             : ""
                     }`}
                   >
@@ -586,7 +630,9 @@ export async function SimCard({
               <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
               <path d="M13.73 21a2 2 0 0 1-3.46 0" />
             </svg>
-            {inWindow ? "本提醒窗口内还没有推送过(下次 cron 会尝试)" : "还没到提醒窗口(170 天起才会推送)"}
+            {inWindow
+              ? "本提醒窗口内还没有推送过(下次 cron 会尝试)"
+              : `还没到提醒窗口(第 ${policy.reminderStartDay} 天起才会推送)`}
           </div>
         ) : (
           <ul className="text-sm divide-y divide-slate-100">
@@ -666,6 +712,7 @@ export async function SimCard({
           days={dayOffset}
           portToken={sim.portToken}
           templateOverride={reminderTemplate}
+          carrier={carrierLabel}
         />
       </details>
     </div>

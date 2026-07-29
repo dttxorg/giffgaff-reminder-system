@@ -1,4 +1,4 @@
-// Giffgaff 保号提醒系统 - Prisma Schema
+// SIM 保号提醒系统 - Prisma Schema
 // 部署：Vercel + Neon Postgres (通过 Vercel Storage 集成)
 // 本地开发：在 Vercel Dashboard 复制 DATABASE_URL 到 .env
 
@@ -11,34 +11,39 @@ datasource db {
   provider = "postgresql"
 }
 
-// 号码库（giffgaff sim 卡）
+// 号码库
 // 一个 sim 隶属一个 user(可空 = 孤卡,管理员导入但用户未兑换)。
 // 同一个 user 可拥有多个 sim(一个账号管理多张 SIM 卡)。
 // 每张 sim 有独立的 channel/channelKey:账号可统一用同一渠道,也可分别设置。
 model Sim {
-  id           Int       @id @default(autoincrement())
-  phoneNumber  String    @unique // 完整号，如 07724215611（只存数字）
+  id               Int       @id @default(autoincrement())
+  phoneNumber      String    @unique // 完整号，如 07724215611（只存数字）
   // portToken 是公开 URL(/p/[token])用的不可枚举随机串,32 字符 url-safe
-  portToken    String    @unique
-  activatedAt  DateTime // 激活日期（保号起算日）
-  lastPortedAt DateTime? // 上次保号日期，NULL = 还没保过号
-  status       SimStatus @default(active) // active / paused
+  portToken        String    @unique
+  activatedAt      DateTime // 激活日期（保号起算日）
+  lastPortedAt     DateTime? // 上次保号日期，NULL = 还没保过号
+  status           SimStatus @default(active) // active / paused
+  carrier          Carrier   @default(giffgaff) // 运营商决定保号周期与提醒窗口
+  // 运营商只提供默认值；客户可为每张卡独立调整提醒开始日与截止日。
+  reminderStartDay Int       @default(170)
+  cycleDays        Int       @default(180)
   // 每张 sim 独立的推送渠道(账号级可统一,也可各 sim 不同)
   // 首次兑换时为空,引导去 /me/settings 设置
-  channel      Channel   @default(serverchan)
-  channelKey   String    @default("")
+  channel          Channel   @default(serverchan)
+  channelKey       String    @default("")
   // 关联 user:1 个 user 可拥有 N 个 sim;sim 端是 FK,user 端是 sims Sim[]
   // onDelete: SetNull - 删 user 时 sim 变孤卡(管理员可在后台看到/清理),不级联删号
-  userId       Int?
-  createdAt    DateTime  @default(now())
-  updatedAt    DateTime  @updatedAt
+  userId           Int?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
 
-  user      User?         @relation(fields: [userId], references: [id], onDelete: SetNull)
+  user      User?          @relation(fields: [userId], references: [id], onDelete: SetNull)
   reminders ReminderSent[]
 
   @@index([phoneNumber])
   @@index([activatedAt, lastPortedAt])
   @@index([userId])
+  @@index([carrier, status])
 }
 
 enum SimStatus {
@@ -46,20 +51,28 @@ enum SimStatus {
   paused
 }
 
+enum Carrier {
+  giffgaff
+  ctexcel
+}
+
 // 用户档案:一个 user 拥有 1..N 个 sim,登录用 username + password
 // 老用户迁移时 username 直接 = sim.phoneNumber(无感),新用户可以自定义账号
-// 用户本身不存 channel/channelKey - 这些都在每张 sim 上(账号级统一 vs 各自不同)
 model User {
-  id               Int       @id @default(autoincrement())
+  id                     Int       @id @default(autoincrement())
   // 登录账号：可以是手机号(老用户)或自定义账号(新用户)
-  username         String    @unique
+  username               String    @unique
   // 登录密码：scrypt 哈希（null = 旧用户未升级，需管理员重置）
-  passwordHash     String?
+  passwordHash           String?
   // 登录限流：连续失败 5 次锁 15 分钟
-  failedLoginCount Int       @default(0)
-  lockedUntil      DateTime?
-  createdAt        DateTime  @default(now())
-  updatedAt        DateTime  @updatedAt
+  failedLoginCount       Int       @default(0)
+  lockedUntil            DateTime?
+  // 删除当前号码时保留通知渠道与提醒名额，之后可直接填写新号码继续使用。
+  defaultChannel         Channel   @default(serverchan)
+  defaultChannelKey      String    @default("")
+  availableReminderSlots Int       @default(0)
+  createdAt              DateTime  @default(now())
+  updatedAt              DateTime  @updatedAt
 
   // 1:N - 一个账号下可挂多张 sim 卡
   sims      Sim[]          @relation
@@ -78,20 +91,20 @@ enum Channel {
 
 // 发送日志(幂等保证 + 渠道快照便于重发)
 model ReminderSent {
-  id           Int        @id @default(autoincrement())
-  userId       Int
-  simId        Int
-  dayOffset    Int // 提醒那天的 day_offset（170/178/179/180）
-  bucket       Int // 0-indexed bucket
-    // 渠道类型用于历史统计；channelKey 仅保留兼容列，新记录固定为空。
-  channel      Channel
-  channelKey   String
-  sentAt       DateTime   @default(now())
-  status       SendStatus @default(success)
-  errorMessage String?
+  id                Int        @id @default(autoincrement())
+  userId            Int
+  simId             Int
+  dayOffset         Int // 提醒当天相对本轮起算日的天数
+  bucket            Int // 0-indexed bucket
+  // 渠道类型用于历史统计；channelKey 仅保留兼容列，新记录固定为空。
+  channel           Channel
+  channelKey        String
+  sentAt            DateTime   @default(now())
+  status            SendStatus @default(success)
+  errorMessage      String?
   // 多号码账号汇总提醒：频率由最接近保号日的号码决定，同一 bucket 一条。
   aggregateDay      String?
-  aggregateSimCount Int     @default(1)
+  aggregateSimCount Int        @default(1)
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
   sim  Sim  @relation(fields: [simId], references: [id], onDelete: Cascade)

@@ -5,8 +5,8 @@ import { UserNav } from "./_components/user-nav";
 import { SkipToContent } from "./_components/skip-to-content";
 
 export const metadata: Metadata = {
-  title: "Giffgaff 保号提醒",
-  description: "Giffgaff SIM 卡保号提醒服务",
+  title: "SIM 保号提醒",
+  description: "Giffgaff、CTExcel SIM 卡保号提醒服务",
 };
 
 /**
@@ -32,8 +32,7 @@ export default function RootLayout({
                 G
               </span>
               <span className="whitespace-nowrap">
-                <span className="max-[359px]:hidden">Giffgaff </span>
-                保号提醒
+                SIM 保号提醒
               </span>
             </Link>
             <nav className="flex items-center gap-1 text-sm">
@@ -44,7 +43,7 @@ export default function RootLayout({
         <main id="main-content" className="flex-1">{children}</main>
         <footer className="site-footer border-t border-slate-200 bg-white/60 py-4 text-center text-xs text-slate-500">
           <div className="max-w-5xl mx-auto px-4 flex items-center justify-center gap-3">
-            <span>Giffgaff 保号提醒 · V1</span>
+            <span>Giffgaff · CTExcel 保号提醒</span>
             <span className="text-slate-300">·</span>
             <Link
               href="/admin/login"

@@ -16,6 +16,9 @@ const PatchBody = z.object({
   activatedAt: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
   lastPortedAt: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).nullable().optional(),
   status: z.enum(["active", "paused"]).optional(),
+  carrier: z.enum(["giffgaff", "ctexcel"]).optional(),
+  reminderStartDay: z.number().int().min(0).max(3649).optional(),
+  cycleDays: z.number().int().min(1).max(3650).optional(),
 });
 
 export async function GET(_req: Request, ctx: RouteContext) {
@@ -60,6 +63,9 @@ export async function PATCH(req: Request, ctx: RouteContext) {
     activatedAt?: Date;
     lastPortedAt?: Date | null;
     status?: "active" | "paused";
+    carrier?: "giffgaff" | "ctexcel";
+    reminderStartDay?: number;
+    cycleDays?: number;
   } = {};
   if (parsed.data.phoneNumber) data.phoneNumber = parsed.data.phoneNumber.replace(/\D/g, "");
   const existingSim = await prisma.sim.findUnique({ where: { id: simId } });
@@ -85,6 +91,19 @@ export async function PATCH(req: Request, ctx: RouteContext) {
     }
   }
   if (parsed.data.status) data.status = parsed.data.status;
+  if (parsed.data.carrier) data.carrier = parsed.data.carrier;
+  if (parsed.data.reminderStartDay !== undefined)
+    data.reminderStartDay = parsed.data.reminderStartDay;
+  if (parsed.data.cycleDays !== undefined) data.cycleDays = parsed.data.cycleDays;
+  const effectiveReminderStartDay =
+    data.reminderStartDay ?? existingSim.reminderStartDay;
+  const effectiveCycleDays = data.cycleDays ?? existingSim.cycleDays;
+  if (effectiveReminderStartDay >= effectiveCycleDays) {
+    return NextResponse.json(
+      { ok: false, error: "提醒开始日必须早于截止日" },
+      { status: 400 }
+    );
+  }
 
   const effectiveActivatedAt = data.activatedAt ?? existingSim.activatedAt;
   const effectiveLastPortedAt =

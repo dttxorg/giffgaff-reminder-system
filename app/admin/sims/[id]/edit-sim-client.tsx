@@ -20,6 +20,13 @@ export function EditSimClient({ initialSim }: { initialSim: AdminSimDetail }) {
     sim.lastPortedAt ?? ""
   );
   const [status, setStatus] = useState<"active" | "paused">(sim.status);
+  const [carrier, setCarrier] = useState<"giffgaff" | "ctexcel">(
+    sim.carrier ?? "giffgaff"
+  );
+  const [reminderStartDay, setReminderStartDay] = useState(
+    sim.reminderStartDay ?? 170
+  );
+  const [cycleDays, setCycleDays] = useState(sim.cycleDays ?? 180);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -36,6 +43,9 @@ export function EditSimClient({ initialSim }: { initialSim: AdminSimDetail }) {
           activatedAt,
           lastPortedAt: lastPortedAt || null,
           status,
+          carrier,
+          reminderStartDay,
+          cycleDays,
         }),
       });
       const data = await resp.json();
@@ -87,6 +97,46 @@ export function EditSimClient({ initialSim }: { initialSim: AdminSimDetail }) {
 
       <form onSubmit={onSubmit} className="bg-white rounded-xl border border-slate-200 p-6 space-y-4">
         <div>
+          <label className="block text-sm font-medium mb-1.5">运营商预设</label>
+          <select
+            value={carrier}
+            onChange={(event) => {
+              const next = event.target.value as "giffgaff" | "ctexcel";
+              setCarrier(next);
+              setReminderStartDay(next === "ctexcel" ? 80 : 170);
+              setCycleDays(next === "ctexcel" ? 90 : 180);
+            }}
+            className="w-full rounded-lg border border-slate-300 px-3.5 py-2.5"
+          >
+            <option value="giffgaff">Giffgaff</option>
+            <option value="ctexcel">CTExcel</option>
+          </select>
+        </div>
+        <div className="grid grid-cols-2 gap-3">
+          <label className="text-sm font-medium">
+            提醒开始日
+            <input
+              type="number"
+              min={0}
+              max={3649}
+              value={reminderStartDay}
+              onChange={(event) => setReminderStartDay(Number(event.target.value))}
+              className="mt-1.5 w-full rounded-lg border border-slate-300 px-3.5 py-2.5"
+            />
+          </label>
+          <label className="text-sm font-medium">
+            截止日
+            <input
+              type="number"
+              min={1}
+              max={3650}
+              value={cycleDays}
+              onChange={(event) => setCycleDays(Number(event.target.value))}
+              className="mt-1.5 w-full rounded-lg border border-slate-300 px-3.5 py-2.5"
+            />
+          </label>
+        </div>
+        <div>
           <label className="block text-sm font-medium mb-1.5">手机号</label>
           <input
             type="text"
@@ -124,7 +174,11 @@ export function EditSimClient({ initialSim }: { initialSim: AdminSimDetail }) {
         {(() => {
           const baseline = sim.lastPortedAt ?? sim.activatedAt;
           const days = dayOffsetFromBaseline(new Date(baseline));
-          const inWindow = isInReminderWindow(days);
+          const inWindow = isInReminderWindow(days, {
+            carrier,
+            reminderStartDay,
+            cycleDays,
+          });
           return (
             <div className="text-xs text-slate-500 px-1 flex items-center gap-3 flex-wrap">
               <span>
@@ -133,12 +187,12 @@ export function EditSimClient({ initialSim }: { initialSim: AdminSimDetail }) {
               </span>
               {inWindow && (
                 <span className="px-1.5 py-0.5 rounded bg-amber-100 text-amber-800">
-                  提醒窗口内(170-180)
+                  提醒窗口内({reminderStartDay}-{cycleDays})
                 </span>
               )}
-              {days > 180 && (
+              {days > cycleDays && (
                 <span className="px-1.5 py-0.5 rounded bg-rose-100 text-rose-800">
-                  已超 180 天
+                  已超 {cycleDays} 天
                 </span>
               )}
               {sim.lastPortedAt && (
