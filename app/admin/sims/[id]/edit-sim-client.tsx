@@ -103,7 +103,7 @@ export function EditSimClient({ initialSim }: { initialSim: AdminSimDetail }) {
             onChange={(event) => {
               const next = event.target.value as "giffgaff" | "ctexcel";
               setCarrier(next);
-              setReminderStartDay(next === "ctexcel" ? 80 : 170);
+              setReminderStartDay(next === "ctexcel" ? 85 : 170);
               setCycleDays(next === "ctexcel" ? 90 : 180);
             }}
             className="w-full rounded-lg border border-slate-300 px-3.5 py-2.5"

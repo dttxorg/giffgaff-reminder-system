@@ -171,7 +171,7 @@ describe("用户设置写接口", () => {
     }
   });
 
-  it("切换到 CTExcel 时载入 80/90 默认值", async () => {
+  it("切换到 CTExcel 时载入 85/90 默认值", async () => {
     mocks.updateCurrentUserSimDetails.mockResolvedValue({
       authenticated: true,
       hasSims: true,
@@ -192,7 +192,7 @@ describe("用户设置写接口", () => {
       {
         activatedAt: undefined,
         carrier: "ctexcel",
-        reminderStartDay: 80,
+        reminderStartDay: 85,
         cycleDays: 90,
       }
     );

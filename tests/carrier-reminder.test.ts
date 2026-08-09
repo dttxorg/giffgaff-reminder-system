@@ -13,21 +13,20 @@ import {
 } from "../lib/sim-manager";
 
 describe("运营商预设与自定义提醒周期", () => {
-  it("提供 Giffgaff 170/180 与 CTExcel 80/90 默认值", () => {
+  it("提供 Giffgaff 170/180 与 CTExcel 85/90 默认值", () => {
     expect(CARRIER_POLICIES.giffgaff).toMatchObject({
       reminderStartDay: 170,
       cycleDays: 180,
     });
     expect(CARRIER_POLICIES.ctexcel).toMatchObject({
-      reminderStartDay: 80,
+      reminderStartDay: 85,
       cycleDays: 90,
     });
   });
 
-  it("CTExcel 在 80 天开始、90 天截止，并沿用同一加密节奏", () => {
-    expect(bucketForDay(79, 12, "ctexcel")).toBeNull();
-    expect(bucketForDay(80, 12, "ctexcel")).toMatchObject({ count: 1 });
-    expect(bucketForDay(83, 12, "ctexcel")).toMatchObject({ count: 2 });
+  it("CTExcel 在 85 天开始、90 天截止，首日直接 3 次/天", () => {
+    expect(bucketForDay(84, 12, "ctexcel")).toBeNull();
+    expect(bucketForDay(85, 12, "ctexcel")).toMatchObject({ count: 3 });
     expect(bucketForDay(86, 12, "ctexcel")).toMatchObject({ count: 3 });
     expect(bucketForDay(89, 12, "ctexcel")).toMatchObject({ count: 5 });
     expect(bucketForDay(90, 12, "ctexcel")).toMatchObject({ count: 10 });
@@ -58,6 +57,18 @@ describe("运营商预设与自定义提醒周期", () => {
       cycleDays: 90,
     });
   });
+
+  it("自定义为 5 天短窗口时也从首日 3 次/天开始", () => {
+    const shortWindow = {
+      carrier: "giffgaff" as const,
+      reminderStartDay: 40,
+      cycleDays: 45,
+    };
+    expect(reminderCountForDay(39, shortWindow)).toBe(0);
+    expect(reminderCountForDay(40, shortWindow)).toBe(3);
+    expect(reminderCountForDay(44, shortWindow)).toBe(5);
+    expect(reminderCountForDay(45, shortWindow)).toBe(10);
+  });
 });
 
 describe("混合运营商号码紧急度", () => {
@@ -83,7 +94,7 @@ describe("混合运营商号码紧急度", () => {
         id: 2,
         dayOffset: 89,
         carrier: "ctexcel",
-        reminderStartDay: 80,
+        reminderStartDay: 85,
         cycleDays: 90,
       },
     ];

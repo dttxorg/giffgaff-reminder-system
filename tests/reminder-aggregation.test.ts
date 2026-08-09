@@ -65,7 +65,7 @@ function sim(
     channel: "serverchan",
     channelKey: options.channelKey ?? `key-${id}`,
     carrier,
-    reminderStartDay: carrier === "ctexcel" ? 80 : 170,
+    reminderStartDay: carrier === "ctexcel" ? 85 : 170,
     cycleDays: carrier === "ctexcel" ? 90 : 180,
   };
 }
@@ -224,7 +224,7 @@ describe("多号码账号汇总提醒", () => {
     expect(result.sent).toBe(3);
   });
 
-  it("CTExcel 按 80/90 天窗口发送并显示正确运营商", async () => {
+  it("CTExcel 按 85/90 天窗口从首日 3 次/天发送", async () => {
     mocks.simFindMany.mockResolvedValue([
       sim(1, 10, { carrier: "ctexcel", dayOffset: 85 }),
     ]);

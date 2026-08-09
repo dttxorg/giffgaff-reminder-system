@@ -26,7 +26,7 @@ export const CARRIER_POLICIES: Record<CarrierType, CarrierPolicy> = {
     id: "ctexcel",
     label: "CTExcel",
     cycleDays: 90,
-    reminderStartDay: 80,
+    reminderStartDay: 85,
   },
 };
 

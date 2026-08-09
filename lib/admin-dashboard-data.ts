@@ -174,7 +174,7 @@ export function summarizeAdminDashboard(
         dayOffset,
         daysLeft: (sim.cycleDays ?? (sim.carrier === "ctexcel" ? 90 : 180)) - dayOffset,
         reminderStartDay:
-          sim.reminderStartDay ?? (sim.carrier === "ctexcel" ? 80 : 170),
+          sim.reminderStartDay ?? (sim.carrier === "ctexcel" ? 85 : 170),
         cycleDays:
           sim.cycleDays ?? (sim.carrier === "ctexcel" ? 90 : 180),
       };

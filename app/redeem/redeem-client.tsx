@@ -450,7 +450,7 @@ function FormPhase({
         <div className="grid grid-cols-2 gap-2">
           {([
             ["giffgaff", "Giffgaff", "170 天提醒 · 180 天截止"],
-            ["ctexcel", "CTExcel", "80 天提醒 · 90 天截止"],
+            ["ctexcel", "CTExcel", "85 天提醒 · 90 天截止 · 首日 3 次"],
           ] as const).map(([value, label, desc]) => (
             <button
               key={value}
@@ -505,7 +505,7 @@ function FormPhase({
           </p>
         ) : (
           <p className="text-xs text-slate-500 mt-1.5">
-            从这天起算 {carrier === "giffgaff" ? 170 : 80} 天开始提醒，
+            从这天起算 {carrier === "giffgaff" ? 170 : 85} 天开始提醒，
             第 {carrier === "giffgaff" ? 180 : 90} 天截止
           </p>
         )}

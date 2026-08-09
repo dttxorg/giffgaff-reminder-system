@@ -21,7 +21,7 @@ import { PublicStats } from "@/app/_components/public-stats";
 export const revalidate = 300;
 
 const reminderSteps = [
-  { marker: "开始日", label: "基础提醒", frequency: "1 次/天", color: "text-slate-500" },
+  { marker: "开始日", label: "按窗口启动", frequency: "1–3 次/天", color: "text-slate-500" },
   { marker: "剩 7 天", label: "增强提醒", frequency: "2 次/天", color: "text-amber-500" },
   { marker: "剩 4 天", label: "高频提醒", frequency: "3 次/天", color: "text-orange-500" },
   { marker: "剩 1 天", label: "关键提醒", frequency: "5 次/天", color: "text-orange-600" },
@@ -35,7 +35,7 @@ const faqItems = [
   },
   {
     q: "提醒日期是固定的吗？",
-    a: "不是。Giffgaff 默认第 170 天开始、第 180 天截止；CTExcel 默认第 80 天开始、第 90 天截止。选择预设后仍可单独调整，后续也能随时切换运营商或修改规则。",
+    a: "不是。Giffgaff 默认第 170 天开始、第 180 天截止；CTExcel 默认第 85 天开始、第 90 天截止，并从首日直接按 3 次/天提醒。选择预设后仍可单独调整。",
   },
   {
     q: "推送渠道怎么选？",
@@ -86,7 +86,7 @@ export default function HomePage() {
                 Giffgaff · 170 → 180 天
               </li>
               <li className="border border-slate-400/70 bg-white/55 px-3 py-2">
-                CTExcel · 80 → 90 天
+                CTExcel · 85 → 90 天 · 首日 3 次
               </li>
               <li className="border border-indigo-400/70 bg-indigo-50/70 px-3 py-2 text-indigo-800">
                 自定义任意有效周期
@@ -226,7 +226,7 @@ export default function HomePage() {
             </h2>
             <p className="mt-5 max-w-2xl text-base leading-7 text-slate-300 sm:text-lg">
               CTExcel 英国卡已提前完成激活并开通 Wi‑Fi Calling，首月含 50GB。
-              介绍页同时整理了国内使用、80 / 90 天保号和 PAC 携号步骤。
+              介绍页同时整理了国内使用、长期保号和 PAC 携号步骤。
             </p>
             <ul className="mt-6 grid gap-3 text-sm text-slate-200 sm:grid-cols-3">
               <li className="flex items-center gap-2 border-t border-slate-700 pt-3">
@@ -270,7 +270,7 @@ export default function HomePage() {
                   <ClockCountdown size={16} aria-hidden="true" />
                   默认规则
                 </dt>
-                <dd className="mt-1 font-black text-white">80 → 90 天</dd>
+                <dd className="mt-1 font-black text-white">85 → 90 天</dd>
               </div>
               <div className="bg-slate-900 p-4">
                 <dt className="flex items-center gap-1.5 text-xs text-slate-400">

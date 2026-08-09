@@ -90,7 +90,7 @@ export default function NewSimPage() {
             {(
               [
                 ["giffgaff", "Giffgaff", 170, 180],
-                ["ctexcel", "CTExcel", 80, 90],
+                ["ctexcel", "CTExcel", 85, 90],
               ] as const
             ).map(([value, label, start, cycle]) => (
               <button

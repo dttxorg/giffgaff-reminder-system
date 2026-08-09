@@ -157,6 +157,7 @@ describe("<HomePage />", () => {
       expect(replacement?.textContent).toContain("Wi‑Fi Calling");
       expect(replacement?.textContent).toContain("PAC 携号说明");
       expect(replacement?.textContent).toContain("¥128");
+      expect(replacement?.textContent).toContain("85 → 90 天");
       expect(link).toHaveAttribute("target", "_blank");
       expect(link).toHaveAttribute("rel", "noopener noreferrer");
     });
@@ -169,7 +170,7 @@ describe("<HomePage />", () => {
       expect(ol).toBeInTheDocument();
       const items = ol?.querySelectorAll("li");
       expect(items?.length).toBe(5);
-      expect(items?.[0]).toHaveAttribute("aria-label", "开始日，1 次/天");
+      expect(items?.[0]).toHaveAttribute("aria-label", "开始日，1–3 次/天");
       expect(items?.[1]).toHaveAttribute("aria-label", "剩 7 天，2 次/天");
       expect(items?.[2]).toHaveAttribute("aria-label", "剩 4 天，3 次/天");
       expect(items?.[3]).toHaveAttribute("aria-label", "剩 1 天，5 次/天");
@@ -179,7 +180,7 @@ describe("<HomePage />", () => {
     it("每个节点显示提醒频率(1/2/3/5/10 次/天)", async () => {
       const { container } = await renderHome();
       const text = container.textContent ?? "";
-      expect(text).toContain("1 次/天");
+      expect(text).toContain("1–3 次/天");
       expect(text).toContain("2 次/天");
       expect(text).toContain("3 次/天");
       expect(text).toContain("5 次/天");

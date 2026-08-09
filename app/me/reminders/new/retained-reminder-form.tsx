@@ -9,7 +9,7 @@ type Carrier = "giffgaff" | "ctexcel";
 
 const PRESETS = {
   giffgaff: { label: "Giffgaff", start: 170, cycle: 180 },
-  ctexcel: { label: "CTExcel", start: 80, cycle: 90 },
+  ctexcel: { label: "CTExcel", start: 85, cycle: 90 },
 } as const;
 
 export function RetainedReminderForm() {

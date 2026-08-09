@@ -297,7 +297,7 @@ export function BatchRedeemPanel({
               className="min-h-11 w-full rounded-lg border border-slate-300 bg-white px-3 text-base outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
             >
               <option value="giffgaff">Giffgaff · 170 / 180 天</option>
-              <option value="ctexcel">CTExcel · 80 / 90 天</option>
+              <option value="ctexcel">CTExcel · 85 / 90 天 · 首日 3 次</option>
             </select>
             <p className="mt-1.5 text-xs leading-5 text-slate-500">
               本次导入统一使用该预设，之后每个号码都可单独调整。

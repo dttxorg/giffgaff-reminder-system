@@ -100,7 +100,7 @@ export default function PortClient({ simIdRaw, initialSim }: PortClientProps) {
         carrierLabel={initialSim.carrier === "ctexcel" ? "CTExcel" : "Giffgaff"}
         reminderStartDay={
           initialSim.reminderStartDay ??
-          (initialSim.carrier === "ctexcel" ? 80 : 170)
+          (initialSim.carrier === "ctexcel" ? 85 : 170)
         }
       />
     );
@@ -109,7 +109,7 @@ export default function PortClient({ simIdRaw, initialSim }: PortClientProps) {
   const sim = initialSim;
   const carrierLabel = sim.carrier === "ctexcel" ? "CTExcel" : "Giffgaff";
   const reminderStartDay =
-    sim.reminderStartDay ?? (sim.carrier === "ctexcel" ? 80 : 170);
+    sim.reminderStartDay ?? (sim.carrier === "ctexcel" ? 85 : 170);
   const cycleDays = sim.cycleDays ?? (sim.carrier === "ctexcel" ? 90 : 180);
 
   return (

@@ -70,6 +70,9 @@ export function reminderCountForDay(
   if (daysLeft === 0) return 10;
   if (daysLeft === 1) return 5;
   if (daysLeft <= 4) return 3;
+  // 客户选择 5 天或更短的提醒窗口时，首日直接从 3 次/天开始。
+  // CTExcel 默认 85→90 天因此不再经过 1–2 次/天的过渡。
+  if (policy.cycleDays - policy.reminderStartDay <= 5) return 3;
   if (daysLeft <= 7) return 2;
   return 1;
 }

@@ -648,7 +648,7 @@ const CARRIER_PRESETS = {
   },
   ctexcel: {
     label: "CTExcel",
-    reminderStartDay: 80,
+    reminderStartDay: 85,
     cycleDays: 90,
   },
 } as const;
